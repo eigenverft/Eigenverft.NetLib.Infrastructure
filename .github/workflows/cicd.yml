@@ -5,7 +5,10 @@
 name: cicd.yml
 
 permissions:
-  contents: read
+  # cicd.ps1 publishes the current reports to docs/reports/<channel>/ and DocFX to
+  # docs/docfx/<channel>/. The workflow still triggers automatically only for src/**
+  # changes, so the generated docs-only commit cannot recursively start another release.
+  contents: write
   packages: write
 
 on:

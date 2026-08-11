@@ -147,6 +147,29 @@ $ProjPublishRootPath = Get-Path -Paths @("$OutputRootPath","projpublish")
 $ReportsRootPath =  Get-Path -Paths @("$OutputRootPath","reports")
 $DocsRootPath = Get-Path -Paths @("$OutputRootPath","docs")
 
+# GitHub Pages publication model
+# ------------------------------
+# The versioned build tree under output/docs is intentionally NOT committed. It is an immutable
+# build result and may contain many versions of the same deployment channel.
+#
+# The repository-level docs tree is different: it is the current/live snapshot served by GitHub
+# Pages when Pages is configured as main:/docs. Documentation type comes first in the public URL,
+# then the deployment channel.
+#
+# Example:
+#   output/docs/.../production/<version>/docfx   -> versioned build result
+#   docs/docfx/production                       -> current production documentation
+#   docs/docfx/quality                          -> current quality/integration documentation
+#   docs/reports/production                     -> current production build/release reports
+#
+# docs/index.html and docs/.nojekyll are durable root files and are never part of a channel mirror.
+$GitHubPagesDocsRootPath = Get-Path -Paths @("$GitRepositoryRoot","docs")
+$GitHubPagesReportsChannelPath = Get-Path -Paths @("$GitHubPagesDocsRootPath","reports",$BranchDeploymentConfig.Channel.Value)
+$GitHubPagesDocFxChannelPath = Get-Path -Paths @("$GitHubPagesDocsRootPath","docfx",$BranchDeploymentConfig.Channel.Value)
+$GitHubPagesStagingRootPath = Get-Path -Paths @("$OutputRootPath","pages")
+$GitHubPagesReportsChannelStagingPath = Get-Path -Paths @("$GitHubPagesStagingRootPath","reports",$BranchDeploymentConfig.Channel.Value)
+$GitHubPagesDocFxChannelStagingPath = Get-Path -Paths @("$GitHubPagesStagingRootPath","docfx",$BranchDeploymentConfig.Channel.Value)
+
 # Initialize the array to accumulate projects.
 $SolutionFileInfos = Find-FilesByPattern -Path "$GitRepositoryRoot\src" -Pattern "*.sln;*.slnx"
 $SolutionProjectPaths = @()
@@ -330,6 +353,15 @@ foreach ($SolutionProjectPath in $SolutionProjectPaths) {
 
         if ($IsPackable -eq $true)
         {
+            # Render the checked-in DocFX templates for this concrete project/build.
+            # Convert-TemplateFilePlaceholders removes the .template token from the file name, so:
+            #   docfx_local.template.json -> docfx_local.json
+            #   index.template.md         -> index.md
+            #
+            # Those rendered files are transient build inputs beside their templates; they are NOT the
+            # GitHub Pages publication tree. The rendered JSON points DocFX at the versioned
+            # output/docs/.../<channel>/<version>/docfx directory below. A later publication step mirrors
+            # that already-built result into repository docs/docfx/<channel>/ for GitHub Pages.
             $DocFxReplacementsByToken = @{
                 "sourceCodeDirectory" = "$($ProjectFileInfo.DirectoryName.Replace('\','/'))"
                 "outputDirectory"     = (Get-Path -Paths @("$DocsDirectory","docfx")).Replace('\','/')
@@ -431,6 +463,121 @@ if ($PushToNuGetOrg -eq $true)
     {
         Invoke-ProcessTyped -Executable "dotnet" -Arguments @("nuget","push", "$($NuGetPackageFileInfo.FullName)", "--api-key", "$NuGetApiKey","--source","$NuGetOrgSourceUri") -HideValues @($NuGetApiKey)
     }
+}
+
+# Publish the current deployment-channel documentation snapshot.
+#
+# This deliberately reuses the outputs already produced by this script. DocFX is NOT built a
+# second time by a Pages-specific workflow. The same build therefore behaves consistently on a
+# developer machine and in GitHub Actions:
+#
+#   1. Reports are generated into the versioned output/reports tree.
+#   2. DocFX is generated into the versioned output/docs tree.
+#   3. Reports and DocFX are staged separately under output/pages.
+#   4. Reports are mirrored to docs/reports/<channel>; DocFX is mirrored to docs/docfx/<channel>.
+#   5. In CI only, those current-channel snapshots are committed and pushed back to the branch.
+#
+# A local run intentionally stops after step 4. This makes the complete documentation result easy
+# to inspect locally without a GitHub-specific deployment step or a second build implementation.
+$null = New-Directory -Paths @($GitHubPagesReportsChannelStagingPath)
+$null = New-Directory -Paths @($GitHubPagesDocFxChannelStagingPath)
+Remove-FilesByPattern -Path "$GitHubPagesReportsChannelStagingPath" -Pattern "*"
+Remove-FilesByPattern -Path "$GitHubPagesDocFxChannelStagingPath" -Pattern "*"
+
+foreach ($SolutionProjectPath in $SolutionProjectPaths) {
+    $SolutionFileInfo = $SolutionProjectPath.Sln
+
+    foreach ($ProjectFileInfo in $SolutionProjectPath.Prj) {
+        $ReportsDirectory = Get-Path -Paths @($ReportsRootPath,$SolutionFileInfo.BaseName,$ProjectFileInfo.BaseName,$ChannelVersionRelativePath)
+        $DocsDirectory = Get-Path -Paths @($DocsRootPath,$SolutionFileInfo.BaseName,$ProjectFileInfo.BaseName,$ChannelVersionRelativePath)
+
+        # Reports are published at the channel root so the landing page can link directly to build,
+        # dependency, vulnerability, license and BOM information without knowing internal output paths.
+        if (Test-Path -Path "$ReportsDirectory" -PathType Container)
+        {
+            Copy-FilesRecursively -SourceDirectory "$ReportsDirectory" -DestinationDirectory "$GitHubPagesReportsChannelStagingPath" -Filter "*" -CopyEmptyDirs $false -ForceOverwrite $true
+        }
+
+        # Public DocFX URLs are grouped by documentation type first: /docfx/<channel>/.
+        if (Test-Path -Path "$DocsDirectory\docfx" -PathType Container)
+        {
+            Copy-FilesRecursively -SourceDirectory "$DocsDirectory\docfx" -DestinationDirectory "$GitHubPagesDocFxChannelStagingPath" -Filter "*" -CopyEmptyDirs $false -ForceOverwrite $true -CleanDestination MirrorTree
+        }
+    }
+}
+
+# Build a small browsable index for the report channel from the files that were actually produced.
+# This page is generated from the same local/CI staging tree as the reports themselves, so
+# docs/reports/<channel>/ remains directly browsable after every MirrorTree publication.
+$GitHubPagesReportFileInfos = @(Get-ChildItem -Path "$GitHubPagesReportsChannelStagingPath" -File | Sort-Object Name)
+$GitHubPagesReportLinks = @()
+foreach ($GitHubPagesReportFileInfo in $GitHubPagesReportFileInfos)
+{
+    $GitHubPagesReportFileNameHtml = [System.Net.WebUtility]::HtmlEncode($GitHubPagesReportFileInfo.Name)
+    $GitHubPagesReportFileUrl = [System.Uri]::EscapeDataString($GitHubPagesReportFileInfo.Name)
+    $GitHubPagesReportLinks += ('<li><a href="{0}">{1}</a></li>' -f $GitHubPagesReportFileUrl,$GitHubPagesReportFileNameHtml)
+}
+
+$GitHubPagesReportListHtml = if ($GitHubPagesReportLinks.Count -gt 0) { $GitHubPagesReportLinks -join [Environment]::NewLine } else { "<li>No reports were produced by this build.</li>" }
+$GitHubPagesReportIndexHtml = @"
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>$DeploymentChannel build reports - $GitRepositoryName</title>
+</head>
+<body>
+  <main>
+    <h1>$DeploymentChannel build reports</h1>
+    <p>Reports produced by the current $DeploymentChannel CI/CD snapshot.</p>
+    <ul>
+$GitHubPagesReportListHtml
+    </ul>
+    <p><a href="../../docfx/$DeploymentChannel/">Open $DeploymentChannel DocFX documentation</a></p>
+    <p><a href="../../">Back to documentation overview</a></p>
+  </main>
+</body>
+</html>
+"@
+Set-Content -Path (Get-Path -Paths @($GitHubPagesReportsChannelStagingPath,"index.html")) -Value $GitHubPagesReportIndexHtml -Encoding UTF8
+
+# Mirror only the current channel leaves. Durable docs root files and other channels stay untouched.
+$null = New-Directory -Paths @($GitHubPagesReportsChannelPath)
+$null = New-Directory -Paths @($GitHubPagesDocFxChannelPath)
+Copy-FilesRecursively -SourceDirectory "$GitHubPagesReportsChannelStagingPath" -DestinationDirectory "$GitHubPagesReportsChannelPath" -Filter "*" -CopyEmptyDirs $false -ForceOverwrite $true -CleanDestination MirrorTree
+Copy-FilesRecursively -SourceDirectory "$GitHubPagesDocFxChannelStagingPath" -DestinationDirectory "$GitHubPagesDocFxChannelPath" -Filter "*" -CopyEmptyDirs $false -ForceOverwrite $true -CleanDestination MirrorTree
+
+if ($RunEnvironment.IsCI)
+{
+    # CI owns publication of the live channel snapshot. The workflow only triggers automatically for
+    # src/** changes, so this docs-only commit does not start another release and cannot form a loop.
+    # The workflow requires `permissions: contents: write`; repository Actions permissions must also
+    # allow a read/write GITHUB_TOKEN.
+    #
+    # Do not call Invoke-GitAddCommitPush when the snapshot is byte-for-byte unchanged: git commit
+    # returns exit code 1 for "nothing to commit", which should not turn a successful rebuild into a
+    # failed release.
+    $GitHubPagesReportsGitPath = "docs/reports/$DeploymentChannel"
+    $GitHubPagesDocFxGitPath = "docs/docfx/$DeploymentChannel"
+    $GitHubPagesChannelGitStatus = @(& git -C "$GitRepositoryRoot" status --porcelain -- "$GitHubPagesReportsGitPath" "$GitHubPagesDocFxGitPath")
+    if ($LASTEXITCODE -ne 0)
+    {
+        throw "Unable to inspect Git status for '$DeploymentChannel' documentation publication paths."
+    }
+
+    if ($GitHubPagesChannelGitStatus.Count -gt 0)
+    {
+        Invoke-GitAddCommitPush -TopLevelDirectory "$GitRepositoryRoot" -Folders @("$GitHubPagesReportsGitPath","$GitHubPagesDocFxGitPath") -CurrentBranch "$GitCurrentBranch" -CommitMessage "Update $DeploymentChannel documentation [skip ci]" -SafeDirectory -ExitOnError
+    }
+    else
+    {
+        Write-Host "Documentation snapshot for '$DeploymentChannel' is unchanged. Git commit/push skipped."
+    }
+}
+else
+{
+    Write-Host "Documentation snapshots updated locally at '$GitHubPagesReportsChannelPath' and '$GitHubPagesDocFxChannelPath'. Git commit/push skipped outside CI."
 }
 
 # additional publish copys
