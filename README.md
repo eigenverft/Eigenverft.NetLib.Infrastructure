@@ -2,11 +2,11 @@
 
 <!-- Maintenance note: This GitHub README has a NuGet/CommonMark counterpart in README.NUGET.md. Keep shared public-facing content aligned. -->
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=build)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-.NET%208%20%7C%2010-512BD4?logo=dotnet&logoColor=white)](#-target-frameworks) [![License](https://img.shields.io/github/license/eigenverft/Eigenverft.NetLib.Infrastructure?logo=mit)](LICENSE)
+[![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Infrastructure?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Infrastructure?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![Build Status](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=build)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-.NET%208%20%7C%2010-512BD4?logo=dotnet&logoColor=white)](#-target-frameworks) [![License](https://img.shields.io/github/license/eigenverft/Eigenverft.NetLib.Infrastructure?logo=mit)](LICENSE)
 
-Reusable non-web-specific infrastructure primitives for .NET applications and Generic Host-based services.
+Small, reusable infrastructure primitives for .NET applications and Generic Host-based services.
 
-The package is intentionally the generic counterpart to web-specific infrastructure: reusable .NET and hosting concerns belong here, while ASP.NET Core/Kestrel-specific adapters remain in dedicated WebLib packages.
+The first public primitive provides predictable, executable-rooted application directories with automatic creation and writable validation.
 
 ---
 
@@ -15,58 +15,129 @@ The package is intentionally the generic counterpart to web-specific infrastruct
 | | |
 | --- | --- |
 | Package | `Eigenverft.NetLib.Infrastructure` |
+| Primary API | `builder.AddDefaultDirectoryLayout()` |
+| Root | `AppContext.BaseDirectory` |
+| Default folders | `AppLogs`, `AppData`, `AppState`, `AppCerts`, `AppSettings` |
+| Host integration | Available before `Build()` and through DI afterwards |
 | Target frameworks | .NET 8 and .NET 10 |
-| Scope | General .NET and Generic Host infrastructure |
-| Web-specific APIs | Intentionally excluded from the core package |
 | License | MIT |
 
-## 🎯 Design boundary
-
-`Eigenverft.NetLib.Infrastructure` is for infrastructure that is useful outside ASP.NET Core applications and does not inherently depend on web-server concepts.
-
-Examples of suitable future primitives include reusable directory-layout models, Generic Host configuration infrastructure, early-host diagnostics, and other application-neutral building blocks. ASP.NET Core adapters and Kestrel/SNI behavior should stay in `Eigenverft.WebLib.Infrastructure` or another web-specific package.
-
-This keeps dependency direction simple:
-
-```text
-Eigenverft.NetLib.Infrastructure
-        ▲
-        │ optional dependency
-        │
-Eigenverft.WebLib.Infrastructure
-```
-
 ## 📦 Installation
-
-Package publication will be enabled when the first public API surface is ready. Once published, installation follows the normal NuGet flow:
 
 ```shell
 dotnet add package Eigenverft.NetLib.Infrastructure
 ```
 
-## 🧩 Repository standard
+Or with the NuGet Package Manager:
 
-This repository is also the minimal Eigenverft baseline for public .NET libraries:
+```powershell
+Install-Package Eigenverft.NetLib.Infrastructure
+```
 
-- `src/prj` / `src/wrk` repository layout
-- explicit package and version metadata
-- embedded package README and Eigenverft icon
-- MIT licensing
-- dedicated test project
-- Release build/test/pack validation
-- dependency, vulnerability, license, SBOM, and DocFX steps in CI/CD
-- GitHub Actions entry point in `.github/workflows/cicd.yml`
+## 🚀 Quick start
 
-The CI/CD scripts discover the solution and projects from repository metadata instead of hard-coding this package name. A new library should therefore need repository/package naming and public-facing content changes rather than a bespoke release pipeline.
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
+using Microsoft.Extensions.Hosting;
+
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+
+builder.AddDefaultDirectoryLayout();
+
+IAppDirectoryLayout directories = builder.GetDirectoryLayout();
+
+Console.WriteLine(directories[DefaultDirectory.ApplicationLogFiles]);
+Console.WriteLine(directories[DefaultDirectory.ApplicationData]);
+
+using IHost host = builder.Build();
+await host.RunAsync();
+```
+
+The standard layout is created directly below the executable directory:
+
+```text
+<application>/
+├─ AppLogs/
+├─ AppData/
+├─ AppState/
+├─ AppCerts/
+└─ AppSettings/
+```
+
+Each directory is created during registration and checked for write access, so path or permission problems fail early during startup instead of surfacing later during normal application work.
+
+The same layout is registered as `IAppDirectoryLayout` when the host is built, so normal constructor injection works as expected:
+
+```csharp
+public sealed class Worker(
+    ILogger<Worker> logger,
+    IAppDirectoryLayout directories) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        logger.LogInformation(
+            "Using application data directory {Directory}",
+            directories[DefaultDirectory.ApplicationData]);
+
+        await Task.Delay(Timeout.Infinite, stoppingToken);
+    }
+}
+```
+
+## 🗂️ Override standard folder names
+
+Unspecified standard directories keep their defaults:
+
+```csharp
+builder.AddDefaultDirectoryLayout(
+    new Dictionary<DefaultDirectory, string>
+    {
+        [DefaultDirectory.ApplicationData] = "Data",
+        [DefaultDirectory.ApplicationLogFiles] = "Logs",
+    });
+```
+
+## 🧩 Custom directory layouts
+
+Use semantic keys when the standard set is not what your application needs:
+
+```csharp
+builder.AddDirectoryLayout(
+    new Dictionary<string, string>
+    {
+        ["Cache"] = "cache",
+        ["Imports"] = "incoming",
+    });
+
+IAppDirectoryLayout directories = builder.GetDirectoryLayout();
+string imports = directories["Imports"];
+```
+
+Folder mappings are intentionally direct children of the application root. Rooted paths, nested paths, and traversal patterns are rejected.
+
+## 🔧 Without Generic Host
+
+The same layout primitive can be used directly when no host builder is involved:
+
+```csharp
+AppDirectoryLayout directories = AppDirectoryLayoutFactory.CreateDefault();
+```
+
+An explicit root can also be supplied to the factory for tools, tests, or custom bootstrap scenarios.
 
 ## 🎯 Target frameworks
 
-The package is prepared to ship dedicated assets for:
+The package ships dedicated assets for:
 
 - `net8.0`
 - `net10.0`
 
-A .NET 9 consumer can use the compatible `net8.0` asset. Preview target frameworks are intentionally excluded from the baseline.
+A .NET 9 consumer can use the compatible `net8.0` asset.
+
+## 📚 Documentation
+
+- [GitHub Pages documentation](https://eigenverft.github.io/Eigenverft.NetLib.Infrastructure/)
+- [Generated API reference](https://eigenverft.github.io/Eigenverft.NetLib.Infrastructure/api/)
 
 ## 🧪 Build and test
 
@@ -75,19 +146,19 @@ From the repository root:
 ```shell
 dotnet build src/Eigenverft.NetLib.Infrastructure.slnx --configuration Release
 dotnet test src/Eigenverft.NetLib.Infrastructure.slnx --configuration Release
-dotnet pack src/prj/Eigenverft.NetLib.Infrastructure/Eigenverft.NetLib.Infrastructure.csproj --configuration Release
 ```
 
 ## 🚢 Releases
 
-`main` is intended to be the production channel once package publication is enabled. The repository CI/CD pipeline performs build, test, documentation, packaging, dependency-health, license, and release preparation from the same reusable workflow used by other Eigenverft public libraries.
+`main` is the production channel. Every accepted change is built, tested, documented, packed, and published by the repository CI/CD workflow.
 
-No repository visibility change or NuGet publication is implied by the presence of the release scaffold.
+Package versions follow the Eigenverft Drydock timestamp-based versioning scheme. Published versions and download history are available on [NuGet.org](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure).
 
 ## 🤝 Contributing and support
 
 - 🐛 [Open an issue](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/issues)
 - 🔧 [Submit a pull request](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/pulls)
+- 📦 [View the package on NuGet.org](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure)
 
 ## 📄 License
 

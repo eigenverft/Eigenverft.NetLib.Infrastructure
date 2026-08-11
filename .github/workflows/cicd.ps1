@@ -86,7 +86,7 @@ Test-VariableValue -Variable { $GitRemoteUrl } -ExitIfNullOrEmpty
 $BranchDeploymentConfig = Convert-BranchToDeploymentInfo -BranchName "$GitCurrentBranch"
 
 # Generates a version based on the current date time to verify the version functions work as expected
-$GeneratedVersion = Convert-DateTimeTo64SecVersionComponents -VersionBuild 0 -VersionMajor 1
+$GeneratedVersion = Convert-DateTimeTo64SecVersionComponents -VersionBuild 1 -VersionMajor 0
 #$GeneratedVersion.VersionFull = "0.1.20256.30636"
 $GeneratedVersionAsDateTime = Convert-64SecVersionComponentsToDateTime -VersionBuild $GeneratedVersion.VersionBuild -VersionMajor $GeneratedVersion.VersionMajor -VersionMinor $GeneratedVersion.VersionMinor -VersionRevision $GeneratedVersion.VersionRevision
 Test-VariableValue -Variable { $GeneratedVersion } -ExitIfNullOrEmpty

@@ -1,10 +1,10 @@
 # 🧱 Eigenverft.NetLib.Infrastructure
 
-[![Targets](https://img.shields.io/badge/targets-.NET%208%20%7C%2010-512BD4?logo=dotnet&logoColor=white)](#-target-frameworks) [![License](https://img.shields.io/github/license/eigenverft/Eigenverft.NetLib.Infrastructure?logo=mit)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE)
+[![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Infrastructure?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Infrastructure?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![Targets](https://img.shields.io/badge/targets-.NET%208%20%7C%2010-512BD4?logo=dotnet&logoColor=white)](#-target-frameworks) [![License](https://img.shields.io/github/license/eigenverft/Eigenverft.NetLib.Infrastructure?logo=mit)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE)
 
-Reusable non-web-specific infrastructure primitives for .NET applications and Generic Host-based services.
+Small, reusable infrastructure primitives for .NET applications and Generic Host-based services.
 
-The package is intentionally the generic counterpart to web-specific infrastructure: reusable .NET and hosting concerns belong here, while ASP.NET Core/Kestrel-specific adapters remain in dedicated WebLib packages.
+The first public primitive provides predictable, executable-rooted application directories with automatic creation and writable validation.
 
 ---
 
@@ -13,16 +13,12 @@ The package is intentionally the generic counterpart to web-specific infrastruct
 | | |
 | --- | --- |
 | Package | `Eigenverft.NetLib.Infrastructure` |
+| Primary API | `builder.AddDefaultDirectoryLayout()` |
+| Root | `AppContext.BaseDirectory` |
+| Default folders | `AppLogs`, `AppData`, `AppState`, `AppCerts`, `AppSettings` |
+| Host integration | Available before `Build()` and through DI afterwards |
 | Target frameworks | .NET 8 and .NET 10 |
-| Scope | General .NET and Generic Host infrastructure |
-| Web-specific APIs | Intentionally excluded from the core package |
 | License | MIT |
-
-## 🎯 Design boundary
-
-The package is for infrastructure that is useful outside ASP.NET Core applications and does not inherently depend on web-server concepts.
-
-The intended dependency direction is simple: generic primitives live in `Eigenverft.NetLib.Infrastructure`; ASP.NET Core adapters may build on them from `Eigenverft.WebLib.Infrastructure` or another web-specific package.
 
 ## 📦 Installation
 
@@ -36,6 +32,91 @@ Or with the NuGet Package Manager:
 Install-Package Eigenverft.NetLib.Infrastructure
 ```
 
+## 🚀 Quick start
+
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
+using Microsoft.Extensions.Hosting;
+
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+
+builder.AddDefaultDirectoryLayout();
+IAppDirectoryLayout directories = builder.GetDirectoryLayout();
+
+Console.WriteLine(directories[DefaultDirectory.ApplicationLogFiles]);
+Console.WriteLine(directories[DefaultDirectory.ApplicationData]);
+
+using IHost host = builder.Build();
+await host.RunAsync();
+```
+
+The standard layout is created directly below the executable directory:
+
+```text
+<application>/
+├─ AppLogs/
+├─ AppData/
+├─ AppState/
+├─ AppCerts/
+└─ AppSettings/
+```
+
+Each directory is created during registration and checked for write access, so path or permission problems fail early during startup.
+
+The same layout is registered as `IAppDirectoryLayout` after `Build()`, so normal constructor injection works as expected:
+
+```csharp
+public sealed class Worker(
+    ILogger<Worker> logger,
+    IAppDirectoryLayout directories) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        logger.LogInformation(
+            "Using application data directory {Directory}",
+            directories[DefaultDirectory.ApplicationData]);
+
+        await Task.Delay(Timeout.Infinite, stoppingToken);
+    }
+}
+```
+
+## 🗂️ Override standard folder names
+
+```csharp
+builder.AddDefaultDirectoryLayout(
+    new Dictionary<DefaultDirectory, string>
+    {
+        [DefaultDirectory.ApplicationData] = "Data",
+        [DefaultDirectory.ApplicationLogFiles] = "Logs",
+    });
+```
+
+Unspecified standard directories retain their defaults.
+
+## 🧩 Custom directory layouts
+
+```csharp
+builder.AddDirectoryLayout(
+    new Dictionary<string, string>
+    {
+        ["Cache"] = "cache",
+        ["Imports"] = "incoming",
+    });
+
+string imports = builder.GetDirectoryLayout()["Imports"];
+```
+
+Folder mappings are intentionally direct children of the application root. Rooted paths, nested paths, and traversal patterns are rejected.
+
+## 🔧 Without Generic Host
+
+```csharp
+AppDirectoryLayout directories = AppDirectoryLayoutFactory.CreateDefault();
+```
+
+An explicit root can also be supplied to the factory for tools, tests, or custom bootstrap scenarios.
+
 ## 🎯 Target frameworks
 
 The package ships dedicated assets for:
@@ -43,11 +124,12 @@ The package ships dedicated assets for:
 - `net8.0`
 - `net10.0`
 
-A .NET 9 consumer can use the compatible `net8.0` asset. Preview target frameworks are intentionally excluded.
+A .NET 9 consumer can use the compatible `net8.0` asset.
 
 ## 🔗 Project links
 
 - [GitHub repository](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure)
+- [Documentation](https://eigenverft.github.io/Eigenverft.NetLib.Infrastructure/)
 - [Issues](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/issues)
 - [NuGet package](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure)
 
