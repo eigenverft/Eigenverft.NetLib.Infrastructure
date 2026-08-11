@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execute Local Implementation Handoff Creation"
+  short_description: "Create useful repository-grounded handoffs"
+  default_prompt: "Use $execute-local-implementation-handoff-creation to investigate the requested repository scope and create only concrete implementation handoffs. Work directly by default. Delegate only when the user explicitly asks for one or more subagents; assign each delegated run a unique short hash. When more than one subagent runs, isolate every prompt from repository-local AGENTS.md so concurrent agents do not repeat shared run-once work or mutate the same worktree during setup, and repeat every essential task constraint directly in each prompt. Store justified results in AGENTS/HANDOFF/ using handoff-<handoffhash>-NN-<topic>.md. Return only created paths, or exactly NO_HANDOFFS_CREATED. Do not implement the findings."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Concept Model"
+  short_description: "Find weak concepts and realistic source-based alternatives"
+  default_prompt: "Use $review-concept-model as a source-first, read-only review to identify only material weak concepts, costly underlying models, and implementation ideas that create unnecessary complexity now. Do not invent findings to satisfy an output shape. When findings qualify, group the concept-level pain points, highlight the highest-pain cluster, judge whether the idea itself makes sense, suggest realistic alternatives, and turn them into concrete improvement tasks without implementing them. If none qualify, return exactly 'Concept model review complete. Material findings: 0.'"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Software Delivery Simplification"
+  short_description: "Simplify build, deployment, updates, and real-world operation"
+  default_prompt: "Use $review-software-delivery-simplification as a source-first, review-only analysis of the real delivery lifecycle. Reconstruct build, publish, first install, configuration, secrets, persistent state, update, verification, rollback, and handover from project evidence; distinguish facts from assumptions; then propose the smallest safe repeatable workflows and prioritized changes. Keep repository and external systems unchanged."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execute Preparatory Codebase Change"
+  short_description: "Prepare the codebase for a later task without implementing it"
+  default_prompt: "Use $execute-preparatory-codebase-change to prepare the current codebase for the target task without implementing or partially completing that task. Inspect first. Make one small behavior-preserving preparatory change only when it is uniquely appropriate; if several reasonable directions exist, present them and wait for lock-in without editing."

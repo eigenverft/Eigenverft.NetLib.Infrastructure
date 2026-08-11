@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review High-Level Software Architecture"
+  short_description: "Source-first architecture directions and tasks"
+  default_prompt: "Use $review-high-level-software-architecture for a source-first, read-only architecture review. Return only material concerns that support a worthwhile current change. For qualifying findings, provide realistic direction options, concrete source-based refactoring tasks, one recommended direction, risks, and a checkpoint. Do not manufacture options or task counts; if no material concern qualifies, return exactly 'Architecture review complete. Material findings: 0.'"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Code Duplication and Indirection"
+  short_description: "Source-first guidance for safe consolidation and deduplication."
+  default_prompt: "Use $review-code-duplication-and-indirection as a source-first, read-only review for material duplication or needless indirection worth reducing now. Do not invent findings to satisfy task counts. For qualifying findings, provide concrete completed refactoring directions that reduce duplication, consolidate repeated logic, keep feature ownership clear, and simplify without over-abstracting; do not implement them. If none qualify, return exactly 'Duplication review complete. Material findings: 0.'"

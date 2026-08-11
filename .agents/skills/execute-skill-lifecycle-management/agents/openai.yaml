@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execute Skill Lifecycle Management"
+  short_description: "Manage skills from the git-root workspace"
+  default_prompt: "Use $execute-skill-lifecycle-management to create, update, delete, and validate skills under the git-root .agents/skills directory. Preserve unselected metadata and resources during updates. Before delete, cleanup-personal, or resource pruning, verify the exact target and require explicit destructive confirmation."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execute Repo Change Grouping and Commit Creation"
+  short_description: "Group repository diffs and execute logical commits"
+  default_prompt: "Use $execute-repo-change-grouping-and-commit-creation to analyze repository differences, group understood in-scope changes into logical local commits, and execute safe staging and commit steps. If I ask for planning, review, or reporting only, stop before staging or committing. Preserve unexplained, sensitive, generated, ignored, or unrelated changes. Do not fetch, pull, push, or change file tracking policy unless I explicitly request that remote or policy action."

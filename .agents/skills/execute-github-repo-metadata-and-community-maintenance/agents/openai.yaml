@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execute GitHub Repo Metadata and Community Maintenance"
+  short_description: "Auto-reconcile GitHub repo metadata and README polish"
+  default_prompt: "Use $execute-github-repo-metadata-and-community-maintenance to inspect current GitHub state first, then auto-reconcile missing or stale repository metadata, community surface, public distribution signals, and applicable README presentation polish from the README, repo content, and confirmed external package or docs surfaces with minimal churn. Use only existing secure gh or runtime-managed authentication; never ask me to paste a token or read one from a file. Confirm immediately before changing GitHub repository feature settings."

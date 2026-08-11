@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Code Quality"
+  short_description: "Report only actionable code-rule violations"
+  default_prompt: "Use $review-code-quality for a read-only, source-first review of main-product source, solution, and project-definition files against every applicable extension-mapped repository rule. Activate it only for an explicitly requested code-quality or rule review, not merely because files will be created or modified. Return only actual rule violations with locations and recommended corrections, plus any concrete review conflict or limitation required by the skill. If the review completes without violations, conflicts, or limitations, return exactly 'Code quality review complete. Material findings: 0.' Keep files and Git state unchanged and do not run builds or tests."

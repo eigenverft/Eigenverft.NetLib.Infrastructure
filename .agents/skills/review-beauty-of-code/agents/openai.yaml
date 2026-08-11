@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Beauty of Code"
+  short_description: "Find focused repository-bound beauty improvements"
+  default_prompt: "Use $review-beauty-of-code as an independent, source-first, repository-bound review. Judge beauty through honest naming, local readability, consistency with strong existing patterns, meaningful surfaces, proportional complexity, and readable tests or scripts. Return only concrete high- or medium-confidence chat findings that are worthwhile for the current repository state. Recommend the smallest coherent direction that improves truthfulness and understanding while preserving behavior and compatibility. Let repository language and actual product needs determine the architecture shape. Use zero findings when the current code is already proportionate, and return exactly 'Beauty review complete. Material findings: 0.' in that case. Keep files, dependencies, configuration, generated artifacts, and Git state unchanged."

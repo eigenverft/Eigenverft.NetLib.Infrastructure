@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Architecture Responsibility Boundaries"
+  short_description: "Review responsibility and lifecycle boundaries"
+  default_prompt: "Use $review-architecture-responsibility-boundaries to perform a read-only, source-first review of responsibility, ownership, separation-of-concerns, and lifecycle boundaries in the selected implementation. Report only evidence-backed concerns, keep repository state unchanged, and use the required architecture verdict, responsibility map, findings, positive observations, final assessment, and decision format."

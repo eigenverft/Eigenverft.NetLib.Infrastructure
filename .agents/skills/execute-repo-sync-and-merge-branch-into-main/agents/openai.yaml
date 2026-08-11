@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execute Repo Sync and Merge Branch into Main"
+  short_description: "Sync a branch and bring it onto main"
+  default_prompt: "Use $execute-repo-sync-and-merge-branch-into-main to verify the current branch is fully synced with remote, switch to the detected mainline branch, refresh mainline from remote, and merge the branch into main locally. Do not push mainline or delete the source branch locally or remotely unless I explicitly request that separate action."

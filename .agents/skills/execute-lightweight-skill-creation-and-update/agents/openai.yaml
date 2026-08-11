@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execute Lightweight Skill Creation and Update"
+  short_description: "Create skill files directly from lightweight specs"
+  default_prompt: "Use $execute-lightweight-skill-creation-and-update to create or minimally update a complete skill package under the git-root .agents/skills directory from my description. Inventory the selected package first, preserve unspecified metadata and resources, validate required interface fields including a $skill-name default prompt, and obtain explicit authorization before overwriting or removing existing resources."
