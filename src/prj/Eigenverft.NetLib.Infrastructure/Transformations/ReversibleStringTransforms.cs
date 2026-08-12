@@ -271,7 +271,11 @@ namespace Eigenverft.NetLib.Infrastructure.Transformations
                 (string value, out string original) => TryReversePipeline(value, pipeline, out original));
         }
 
-        internal static string NormalizeReadablePassword(string password, string parameterName)
+        /// <summary>Validates and returns a non-empty visible-ASCII password.</summary>
+        /// <param name="password">The password to validate.</param>
+        /// <param name="parameterName">The parameter name used when validation fails.</param>
+        /// <returns>The validated password unchanged.</returns>
+        public static string NormalizeReadablePassword(string password, string parameterName)
         {
             ArgumentException.ThrowIfNullOrEmpty(password, parameterName);
 
@@ -289,7 +293,11 @@ namespace Eigenverft.NetLib.Infrastructure.Transformations
             return password;
         }
 
-        internal static string NormalizeReadablePassword(byte[] passwordBytes, string parameterName)
+        /// <summary>Validates visible-ASCII password bytes and returns their ASCII string representation.</summary>
+        /// <param name="passwordBytes">The password bytes to validate.</param>
+        /// <param name="parameterName">The parameter name used when validation fails.</param>
+        /// <returns>The validated password represented as ASCII text.</returns>
+        public static string NormalizeReadablePassword(byte[] passwordBytes, string parameterName)
         {
             ArgumentNullException.ThrowIfNull(passwordBytes, parameterName);
             if (passwordBytes.Length == 0)
@@ -311,7 +319,11 @@ namespace Eigenverft.NetLib.Infrastructure.Transformations
             return Encoding.ASCII.GetString(passwordBytes);
         }
 
-        internal static bool TryReverseCaesarPayload(string payload, out string original)
+        /// <summary>Attempts to reverse a self-describing Caesar payload containing its normalized shift.</summary>
+        /// <param name="payload">The encoded Caesar payload.</param>
+        /// <param name="original">The reversed value when successful; otherwise the supplied payload.</param>
+        /// <returns><see langword="true"/> when the payload is valid and reversible; otherwise <see langword="false"/>.</returns>
+        public static bool TryReverseCaesarPayload(string payload, out string original)
         {
             return TryReverseCaesarPayload(payload, out _, out original);
         }

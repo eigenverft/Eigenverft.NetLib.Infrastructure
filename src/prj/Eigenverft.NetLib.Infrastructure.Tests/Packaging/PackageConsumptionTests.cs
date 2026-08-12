@@ -134,6 +134,9 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
                 _ = customTransform.Apply("package-consumer");
                 _ = PhysicalMachineBinding.TryGetFingerprint(out _);
                 _ = ReversibleStringTransforms.DpapiMachine;
+                _ = ReversibleStringTransforms.NormalizeReadablePassword("package-consumer", "password");
+                _ = ReversibleStringTransforms.NormalizeReadablePassword(new byte[] { 0x70, 0x77 }, "passwordBytes");
+                _ = ReversibleStringTransforms.TryReverseCaesarPayload("13:cnpxntr-pbafhzre", out _);
 
                 return string.IsNullOrWhiteSpace(settingsDirectory)
                     || !certificate.HasPrivateKey
