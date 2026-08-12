@@ -94,6 +94,36 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateKeyProfile.yml",
       "output": {
         ".html": {

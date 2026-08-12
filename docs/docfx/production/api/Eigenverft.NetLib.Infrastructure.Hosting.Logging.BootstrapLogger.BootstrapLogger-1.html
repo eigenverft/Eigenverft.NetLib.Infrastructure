@@ -5,10 +5,10 @@
   <head>
     <meta charset="utf-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-      <title>Class PhysicalMachineBinding
+      <title>Class BootstrapLogger&lt;TCategoryName&gt;
  | Eigenverft.NetLib.Infrastructure </title>
       <meta name="viewport" content="width=device-width">
-      <meta name="title" content="Class PhysicalMachineBinding
+      <meta name="title" content="Class BootstrapLogger&lt;TCategoryName&gt;
  | Eigenverft.NetLib.Infrastructure ">
     
       <link rel="shortcut icon" href="../favicon.ico">
@@ -120,8 +120,8 @@
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.html" title="BootstrapLogger" class="">BootstrapLogger</a>
                           </li>
-                          <li class="">
-                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger-1.html" title="BootstrapLogger&lt;TCategoryName&gt;" class="">BootstrapLogger&lt;TCategoryName&gt;</a>
+                          <li class="active">
+                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger-1.html" title="BootstrapLogger&lt;TCategoryName&gt;" class="active">BootstrapLogger&lt;TCategoryName&gt;</a>
                           </li>
                         </ul>
                     </li>
@@ -167,8 +167,8 @@
                       <a href="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.html" title="Eigenverft.NetLib.Infrastructure.Security.MachineBinding" class="">Eigenverft.NetLib.Infrastructure.Security.MachineBinding</a>
 
                         <ul class="nav level2">
-                          <li class="active">
-                            <a href="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding.html" title="PhysicalMachineBinding" class="active">PhysicalMachineBinding</a>
+                          <li class="">
+                            <a href="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding.html" title="PhysicalMachineBinding" class="">PhysicalMachineBinding</a>
                           </li>
                         </ul>
                     </li>
@@ -206,19 +206,19 @@
         </div>
         <div class="article row grid-right">
           <div class="col-md-10">
-            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding">
+            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1">
 
 
 
-  <h1 id="Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding" data-uid="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding" class="text-break">Class PhysicalMachineBinding
+  <h1 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1" class="text-break">Class BootstrapLogger&lt;TCategoryName&gt;
 </h1>
-  <div class="markdown level0 summary"><p>Derives a stable, non-secret fingerprint from the current system/platform UUID for lightweight machine binding.</p>
+  <div class="markdown level0 summary"><p>Provides a refactor-friendly pre-host logger for early startup logging.</p>
 </div>
   <div class="markdown level0 conceptual"></div>
   <div class="inheritance">
     <h5>Inheritance</h5>
     <div class="level0"><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
-    <div class="level1"><span class="xref">PhysicalMachineBinding</span></div>
+    <div class="level1"><span class="xref">BootstrapLogger&lt;TCategoryName&gt;</span></div>
   </div>
   <div class="inheritedMembers">
     <h5>Inherited Members</h5>
@@ -244,51 +244,82 @@
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
     </div>
   </div>
-  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.html">Security</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.html">MachineBinding</a></h6>
+  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.html">Hosting</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.html">Logging</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.html">BootstrapLogger</a></h6>
   <h6><strong>Assembly</strong>: Eigenverft.NetLib.Infrastructure.dll</h6>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_syntax">Syntax</h5>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_syntax">Syntax</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static class PhysicalMachineBinding</code></pre>
+    <pre><code class="lang-csharp hljs">public static class BootstrapLogger&lt;TCategoryName&gt;</code></pre>
   </div>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_remarks"><strong>Remarks</strong></h5>
-  <div class="markdown level0 remarks"><p>
-This helper is intentionally not a hardware security boundary and the returned fingerprint is not a secret. Its
-purpose is narrower: an attacker who copies an application's files to another machine should also need to obtain
-system information from the original machine before a value derived from this fingerprint can be reproduced.
-This adds an additional offline/lateral-movement step; it does not defend against an attacker who can already read
-the platform UUID on the source machine or inspect a process after the fingerprint has been derived.
-</p>
-<p>
-Version 1 deliberately uses one semantically comparable platform identifier on every supported operating system:
-the SMBIOS system UUID on Windows, the DMI product UUID on Linux, and IOPlatformUUID on macOS. Virtual machines
-generally expose a virtual platform UUID, so in that environment the binding is to the VM identity rather than to
-the physical host. Cloning or re-provisioning a VM may therefore preserve or change the binding depending on the
-hypervisor and provisioning process.
-</p>
-<p>
-The implementation intentionally has no additional management-library dependency. If broader machine inventory
-becomes useful later, Microsoft.Management.Infrastructure can be evaluated as an extension point; collecting a
-wider CIM/hardware inventory is explicitly outside the scope of this minimal V1 binding.
-</p>
+  <h5 class="typeParameters">Type Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="parametername">TCategoryName</span></td>
+        <td><p>The category type used to name the logger.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_remarks"><strong>Remarks</strong></h5>
+  <div class="markdown level0 remarks"><p>Intended for logging before the host is built, when DI resolution of <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.iloggerfactory">ILoggerFactory</a> is not available.
+The resulting logger is deliberately a stable, process-wide bootstrap channel. It is not rebound when the
+application later replaces Serilog's global logger or configures the host logging pipeline. This separation lets
+startup diagnostics inspect configuration and logging setup without depending on the setup being diagnosed.</p>
+<p>Resolution strategy on the first call:</p>
+<ul>
+<li>If Serilog and the Serilog-to-MEL bridge are available and the current global logger is not Serilog's built-in
+default silent logger, that logger is captured by a Serilog-backed <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.iloggerfactory">ILoggerFactory</a>.</li>
+<li>Serilog's built-in default silent logger is treated as &quot;not explicitly initialized&quot; and uses the Microsoft fallback.
+Sink configuration is otherwise not inferred; every explicitly assigned Serilog logger is accepted as intentional.</li>
+<li>Otherwise, a minimal Microsoft logging factory is created with Console support when available, optionally
+applying the &quot;Logging&quot; configuration section when possible.</li>
+</ul>
+<p>The first successful factory creation wins for the process. Later configuration arguments and later application
+logging changes intentionally do not alter existing bootstrap loggers.</p>
 </div>
   <h3 id="methods">Methods
 </h3>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_GetFingerprint.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding.GetFingerprint%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateLogger_Microsoft_Extensions_Configuration_IConfiguration_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger%601.CreateLogger(Microsoft.Extensions.Configuration.IConfiguration)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Security/MachineBinding/PhysicalMachineBinding.cs/#L59">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Logging/BootstrapLogger/BootstrapLogger.cs/#L48">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_GetFingerprint_" data-uid="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding.GetFingerprint*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_GetFingerprint" data-uid="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding.GetFingerprint">GetFingerprint()</h4>
-  <div class="markdown level1 summary"><p>Gets the V1 machine fingerprint for the current system.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateLogger_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateLogger*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateLogger_Microsoft_Extensions_Configuration_IConfiguration_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateLogger(Microsoft.Extensions.Configuration.IConfiguration)">CreateLogger(IConfiguration?)</h4>
+  <div class="markdown level1 summary"><p>Creates a pre-host <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.ilogger-1">ILogger&lt;TCategoryName&gt;</a> using <code class="typeparamref">TCategoryName</code> as category.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static string GetFingerprint()</code></pre>
+    <pre><code class="lang-csharp hljs">public static ILogger&lt;TCategoryName&gt; CreateLogger(IConfiguration? configuration = null)</code></pre>
   </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.configuration.iconfiguration">IConfiguration</a></td>
+        <td><span class="parametername">configuration</span></td>
+        <td><p>Optional configuration used only when the process-wide factory is first created. It may apply the
+&quot;Logging&quot; section to the Microsoft fallback factory when the required logging configuration package is available.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
   <h5 class="returns">Returns</h5>
   <table class="table table-bordered table-condensed">
     <thead>
@@ -299,53 +330,80 @@ wider CIM/hardware inventory is explicitly outside the scope of this minimal V1 
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><p>An uppercase SHA-256 hexadecimal string derived from a versioned canonical representation of the platform UUID.</p>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.ilogger-1">ILogger</a>&lt;TCategoryName&gt;</td>
+        <td><p>A logger instance that can be used prior to building the host.</p>
 </td>
       </tr>
     </tbody>
   </table>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_GetFingerprint_remarks">Remarks</h5>
-  <div class="markdown level1 remarks"><p>Hashing normalizes the representation and avoids propagating the raw platform UUID through consuming APIs; it
-does not make the underlying UUID secret. The version/domain prefix is part of the fingerprint contract so a
-future binding strategy can coexist with V1 instead of silently changing previously derived AES material.</p>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateLogger_Microsoft_Extensions_Configuration_IConfiguration__examples">Examples</h5>
+  <pre><code class="lang-csharp">ILogger startupLogger = BootstrapLogger&lt;Program&gt;.CreateLogger(builder.Configuration);</code></pre>
+
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateLoggerFactory_Microsoft_Extensions_Configuration_IConfiguration_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger%601.CreateLoggerFactory(Microsoft.Extensions.Configuration.IConfiguration)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Logging/BootstrapLogger/BootstrapLogger.cs/#L116">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateLoggerFactory_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateLoggerFactory*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateLoggerFactory_Microsoft_Extensions_Configuration_IConfiguration_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateLoggerFactory(Microsoft.Extensions.Configuration.IConfiguration)">CreateLoggerFactory(IConfiguration?)</h4>
+  <div class="markdown level1 summary"><p>Creates (or returns the cached) <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.iloggerfactory">ILoggerFactory</a> suitable for pre-host usage.</p>
 </div>
-  <h5 class="exceptions">Exceptions</h5>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ILoggerFactory CreateLoggerFactory(IConfiguration? configuration = null)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
   <table class="table table-bordered table-condensed">
     <thead>
       <tr>
         <th>Type</th>
-        <th>Condition</th>
+        <th>Name</th>
+        <th>Description</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.platformnotsupportedexception">PlatformNotSupportedException</a></td>
-        <td><p>The current operating system is not supported.</p>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.configuration.iconfiguration">IConfiguration</a></td>
+        <td><span class="parametername">configuration</span></td>
+        <td><p>Optional configuration used to apply the &quot;Logging&quot; section (levels and filters) if available.</p>
 </td>
       </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
       <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.invalidoperationexception">InvalidOperationException</a></td>
-        <td><p>The current operating system is supported, but no valid system/platform UUID is available.</p>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.iloggerfactory">ILoggerFactory</a></td>
+        <td><p>The process-owned cached <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.iloggerfactory">ILoggerFactory</a>. Callers may create loggers from it but must not dispose it.</p>
 </td>
       </tr>
     </tbody>
   </table>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_TryGetFingerprint_System_String__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding.TryGetFingerprint(System.String%40)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateRequiredSerilogLogger_System_String_System_String_System_String_System_Boolean_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger%601.CreateRequiredSerilogLogger(System.String%2CSystem.String%2CSystem.String%2CSystem.Boolean)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Security/MachineBinding/PhysicalMachineBinding.cs/#L81">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Logging/BootstrapLogger/BootstrapLogger.cs/#L93">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_TryGetFingerprint_" data-uid="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding.TryGetFingerprint*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_TryGetFingerprint_System_String__" data-uid="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding.TryGetFingerprint(System.String@)">TryGetFingerprint(out string)</h4>
-  <div class="markdown level1 summary"><p>Attempts to derive the V1 machine fingerprint for the current system.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateRequiredSerilogLogger_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateRequiredSerilogLogger*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateRequiredSerilogLogger_System_String_System_String_System_String_System_Boolean_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateRequiredSerilogLogger(System.String,System.String,System.String,System.Boolean)">CreateRequiredSerilogLogger(string, string?, string, bool)</h4>
+  <div class="markdown level1 summary"><p>Creates a required Serilog-backed pre-host logger from one explicit JSON configuration file.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static bool TryGetFingerprint(out string fingerprint)</code></pre>
+    <pre><code class="lang-csharp hljs">public static ILogger&lt;TCategoryName&gt; CreateRequiredSerilogLogger(string configurationFile = &quot;AppSettings/BootstrapLoggerSettings.json&quot;, string? baseDirectory = null, string sectionName = &quot;Serilog&quot;, bool reloadOnChange = false)</code></pre>
   </div>
   <h5 class="parameters">Parameters</h5>
   <table class="table table-bordered table-condensed">
@@ -359,58 +417,30 @@ future binding strategy can coexist with V1 instead of silently changing previou
     <tbody>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><span class="parametername">fingerprint</span></td>
-        <td><p>Receives the uppercase SHA-256 hexadecimal fingerprint on success.</p>
+        <td><span class="parametername">configurationFile</span></td>
+        <td><p>The JSON file containing the isolated bootstrap Serilog configuration. Relative paths are resolved beneath
+<code class="paramref">baseDirectory</code>. The default is <code>AppSettings/BootstrapLoggerSettings.json</code>.</p>
 </td>
       </tr>
-    </tbody>
-  </table>
-  <h5 class="returns">Returns</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
-        <td><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when a valid platform UUID was available; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
-</td>
-      </tr>
-    </tbody>
-  </table>
-  <span class="small pull-right mobile-hide">
-    <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_TryGetSystemPlatformUuid_System_String__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding.TryGetSystemPlatformUuid(System.String%40)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
-  </span>
-  <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Security/MachineBinding/PhysicalMachineBinding.cs/#L109">View Source</a>
-  </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_TryGetSystemPlatformUuid_" data-uid="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding.TryGetSystemPlatformUuid*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_TryGetSystemPlatformUuid_System_String__" data-uid="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding.TryGetSystemPlatformUuid(System.String@)">TryGetSystemPlatformUuid(out string)</h4>
-  <div class="markdown level1 summary"><p>Attempts to read the normalized system/platform UUID used as the V1 binding source.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-  <h5 class="declaration">Declaration</h5>
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static bool TryGetSystemPlatformUuid(out string platformUuid)</code></pre>
-  </div>
-  <h5 class="parameters">Parameters</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Name</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><span class="parametername">platformUuid</span></td>
-        <td><p>Receives the canonical uppercase UUID in <code>D</code> format on success.</p>
+        <td><span class="parametername">baseDirectory</span></td>
+        <td><p>The base directory used to resolve a relative <code class="paramref">configurationFile</code>. A null value uses
+<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.appcontext.basedirectory">BaseDirectory</a>, making the parameterless call suitable for static field initialization.</p>
+</td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">sectionName</span></td>
+        <td><p>The configuration section consumed by Serilog.Settings.Configuration. The default is <code>Serilog</code>.</p>
+</td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td><span class="parametername">reloadOnChange</span></td>
+        <td><p>Enables the JSON configuration provider's change notifications. The default is false so the bootstrap channel
+remains completely stable. When enabled, Serilog can update existing minimum-level overrides and level switches;
+it does not rebuild or replace the configured sink pipeline.</p>
 </td>
       </tr>
     </tbody>
@@ -425,16 +455,27 @@ future binding strategy can coexist with V1 instead of silently changing previou
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
-        <td><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when a valid UUID is available; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.ilogger-1">ILogger</a>&lt;TCategoryName&gt;</td>
+        <td><p>A stable <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.ilogger-1">ILogger&lt;TCategoryName&gt;</a> backed by the Serilog instance created from the file.</p>
 </td>
       </tr>
     </tbody>
   </table>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_TryGetSystemPlatformUuid_System_String___remarks">Remarks</h5>
-  <div class="markdown level1 remarks"><p>The returned UUID is machine information, not secret key material. Callers that only need a binding value should
-prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding.html#Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_GetFingerprint">GetFingerprint()</a> or <a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding.html#Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding_TryGetFingerprint_System_String__">TryGetFingerprint(out string)</a> so the V1 normalization contract remains
-centralized here.</p>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateRequiredSerilogLogger_System_String_System_String_System_String_System_Boolean__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>This strict API must not be confused with <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateLogger_Microsoft_Extensions_Configuration_IConfiguration_">CreateLogger(IConfiguration?)</a>. The automatic method uses
+an already initialized Serilog logger when one exists and otherwise falls back to Microsoft logging. This method
+instead explicitly creates Serilog from the named file and never falls back.</p>
+<p>The bootstrap configuration is intentionally isolated. It does not load ASP.NET Core defaults, environment-specific
+companion files, environment variables, command-line arguments, DPAPI decoding, or the later application logging
+configuration. This separation allows the static bootstrap logger to report failures in those later configuration
+stages without depending on them.</p>
+<p>Serilog core, Serilog.Settings.Configuration, Serilog.Extensions.Logging, and every sink or enricher named by the
+JSON file must be supplied by the consuming application. The NetLib has no compile-time Serilog reference and uses
+reflection exclusively. Missing components, invalid JSON, and incompatible Serilog APIs produce descriptive startup
+exceptions. This method must be the first BootstrapLogger initialization in the process; later replacement of the
+global Serilog logger does not rebind the created bootstrap channel.</p>
+<p>When called from a static field initializer, failures may occur before the <code>Main</code> method body is entered and can
+therefore surface as a type-initialization exception. This fail-fast behavior is intentional for a required provider.</p>
 </div>
 
 </article>
@@ -445,10 +486,10 @@ centralized here.</p>
               <div class="contribution">
                 <ul class="nav">
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_MachineBinding_PhysicalMachineBinding.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.MachineBinding.PhysicalMachineBinding%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger%601%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
                   </li>
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Security/MachineBinding/PhysicalMachineBinding.cs/#L34" class="contribution-link">View Source</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Logging/BootstrapLogger/BootstrapLogger.cs/#L33" class="contribution-link">View Source</a>
                   </li>
                 </ul>
               </div>

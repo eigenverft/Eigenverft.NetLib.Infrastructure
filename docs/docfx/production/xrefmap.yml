@@ -463,6 +463,129 @@ references:
   isSpec: "True"
   fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.TryGet
   nameWithType: IAppDirectoryLayout.TryGet
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger
+  name: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.html
+  commentId: N:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger
+  nameWithType: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger
+  name: BootstrapLogger
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger
+  nameWithType: BootstrapLogger
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLogger(System.String,Microsoft.Extensions.Configuration.IConfiguration)
+  name: CreateLogger(string, IConfiguration?)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_CreateLogger_System_String_Microsoft_Extensions_Configuration_IConfiguration_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLogger(System.String,Microsoft.Extensions.Configuration.IConfiguration)
+  name.vb: CreateLogger(String, IConfiguration)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLogger(string, Microsoft.Extensions.Configuration.IConfiguration?)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLogger(String, Microsoft.Extensions.Configuration.IConfiguration)
+  nameWithType: BootstrapLogger.CreateLogger(string, IConfiguration?)
+  nameWithType.vb: BootstrapLogger.CreateLogger(String, IConfiguration)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLogger*
+  name: CreateLogger
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_CreateLogger_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLogger
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLogger
+  nameWithType: BootstrapLogger.CreateLogger
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLoggerFactory(Microsoft.Extensions.Configuration.IConfiguration)
+  name: CreateLoggerFactory(IConfiguration?)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_CreateLoggerFactory_Microsoft_Extensions_Configuration_IConfiguration_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLoggerFactory(Microsoft.Extensions.Configuration.IConfiguration)
+  name.vb: CreateLoggerFactory(IConfiguration)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLoggerFactory(Microsoft.Extensions.Configuration.IConfiguration?)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLoggerFactory(Microsoft.Extensions.Configuration.IConfiguration)
+  nameWithType: BootstrapLogger.CreateLoggerFactory(IConfiguration?)
+  nameWithType.vb: BootstrapLogger.CreateLoggerFactory(IConfiguration)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLoggerFactory*
+  name: CreateLoggerFactory
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_CreateLoggerFactory_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLoggerFactory
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateLoggerFactory
+  nameWithType: BootstrapLogger.CreateLoggerFactory
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateRequiredSerilogLogger(System.String,System.String,System.String,System.String,System.Boolean)
+  name: CreateRequiredSerilogLogger(string, string, string?, string, bool)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_CreateRequiredSerilogLogger_System_String_System_String_System_String_System_String_System_Boolean_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateRequiredSerilogLogger(System.String,System.String,System.String,System.String,System.Boolean)
+  name.vb: CreateRequiredSerilogLogger(String, String, String, String, Boolean)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateRequiredSerilogLogger(string, string, string?, string, bool)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateRequiredSerilogLogger(String, String, String, String, Boolean)
+  nameWithType: BootstrapLogger.CreateRequiredSerilogLogger(string, string, string?, string, bool)
+  nameWithType.vb: BootstrapLogger.CreateRequiredSerilogLogger(String, String, String, String, Boolean)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateRequiredSerilogLogger*
+  name: CreateRequiredSerilogLogger
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_CreateRequiredSerilogLogger_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateRequiredSerilogLogger
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger.CreateRequiredSerilogLogger
+  nameWithType: BootstrapLogger.CreateRequiredSerilogLogger
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1
+  name: BootstrapLogger<TCategoryName>
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger-1.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1
+  name.vb: BootstrapLogger(Of TCategoryName)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger<TCategoryName>
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger(Of TCategoryName)
+  nameWithType: BootstrapLogger<TCategoryName>
+  nameWithType.vb: BootstrapLogger(Of TCategoryName)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateLogger(Microsoft.Extensions.Configuration.IConfiguration)
+  name: CreateLogger(IConfiguration?)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateLogger_Microsoft_Extensions_Configuration_IConfiguration_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateLogger(Microsoft.Extensions.Configuration.IConfiguration)
+  name.vb: CreateLogger(IConfiguration)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger<TCategoryName>.CreateLogger(Microsoft.Extensions.Configuration.IConfiguration?)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger(Of TCategoryName).CreateLogger(Microsoft.Extensions.Configuration.IConfiguration)
+  nameWithType: BootstrapLogger<TCategoryName>.CreateLogger(IConfiguration?)
+  nameWithType.vb: BootstrapLogger(Of TCategoryName).CreateLogger(IConfiguration)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateLogger*
+  name: CreateLogger
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateLogger_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateLogger
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger<TCategoryName>.CreateLogger
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger(Of TCategoryName).CreateLogger
+  nameWithType: BootstrapLogger<TCategoryName>.CreateLogger
+  nameWithType.vb: BootstrapLogger(Of TCategoryName).CreateLogger
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateLoggerFactory(Microsoft.Extensions.Configuration.IConfiguration)
+  name: CreateLoggerFactory(IConfiguration?)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateLoggerFactory_Microsoft_Extensions_Configuration_IConfiguration_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateLoggerFactory(Microsoft.Extensions.Configuration.IConfiguration)
+  name.vb: CreateLoggerFactory(IConfiguration)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger<TCategoryName>.CreateLoggerFactory(Microsoft.Extensions.Configuration.IConfiguration?)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger(Of TCategoryName).CreateLoggerFactory(Microsoft.Extensions.Configuration.IConfiguration)
+  nameWithType: BootstrapLogger<TCategoryName>.CreateLoggerFactory(IConfiguration?)
+  nameWithType.vb: BootstrapLogger(Of TCategoryName).CreateLoggerFactory(IConfiguration)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateLoggerFactory*
+  name: CreateLoggerFactory
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateLoggerFactory_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateLoggerFactory
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger<TCategoryName>.CreateLoggerFactory
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger(Of TCategoryName).CreateLoggerFactory
+  nameWithType: BootstrapLogger<TCategoryName>.CreateLoggerFactory
+  nameWithType.vb: BootstrapLogger(Of TCategoryName).CreateLoggerFactory
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateRequiredSerilogLogger(System.String,System.String,System.String,System.Boolean)
+  name: CreateRequiredSerilogLogger(string, string?, string, bool)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateRequiredSerilogLogger_System_String_System_String_System_String_System_Boolean_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateRequiredSerilogLogger(System.String,System.String,System.String,System.Boolean)
+  name.vb: CreateRequiredSerilogLogger(String, String, String, Boolean)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger<TCategoryName>.CreateRequiredSerilogLogger(string, string?, string, bool)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger(Of TCategoryName).CreateRequiredSerilogLogger(String, String, String, Boolean)
+  nameWithType: BootstrapLogger<TCategoryName>.CreateRequiredSerilogLogger(string, string?, string, bool)
+  nameWithType.vb: BootstrapLogger(Of TCategoryName).CreateRequiredSerilogLogger(String, String, String, Boolean)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateRequiredSerilogLogger*
+  name: CreateRequiredSerilogLogger
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_BootstrapLogger_BootstrapLogger_1_CreateRequiredSerilogLogger_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger`1.CreateRequiredSerilogLogger
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger<TCategoryName>.CreateRequiredSerilogLogger
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger.BootstrapLogger(Of TCategoryName).CreateRequiredSerilogLogger
+  nameWithType: BootstrapLogger<TCategoryName>.CreateRequiredSerilogLogger
+  nameWithType.vb: BootstrapLogger(Of TCategoryName).CreateRequiredSerilogLogger
 - uid: Eigenverft.NetLib.Infrastructure.Security.Certificates
   name: Eigenverft.NetLib.Infrastructure.Security.Certificates
   href: api/Eigenverft.NetLib.Infrastructure.Security.Certificates.html
