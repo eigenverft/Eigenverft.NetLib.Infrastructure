@@ -4,6 +4,546 @@
   "files": [
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetApplyMode.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetApplyMode.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetBuilderBindingExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetBuilderBindingExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetDefinition.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetDefinition.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetEventArgs.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetEventArgs.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetEventKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetEventKind.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetNotification.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetNotification.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetParticipantSwitchResult.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetParticipantSwitchResult.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetPendingRestartChange.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetPendingRestartChange.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetRegistration.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetRegistration.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateApplyResult.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateApplyResult.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateApplyStatus.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateApplyStatus.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateFailureKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateFailureKind.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateStatus.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateStatus.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateStoreEventArgs.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateStoreEventArgs.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateStoreEventKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateStoreEventKind.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateStoreExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateStoreExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateStoreStatus.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateStoreStatus.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStatus.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStatus.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetSwitchFailureKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetSwitchFailureKind.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetSwitchResult.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetSwitchResult.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetSwitchStatus.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetSwitchStatus.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetSwitchableJsonExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetSwitchableJsonExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetEventHub.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetEventHub.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetManager.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetManager.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Diagnostics.ConfigurationPrecedenceDiagnosticsExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Diagnostics.ConfigurationPrecedenceDiagnosticsExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Diagnostics.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Diagnostics.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Sources.HostApplicationBuilderConfigurationExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Sources.HostApplicationBuilderConfigurationExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Sources.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Sources.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.IJsonConfigurationSourcePreparation.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.IJsonConfigurationSourcePreparation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.ISwitchableJsonConfiguration.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.ISwitchableJsonConfiguration.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationCandidatePreparation.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationCandidatePreparation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationCandidatePreparations.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationCandidatePreparations.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationContext.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationContext.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationException.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonConfigurationEventArgs.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonConfigurationEventArgs.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonConfigurationEventKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonConfigurationEventKind.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonConfigurationExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonConfigurationExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonFailureKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonFailureKind.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonPreparationStatus.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonPreparationStatus.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRuntimeFailurePolicy.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRuntimeFailurePolicy.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonSwitchPreparation.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonSwitchPreparation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonSwitchResult.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonSwitchResult.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonSwitchStatus.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonSwitchStatus.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodecs.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodecs.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueKind.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.yml",
       "output": {
         ".html": {
