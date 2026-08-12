@@ -103,6 +103,9 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
                 """
                 using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
                 using Eigenverft.NetLib.Infrastructure.Security.Certificates;
+                using Eigenverft.NetLib.Infrastructure.Security.MachineBinding;
+                using Eigenverft.NetLib.Infrastructure.Text;
+                using Eigenverft.NetLib.Infrastructure.Transformations;
 
                 var builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory();
                 var directories = builder.GetDirectoryLayout();
@@ -114,8 +117,18 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
                         Subject = new CertificateSubject { CommonName = "package-consumer.test" },
                         Purpose = CertificatePurpose.TlsClient,
                     });
+                string base92 = Base92JsonSafeEncoder.Encode(new byte[] { 1, 2, 3 });
+                ReversibleStringTransform transform = ReversibleStringTransforms.Base64;
+                string transformed = transform.Apply("package-consumer");
+                _ = PhysicalMachineBinding.TryGetFingerprint(out _);
+                _ = ReversibleStringTransforms.DpapiMachine;
 
-                return string.IsNullOrWhiteSpace(settingsDirectory) || !certificate.HasPrivateKey ? 1 : 0;
+                return string.IsNullOrWhiteSpace(settingsDirectory)
+                    || !certificate.HasPrivateKey
+                    || string.IsNullOrWhiteSpace(base92)
+                    || string.IsNullOrWhiteSpace(transformed)
+                    ? 1
+                    : 0;
                 """);
 
             XDocument nugetConfig = new(

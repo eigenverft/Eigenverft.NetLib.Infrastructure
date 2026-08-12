@@ -6,7 +6,9 @@
 
 Small, reusable infrastructure primitives for .NET applications and Generic Host-based services.
 
-The first public primitive provides predictable, executable-rooted application directories with automatic creation and writable validation.
+Provides predictable, executable-rooted application directories with automatic creation and writable validation.
+
+Also includes generic reversible string transforms, JSON-safe Base92 representation, machine binding, DPAPI machine-scope transforms, and certificate primitives.
 
 ---
 
