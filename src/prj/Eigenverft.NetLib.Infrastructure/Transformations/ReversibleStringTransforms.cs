@@ -30,12 +30,14 @@ namespace Eigenverft.NetLib.Infrastructure.Transformations
     /// </remarks>
     public sealed class ReversibleStringTransform
     {
-        internal delegate bool TryReverseDelegate(string transformedValue, out string originalValue);
+        /// <summary>Attempts to reverse a transformed string while preserving the original transformed value on failure.</summary>
+        public delegate bool TryReverseDelegate(string transformedValue, out string originalValue);
 
         private readonly Func<string, string> _apply;
         private readonly TryReverseDelegate _tryReverse;
 
-        internal ReversibleStringTransform(
+        /// <summary>Creates a reusable reversible string transform.</summary>
+        public ReversibleStringTransform(
             string name,
             Func<string, string> apply,
             TryReverseDelegate tryReverse)

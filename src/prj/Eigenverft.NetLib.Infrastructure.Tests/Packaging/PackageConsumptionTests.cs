@@ -120,6 +120,15 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
                 string base92 = Base92JsonSafeEncoder.Encode(new byte[] { 1, 2, 3 });
                 ReversibleStringTransform transform = ReversibleStringTransforms.Base64;
                 string transformed = transform.Apply("package-consumer");
+                var customTransform = new ReversibleStringTransform(
+                    "Identity",
+                    value => value,
+                    (string value, out string original) =>
+                    {
+                        original = value;
+                        return true;
+                    });
+                _ = customTransform.Apply("package-consumer");
                 _ = PhysicalMachineBinding.TryGetFingerprint(out _);
                 _ = ReversibleStringTransforms.DpapiMachine;
 
