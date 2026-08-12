@@ -102,12 +102,20 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
                 programPath,
                 """
                 using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
+                using Eigenverft.NetLib.Infrastructure.Security.Certificates;
 
                 var builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory();
                 var directories = builder.GetDirectoryLayout();
 
                 string settingsDirectory = directories[DefaultDirectory.ApplicationSettings];
-                return string.IsNullOrWhiteSpace(settingsDirectory) ? 1 : 0;
+                using var certificate = SelfSignedCertificateFactory.Create(
+                    new SelfSignedCertificateOptions
+                    {
+                        Subject = new CertificateSubject { CommonName = "package-consumer.test" },
+                        Purpose = CertificatePurpose.TlsClient,
+                    });
+
+                return string.IsNullOrWhiteSpace(settingsDirectory) || !certificate.HasPrivateKey ? 1 : 0;
                 """);
 
             XDocument nugetConfig = new(

@@ -116,6 +116,15 @@ AppDirectoryLayout directories = AppDirectoryLayoutFactory.CreateDefault();
 
 An explicit root can also be supplied to the factory for tools, tests, or custom bootstrap scenarios.
 
+## Certificates
+
+`Eigenverft.NetLib.Infrastructure.Security.Certificates` provides host-independent X.509 helpers:
+
+- `SelfSignedCertificateFactory.Create(...)` creates caller-owned self-signed certificates for TLS server/client, code-signing, and email-protection purposes using RSA or ECDSA profiles.
+- `ManagedCertificateFile.LoadOrCreate(...)` loads a managed PFX or returns a policy-controlled recovery certificate. `CertificateRecoveryMode.PreserveExisting` is the safe default and does not overwrite an existing unusable PFX.
+
+The certificate APIs have no ASP.NET Core, Kestrel, SNI, configuration, or logging dependency.
+
 ## 🎯 Target frameworks
 
 The package ships dedicated assets for:
