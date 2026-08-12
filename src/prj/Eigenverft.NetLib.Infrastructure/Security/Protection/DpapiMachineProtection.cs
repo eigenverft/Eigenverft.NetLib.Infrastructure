@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 namespace Eigenverft.NetLib.Infrastructure.Security.Protection
 {
     /// <summary>
-    /// Provides the minimal Windows DPAPI LocalMachine primitive needed by the settings codecs.
+    /// Provides the minimal Windows DPAPI LocalMachine primitive needed by configuration-value codecs.
     /// </summary>
     /// <remarks>
     /// This helper wraps the Windows operating-system API directly so the library does not need the

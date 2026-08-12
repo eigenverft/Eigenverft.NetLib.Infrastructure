@@ -40,6 +40,7 @@ Install-Package Eigenverft.NetLib.Infrastructure
 
 ```csharp
 using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
+using Microsoft.Extensions.Hosting;
 
 var builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory();
 var directories = builder.GetDirectoryLayout();
@@ -158,7 +159,6 @@ A .NET 9 consumer can use the compatible `net8.0` asset.
 ## 📚 Documentation
 
 - [GitHub Pages documentation](https://eigenverft.github.io/Eigenverft.NetLib.Infrastructure/)
-- [Generated API reference](https://eigenverft.github.io/Eigenverft.NetLib.Infrastructure/api/)
 
 ## 🧪 Build and test
 

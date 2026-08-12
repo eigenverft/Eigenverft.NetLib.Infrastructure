@@ -38,6 +38,7 @@ Install-Package Eigenverft.NetLib.Infrastructure
 
 ```csharp
 using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
+using Microsoft.Extensions.Hosting;
 
 var builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory();
 var directories = builder.GetDirectoryLayout();
