@@ -8,7 +8,7 @@ Small, reusable infrastructure primitives for .NET applications and Generic Host
 
 Provides predictable, executable-rooted application directories with automatic creation and writable validation.
 
-Also includes generic reversible string transforms, JSON-safe Base92 representation, machine binding, DPAPI machine-scope transforms, certificate primitives, and pre-host bootstrap logging.
+Also includes Configuration Sets, SwitchableJson, configuration-value codecs and preparations, generic reversible string transforms, JSON-safe Base92 representation, machine binding, DPAPI machine-scope transforms, certificate primitives, configuration diagnostics, and pre-host bootstrap logging.
 
 ---
 
@@ -124,6 +124,18 @@ AppDirectoryLayout directories = AppDirectoryLayoutFactory.CreateDefault();
 ```
 
 An explicit root can also be supplied to the factory for tools, tests, or custom bootstrap scenarios.
+
+## Configuration preferred API
+
+The public configuration surface is intentionally centered on developer-facing contracts and registration helpers:
+
+- `builder.AddConfigurationSet(...)` returns a `ConfigurationSetRegistration` for fluent startup binding; runtime control uses `IConfigurationSetManager` or keyed `IConfigurationSetCoordinator`.
+- `builder.AddSwitchableJsonFile(...)` registers a source; runtime control uses keyed `ISwitchableJsonConfiguration`.
+- `SwitchableJsonRegistrationOptions.CandidatePreparation` accepts `IJsonConfigurationSourcePreparation`; common preparations come from `JsonConfigurationCandidatePreparations`.
+- `ConfigurationValueCodecs` provides the built-in persisted codecs. External adapters can compose a public `ReversibleStringTransform` with `new ConfigurationValueCodec(...)` and then use `JsonConfigurationCandidatePreparations.Decode(...)`.
+- `ResetToMinimalConfigurationSources(...)` and `LogConfigurationResolution(...)` are Generic Host configuration utilities and work through `IHostApplicationBuilder`.
+
+Concrete coordinator, provider, runtime, pipeline, watcher, and persistence-format implementation types are intentionally internal. They are created and exposed through the public contracts above and are not required for normal consumer code.
 
 ## Certificates
 

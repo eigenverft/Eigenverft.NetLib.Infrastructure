@@ -92,7 +92,7 @@ namespace Eigenverft.NetLib.Infrastructure.Transformations
     /// <remarks>
     /// These transformations are intentionally persistence-neutral. They do not add JSON-settings <c>enc:</c> wrappers and they
     /// do not decide which configuration keys are transformed. Persisted format/version ownership remains with the caller that
-    /// frames the transformed payload, such as <c>JsonSettingsValueCodec</c>.
+    /// frames the transformed payload, such as <c>ConfigurationValueCodec</c>.
     /// </remarks>
     public static class ReversibleStringTransforms
     {
@@ -275,7 +275,7 @@ namespace Eigenverft.NetLib.Infrastructure.Transformations
         /// <param name="password">The password to validate.</param>
         /// <param name="parameterName">The parameter name used when validation fails.</param>
         /// <returns>The validated password unchanged.</returns>
-        public static string NormalizeReadablePassword(string password, string parameterName)
+        internal static string NormalizeReadablePassword(string password, string parameterName)
         {
             ArgumentException.ThrowIfNullOrEmpty(password, parameterName);
 
@@ -297,7 +297,7 @@ namespace Eigenverft.NetLib.Infrastructure.Transformations
         /// <param name="passwordBytes">The password bytes to validate.</param>
         /// <param name="parameterName">The parameter name used when validation fails.</param>
         /// <returns>The validated password represented as ASCII text.</returns>
-        public static string NormalizeReadablePassword(byte[] passwordBytes, string parameterName)
+        internal static string NormalizeReadablePassword(byte[] passwordBytes, string parameterName)
         {
             ArgumentNullException.ThrowIfNull(passwordBytes, parameterName);
             if (passwordBytes.Length == 0)
@@ -323,7 +323,7 @@ namespace Eigenverft.NetLib.Infrastructure.Transformations
         /// <param name="payload">The encoded Caesar payload.</param>
         /// <param name="original">The reversed value when successful; otherwise the supplied payload.</param>
         /// <returns><see langword="true"/> when the payload is valid and reversible; otherwise <see langword="false"/>.</returns>
-        public static bool TryReverseCaesarPayload(string payload, out string original)
+        internal static bool TryReverseCaesarPayload(string payload, out string original)
         {
             return TryReverseCaesarPayload(payload, out _, out original);
         }
