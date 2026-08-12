@@ -1096,6 +1096,25 @@ references:
   commentId: T:Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform
   fullName: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform
   nameWithType: ReversibleStringTransform
+- uid: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.#ctor(System.String,System.Func{System.String,System.String},Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate)
+  name: ReversibleStringTransform(string, Func<string, string>, TryReverseDelegate)
+  href: api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.html#Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform__ctor_System_String_System_Func_System_String_System_String__Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_TryReverseDelegate_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.#ctor(System.String,System.Func{System.String,System.String},Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate)
+  name.vb: New(String, Func(Of String, String), TryReverseDelegate)
+  fullName: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.ReversibleStringTransform(string, System.Func<string, string>, Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.New(String, System.Func(Of String, String), Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate)
+  nameWithType: ReversibleStringTransform.ReversibleStringTransform(string, Func<string, string>, ReversibleStringTransform.TryReverseDelegate)
+  nameWithType.vb: ReversibleStringTransform.New(String, Func(Of String, String), ReversibleStringTransform.TryReverseDelegate)
+- uid: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.#ctor*
+  name: ReversibleStringTransform
+  href: api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.html#Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform__ctor_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.ReversibleStringTransform
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.New
+  nameWithType: ReversibleStringTransform.ReversibleStringTransform
+  nameWithType.vb: ReversibleStringTransform.New
 - uid: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.Apply(System.String)
   name: Apply(string?)
   href: api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.html#Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_Apply_System_String_
@@ -1154,6 +1173,12 @@ references:
   isSpec: "True"
   fullName: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverse
   nameWithType: ReversibleStringTransform.TryReverse
+- uid: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate
+  name: ReversibleStringTransform.TryReverseDelegate
+  href: api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate
+  fullName: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate
+  nameWithType: ReversibleStringTransform.TryReverseDelegate
 - uid: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms
   name: ReversibleStringTransforms
   href: api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.html

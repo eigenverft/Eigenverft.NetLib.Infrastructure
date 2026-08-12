@@ -244,6 +244,16 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.yml",
       "output": {
         ".html": {

@@ -178,6 +178,9 @@
                             <a href="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.html" title="ReversibleStringTransform" class="active">ReversibleStringTransform</a>
                           </li>
                           <li class="">
+                            <a href="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate.html" title="ReversibleStringTransform.TryReverseDelegate" class="">ReversibleStringTransform.TryReverseDelegate</a>
+                          </li>
+                          <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.html" title="ReversibleStringTransforms" class="">ReversibleStringTransforms</a>
                           </li>
                         </ul>
@@ -244,6 +247,51 @@ analysis-friction layers; none of them is a confidentiality boundary.
 value rather than a partially reversed intermediate representation. Composed transforms preserve the same rule.
 </p>
 </div>
+  <h3 id="constructors">Constructors
+</h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform__ctor_System_String_System_Func_System_String_System_String__Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_TryReverseDelegate_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.%23ctor(System.String%2CSystem.Func%7BSystem.String%2CSystem.String%7D%2CEigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L40">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform__ctor_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.#ctor*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform__ctor_System_String_System_Func_System_String_System_String__Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_TryReverseDelegate_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.#ctor(System.String,System.Func{System.String,System.String},Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate)">ReversibleStringTransform(string, Func&lt;string, string&gt;, TryReverseDelegate)</h4>
+  <div class="markdown level1 summary"><p>Creates a reusable reversible string transform.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ReversibleStringTransform(string name, Func&lt;string, string&gt; apply, ReversibleStringTransform.TryReverseDelegate tryReverse)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">name</span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.func-2">Func</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</td>
+        <td><span class="parametername">apply</span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.html">ReversibleStringTransform</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverseDelegate.html">TryReverseDelegate</a></td>
+        <td><span class="parametername">tryReverse</span></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
   <h3 id="properties">Properties
 </h3>
   <span class="small pull-right mobile-hide">
@@ -251,7 +299,7 @@ value rather than a partially reversed intermediate representation. Composed tra
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_Name.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.Name%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L53">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L55">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_Name_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.Name*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_Name" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.Name">Name</h4>
@@ -284,7 +332,7 @@ value rather than a partially reversed intermediate representation. Composed tra
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_Apply_System_String_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.Apply(System.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L58">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L60">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_Apply_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.Apply*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_Apply_System_String_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.Apply(System.String)">Apply(string?)</h4>
@@ -334,7 +382,7 @@ value rather than a partially reversed intermediate representation. Composed tra
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_ToString.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.ToString%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L83">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L85">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_ToString_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.ToString*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_ToString" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.ToString">ToString()</h4>
@@ -368,7 +416,7 @@ value rather than a partially reversed intermediate representation. Composed tra
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_TryReverse_System_String_System_String__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverse(System.String%2CSystem.String%40)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L69">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L71">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_TryReverse_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverse*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_TryReverse_System_String_System_String__" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverse(System.String,System.String@)">TryReverse(string?, out string)</h4>
