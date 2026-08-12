@@ -4821,31 +4821,6 @@ references:
   isSpec: "True"
   fullName: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.DpapiMachineBase64Url
   nameWithType: ReversibleStringTransforms.DpapiMachineBase64Url
-- uid: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword(System.Byte[],System.String)
-  name: NormalizeReadablePassword(byte[], string)
-  href: api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.html#Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_NormalizeReadablePassword_System_Byte___System_String_
-  commentId: M:Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword(System.Byte[],System.String)
-  name.vb: NormalizeReadablePassword(Byte(), String)
-  fullName: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword(byte[], string)
-  fullName.vb: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword(Byte(), String)
-  nameWithType: ReversibleStringTransforms.NormalizeReadablePassword(byte[], string)
-  nameWithType.vb: ReversibleStringTransforms.NormalizeReadablePassword(Byte(), String)
-- uid: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword(System.String,System.String)
-  name: NormalizeReadablePassword(string, string)
-  href: api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.html#Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_NormalizeReadablePassword_System_String_System_String_
-  commentId: M:Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword(System.String,System.String)
-  name.vb: NormalizeReadablePassword(String, String)
-  fullName: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword(string, string)
-  fullName.vb: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword(String, String)
-  nameWithType: ReversibleStringTransforms.NormalizeReadablePassword(string, string)
-  nameWithType.vb: ReversibleStringTransforms.NormalizeReadablePassword(String, String)
-- uid: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword*
-  name: NormalizeReadablePassword
-  href: api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.html#Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_NormalizeReadablePassword_
-  commentId: Overload:Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword
-  isSpec: "True"
-  fullName: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword
-  nameWithType: ReversibleStringTransforms.NormalizeReadablePassword
 - uid: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.PhysicalMachineBoundAes
   name: PhysicalMachineBoundAes()
   href: api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.html#Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_PhysicalMachineBoundAes
@@ -4872,19 +4847,3 @@ references:
   isSpec: "True"
   fullName: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.Rot13
   nameWithType: ReversibleStringTransforms.Rot13
-- uid: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.TryReverseCaesarPayload(System.String,System.String@)
-  name: TryReverseCaesarPayload(string, out string)
-  href: api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.html#Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_TryReverseCaesarPayload_System_String_System_String__
-  commentId: M:Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.TryReverseCaesarPayload(System.String,System.String@)
-  name.vb: TryReverseCaesarPayload(String, String)
-  fullName: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.TryReverseCaesarPayload(string, out string)
-  fullName.vb: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.TryReverseCaesarPayload(String, String)
-  nameWithType: ReversibleStringTransforms.TryReverseCaesarPayload(string, out string)
-  nameWithType.vb: ReversibleStringTransforms.TryReverseCaesarPayload(String, String)
-- uid: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.TryReverseCaesarPayload*
-  name: TryReverseCaesarPayload
-  href: api/Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.html#Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_TryReverseCaesarPayload_
-  commentId: Overload:Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.TryReverseCaesarPayload
-  isSpec: "True"
-  fullName: Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.TryReverseCaesarPayload
-  nameWithType: ReversibleStringTransforms.TryReverseCaesarPayload

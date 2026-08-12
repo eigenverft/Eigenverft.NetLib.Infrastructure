@@ -435,7 +435,7 @@
   <h5 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_remarks"><strong>Remarks</strong></h5>
   <div class="markdown level0 remarks"><p>These transformations are intentionally persistence-neutral. They do not add JSON-settings <code>enc:</code> wrappers and they
 do not decide which configuration keys are transformed. Persisted format/version ownership remains with the caller that
-frames the transformed payload, such as <code>JsonSettingsValueCodec</code>.</p>
+frames the transformed payload, such as <code>ConfigurationValueCodec</code>.</p>
 </div>
   <h3 id="properties">Properties
 </h3>
@@ -843,118 +843,6 @@ persisted wrappers or stage-specific migration metadata must compose at their pe
 </div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_NormalizeReadablePassword_System_Byte___System_String_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword(System.Byte%5B%5D%2CSystem.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
-  </span>
-  <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L300">View Source</a>
-  </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_NormalizeReadablePassword_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_NormalizeReadablePassword_System_Byte___System_String_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword(System.Byte[],System.String)">NormalizeReadablePassword(byte[], string)</h4>
-  <div class="markdown level1 summary"><p>Validates visible-ASCII password bytes and returns their ASCII string representation.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-  <h5 class="declaration">Declaration</h5>
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static string NormalizeReadablePassword(byte[] passwordBytes, string parameterName)</code></pre>
-  </div>
-  <h5 class="parameters">Parameters</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Name</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>[]</td>
-        <td><span class="parametername">passwordBytes</span></td>
-        <td><p>The password bytes to validate.</p>
-</td>
-      </tr>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><span class="parametername">parameterName</span></td>
-        <td><p>The parameter name used when validation fails.</p>
-</td>
-      </tr>
-    </tbody>
-  </table>
-  <h5 class="returns">Returns</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><p>The validated password represented as ASCII text.</p>
-</td>
-      </tr>
-    </tbody>
-  </table>
-  <span class="small pull-right mobile-hide">
-    <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_NormalizeReadablePassword_System_String_System_String_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword(System.String%2CSystem.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
-  </span>
-  <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L278">View Source</a>
-  </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_NormalizeReadablePassword_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_NormalizeReadablePassword_System_String_System_String_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.NormalizeReadablePassword(System.String,System.String)">NormalizeReadablePassword(string, string)</h4>
-  <div class="markdown level1 summary"><p>Validates and returns a non-empty visible-ASCII password.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-  <h5 class="declaration">Declaration</h5>
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static string NormalizeReadablePassword(string password, string parameterName)</code></pre>
-  </div>
-  <h5 class="parameters">Parameters</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Name</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><span class="parametername">password</span></td>
-        <td><p>The password to validate.</p>
-</td>
-      </tr>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><span class="parametername">parameterName</span></td>
-        <td><p>The parameter name used when validation fails.</p>
-</td>
-      </tr>
-    </tbody>
-  </table>
-  <h5 class="returns">Returns</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><p>The validated password unchanged.</p>
-</td>
-      </tr>
-    </tbody>
-  </table>
-  <span class="small pull-right mobile-hide">
-    <span class="divider">|</span>
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_PhysicalMachineBoundAes.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.PhysicalMachineBoundAes%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
@@ -989,62 +877,6 @@ persisted wrappers or stage-specific migration metadata must compose at their pe
 theft insufficient for offline reversal on another machine unless the source platform identity was also collected. An
 attacker with sufficient source-machine access can read the same identity and reproduce the fingerprint.</p>
 </div>
-  <span class="small pull-right mobile-hide">
-    <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_TryReverseCaesarPayload_System_String_System_String__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.TryReverseCaesarPayload(System.String%2CSystem.String%40)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
-  </span>
-  <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L326">View Source</a>
-  </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_TryReverseCaesarPayload_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.TryReverseCaesarPayload*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransforms_TryReverseCaesarPayload_System_String_System_String__" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.TryReverseCaesarPayload(System.String,System.String@)">TryReverseCaesarPayload(string, out string)</h4>
-  <div class="markdown level1 summary"><p>Attempts to reverse a self-describing Caesar payload containing its normalized shift.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-  <h5 class="declaration">Declaration</h5>
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static bool TryReverseCaesarPayload(string payload, out string original)</code></pre>
-  </div>
-  <h5 class="parameters">Parameters</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Name</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><span class="parametername">payload</span></td>
-        <td><p>The encoded Caesar payload.</p>
-</td>
-      </tr>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><span class="parametername">original</span></td>
-        <td><p>The reversed value when successful; otherwise the supplied payload.</p>
-</td>
-      </tr>
-    </tbody>
-  </table>
-  <h5 class="returns">Returns</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
-        <td><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when the payload is valid and reversible; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
-</td>
-      </tr>
-    </tbody>
-  </table>
 
 </article>
           </div>
