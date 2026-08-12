@@ -12,6 +12,8 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSe
     /// with observer publication deferred, finalizes coordinator state, and only then releases IConfiguration/lifecycle notifications.
     /// A bound participant grants this coordinator exclusive ownership of manual source selection for that runtime.
     /// The coordinator assigns no application meaning to set names or values.
+    /// This interface is the public runtime/control contract. Implementing it does not imply compatibility with
+    /// NetLib-specific advanced participant-binding helpers such as <c>BindSwitchableJson(...)</c>.
     /// </remarks>
     public interface IConfigurationSetCoordinator
     {

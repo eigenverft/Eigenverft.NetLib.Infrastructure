@@ -113,6 +113,9 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
                 using Eigenverft.NetLib.Infrastructure.Text;
                 using Eigenverft.NetLib.Infrastructure.Transformations;
 
+                using Microsoft.Extensions.DependencyInjection;
+                using Microsoft.Extensions.Hosting;
+
                 var builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory();
                 var directories = builder.GetDirectoryLayout();
                 var bootstrapLogger = BootstrapLogger.CreateLogger("package-consumer");
@@ -163,21 +166,47 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
                 {
                     CandidatePreparation = candidatePreparation,
                 };
-                IConfigurationSetCoordinator configurationSet = builder
-                    .AddConfigurationSet("PackageSet", "Stable", "Candidate")
-                    .Coordinator;
-                ConfigurationSetSwitchResult configurationSetSwitch = configurationSet.TrySwitch("Candidate");
+                string switchableDirectory = Path.Combine(
+                    Path.GetTempPath(),
+                    $"Eigenverft.NetLib.PackageConsumer-{Guid.NewGuid():N}");
+                Directory.CreateDirectory(switchableDirectory);
+                string stablePath = Path.Combine(switchableDirectory, "Stable.json");
+                string candidatePath = Path.Combine(switchableDirectory, "Candidate.json");
+                File.WriteAllText(stablePath, "{ \"PackageMarker\": \"Stable\" }");
+                File.WriteAllText(candidatePath, "{ \"PackageMarker\": \"Candidate\" }");
+
+                ConfigurationSetRegistration configurationSet = builder
+                    .AddConfigurationSet("PackageSet", "Stable", "Candidate");
+                configurationSet.AddSwitchableJson(
+                    value => value == "Stable" ? stablePath : candidatePath);
                 _ = switchableOptions;
 
-                return string.IsNullOrWhiteSpace(settingsDirectory)
-                    || !certificate.HasPrivateKey
-                    || string.IsNullOrWhiteSpace(base92)
-                    || string.IsNullOrWhiteSpace(transformed)
-                    || !decodedConfigurationValue
-                    || configurationValue != "configuration-value"
-                    || configurationSetSwitch.Status != ConfigurationSetSwitchStatus.Succeeded
-                    ? 1
-                    : 0;
+                using IHost host = builder.Build();
+                IConfigurationSetManager configurationSetManager =
+                    host.Services.GetRequiredService<IConfigurationSetManager>();
+                bool configurationSetSwitched = configurationSetManager.TrySwitchRuntime(
+                    "PackageSet",
+                    "Candidate",
+                    out ConfigurationSetSwitchResult? configurationSetSwitch);
+
+                try
+                {
+                    return string.IsNullOrWhiteSpace(settingsDirectory)
+                        || !certificate.HasPrivateKey
+                        || string.IsNullOrWhiteSpace(base92)
+                        || string.IsNullOrWhiteSpace(transformed)
+                        || !decodedConfigurationValue
+                        || configurationValue != "configuration-value"
+                        || !configurationSetSwitched
+                        || configurationSetSwitch?.Status != ConfigurationSetSwitchStatus.Succeeded
+                        || builder.Configuration["PackageMarker"] != "Candidate"
+                        ? 1
+                        : 0;
+                }
+                finally
+                {
+                    Directory.Delete(switchableDirectory, recursive: true);
+                }
                 """);
 
             XDocument nugetConfig = new(

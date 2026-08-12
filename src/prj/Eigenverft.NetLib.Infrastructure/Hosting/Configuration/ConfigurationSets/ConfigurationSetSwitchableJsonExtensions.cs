@@ -5,7 +5,7 @@ using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson;
 
 namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets
 {
-    /// <summary>Connects configuration-set coordinators to existing switchable JSON configuration runtimes.</summary>
+    /// <summary>Provides advanced binding of existing switchable JSON runtimes to NetLib-created configuration-set coordinators.</summary>
     public static class ConfigurationSetSwitchableJsonExtensions
     {
         /// <summary>
@@ -22,7 +22,12 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSe
         /// Once bound, the coordinator exclusively owns source selection for that runtime. Direct public source switches are rejected,
         /// while active-file reload and lifecycle observation remain normal switchable-runtime behavior. A runtime can belong to only
         /// one configuration set at a time.
+        /// This advanced binding path is supported only for coordinators created by NetLib configuration-set registration.
+        /// Custom <see cref="IConfigurationSetCoordinator"/> implementations are not supported by this operation.
         /// </remarks>
+        /// <exception cref="NotSupportedException">
+        /// <paramref name="coordinator"/> is not a NetLib-provided configuration-set coordinator.
+        /// </exception>
         public static IConfigurationSetCoordinator BindSwitchableJson(
             this IConfigurationSetCoordinator coordinator,
             ISwitchableJsonConfiguration configuration,

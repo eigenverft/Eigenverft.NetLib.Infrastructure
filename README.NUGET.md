@@ -123,8 +123,9 @@ An explicit root can also be supplied to the factory for tools, tests, or custom
 
 The public configuration surface is intentionally centered on developer-facing contracts and registration helpers:
 
-- `builder.AddConfigurationSet(...)` returns a `ConfigurationSetRegistration` for fluent startup binding; runtime control uses `IConfigurationSetManager` or keyed `IConfigurationSetCoordinator`.
+- `builder.AddConfigurationSet(...)` returns a `ConfigurationSetRegistration` for fluent startup binding. External runtime control uses `IConfigurationSetManager.TrySwitchRuntime(...)`; set-specific control can use keyed `IConfigurationSetCoordinator.TrySwitch(...)`.
 - `builder.AddSwitchableJsonFile(...)` registers a source; runtime control uses keyed `ISwitchableJsonConfiguration`.
+- `IConfigurationSetCoordinator.BindSwitchableJson(...)` is an advanced binding API for already existing runtimes and is supported only for coordinators created by NetLib configuration-set registration; it is not the runtime switch API.
 - `SwitchableJsonRegistrationOptions.CandidatePreparation` accepts `IJsonConfigurationSourcePreparation`; common preparations come from `JsonConfigurationCandidatePreparations`.
 - `ConfigurationValueCodecs` provides the built-in persisted codecs. External adapters can compose a public `ReversibleStringTransform` with `new ConfigurationValueCodec(...)` and then use `JsonConfigurationCandidatePreparations.Decode(...)`.
 - `ResetToMinimalConfigurationSources(...)` and `LogConfigurationResolution(...)` are Generic Host configuration utilities and work through `IHostApplicationBuilder`.
