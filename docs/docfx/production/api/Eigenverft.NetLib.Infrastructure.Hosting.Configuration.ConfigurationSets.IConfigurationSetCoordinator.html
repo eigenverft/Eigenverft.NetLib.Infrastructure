@@ -408,7 +408,9 @@
 configuration sources can be bound to it. A coordinated transition prepares every mapped source, commits participant state
 with observer publication deferred, finalizes coordinator state, and only then releases IConfiguration/lifecycle notifications.
 A bound participant grants this coordinator exclusive ownership of manual source selection for that runtime.
-The coordinator assigns no application meaning to set names or values.</p>
+The coordinator assigns no application meaning to set names or values.
+This interface is the public runtime/control contract. Implementing it does not imply compatibility with
+NetLib-specific advanced participant-binding helpers such as <code>BindSwitchableJson(...)</code>.</p>
 </div>
   <h3 id="properties">Properties
 </h3>
@@ -417,7 +419,7 @@ The coordinator assigns no application meaning to set names or values.</p>
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_ActiveValue.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.ActiveValue%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L27">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L29">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_ActiveValue_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.ActiveValue*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_ActiveValue" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.ActiveValue">ActiveValue</h4>
@@ -448,7 +450,7 @@ The coordinator assigns no application meaning to set names or values.</p>
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_AllowedValues.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.AllowedValues%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L39">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L41">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_AllowedValues_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.AllowedValues*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_AllowedValues" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.AllowedValues">AllowedValues</h4>
@@ -479,7 +481,7 @@ The coordinator assigns no application meaning to set names or values.</p>
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_BoundParticipantNames.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.BoundParticipantNames%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L42">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L44">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_BoundParticipantNames_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.BoundParticipantNames*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_BoundParticipantNames" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.BoundParticipantNames">BoundParticipantNames</h4>
@@ -510,7 +512,7 @@ The coordinator assigns no application meaning to set names or values.</p>
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_InitialValue.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.InitialValue%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L22">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L24">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_InitialValue_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.InitialValue*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_InitialValue" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.InitialValue">InitialValue</h4>
@@ -541,7 +543,7 @@ The coordinator assigns no application meaning to set names or values.</p>
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_IsConsistent.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.IsConsistent%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L36">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L38">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_IsConsistent_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.IsConsistent*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_IsConsistent" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.IsConsistent">IsConsistent</h4>
@@ -576,7 +578,7 @@ until a later successful switch converges every binding on one allowed value aga
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_Name.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.Name%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L19">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L21">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_Name_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.Name*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_Name" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.Name">Name</h4>
@@ -609,7 +611,7 @@ until a later successful switch converges every binding on one allowed value aga
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_GetStatus.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.GetStatus%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L54">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L56">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_GetStatus_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.GetStatus*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_GetStatus" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.GetStatus">GetStatus()</h4>
@@ -640,7 +642,7 @@ until a later successful switch converges every binding on one allowed value aga
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_IsAllowed_System_String_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.IsAllowed(System.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L57">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L59">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_IsAllowed_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.IsAllowed*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_IsAllowed_System_String_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.IsAllowed(System.String)">IsAllowed(string)</h4>
@@ -688,7 +690,7 @@ until a later successful switch converges every binding on one allowed value aga
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_TrySwitch_System_String_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.TrySwitch(System.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L62">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L64">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_TrySwitch_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.TrySwitch*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_TrySwitch_System_String_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.TrySwitch(System.String)">TrySwitch(string)</h4>
@@ -740,7 +742,7 @@ until a later successful switch converges every binding on one allowed value aga
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_LifecycleChanged.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.LifecycleChanged%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L51">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L53">View Source</a>
   </span>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator_LifecycleChanged" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.LifecycleChanged">LifecycleChanged</h4>
   <div class="markdown level1 summary"><p>Occurs after a completed switch request, including success, already-active no-op, rejection and partial commit.</p>
@@ -785,7 +787,7 @@ not alter an already completed coordinator outcome.</p>
                     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetCoordinator.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
                   </li>
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L16" class="contribution-link">View Source</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/IConfigurationSetCoordinator.cs/#L18" class="contribution-link">View Source</a>
                   </li>
                 </ul>
               </div>
