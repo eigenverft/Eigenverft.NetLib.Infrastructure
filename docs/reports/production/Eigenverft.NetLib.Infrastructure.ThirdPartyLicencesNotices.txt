@@ -1,0 +1,22 @@
+===================================================================
+THIRD-PARTY LICENSE NOTICES - Eigenverft.NetLib.Infrastructure
+===================================================================
+
+This project includes third-party libraries under open-source licenses.
+
+--------------------------------------------
+Package: Microsoft.Extensions.Hosting (v10.0.0)
+License: MIT
+License URL: https://licenses.nuget.org/MIT
+Authors: Microsoft
+Project: https://dot.net/
+--------------------------------------------
+
+--------------------------------------------
+Package: Microsoft.Extensions.Hosting (v8.0.1)
+License: MIT
+License URL: https://licenses.nuget.org/MIT
+Authors: Microsoft
+Project: https://dot.net/
+--------------------------------------------
+

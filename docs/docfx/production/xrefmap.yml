@@ -1,0 +1,465 @@
+### YamlMime:XRefMap
+sorted: true
+references:
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout
+  name: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.html
+  commentId: N:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout
+  nameWithType: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout
+  name: AppDirectoryLayout
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout
+  nameWithType: AppDirectoryLayout
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.#ctor(System.String,System.Collections.Generic.IReadOnlyDictionary{System.String,System.String})
+  name: AppDirectoryLayout(string, IReadOnlyDictionary<string, string>)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout__ctor_System_String_System_Collections_Generic_IReadOnlyDictionary_System_String_System_String__
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.#ctor(System.String,System.Collections.Generic.IReadOnlyDictionary{System.String,System.String})
+  name.vb: New(String, IReadOnlyDictionary(Of String, String))
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.AppDirectoryLayout(string, System.Collections.Generic.IReadOnlyDictionary<string, string>)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.New(String, System.Collections.Generic.IReadOnlyDictionary(Of String, String))
+  nameWithType: AppDirectoryLayout.AppDirectoryLayout(string, IReadOnlyDictionary<string, string>)
+  nameWithType.vb: AppDirectoryLayout.New(String, IReadOnlyDictionary(Of String, String))
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.#ctor*
+  name: AppDirectoryLayout
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout__ctor_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.AppDirectoryLayout
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.New
+  nameWithType: AppDirectoryLayout.AppDirectoryLayout
+  nameWithType.vb: AppDirectoryLayout.New
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Get(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  name: Get(DefaultDirectory)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout_Get_Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Get(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Get(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  nameWithType: AppDirectoryLayout.Get(DefaultDirectory)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Get(System.String)
+  name: Get(string)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout_Get_System_String_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Get(System.String)
+  name.vb: Get(String)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Get(string)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Get(String)
+  nameWithType: AppDirectoryLayout.Get(string)
+  nameWithType.vb: AppDirectoryLayout.Get(String)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Get*
+  name: Get
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout_Get_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Get
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Get
+  nameWithType: AppDirectoryLayout.Get
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.GetByKey
+  name: GetByKey
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout_GetByKey
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.GetByKey
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.GetByKey
+  nameWithType: AppDirectoryLayout.GetByKey
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.GetByKey*
+  name: GetByKey
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout_GetByKey_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.GetByKey
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.GetByKey
+  nameWithType: AppDirectoryLayout.GetByKey
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Item(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  name: this[DefaultDirectory]
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout_Item_Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Item(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  name.vb: this[](DefaultDirectory)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.this[Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory]
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.this[](Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  nameWithType: AppDirectoryLayout.this[DefaultDirectory]
+  nameWithType.vb: AppDirectoryLayout.this[](DefaultDirectory)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Item(System.String)
+  name: this[string]
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout_Item_System_String_
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Item(System.String)
+  name.vb: this[](String)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.this[string]
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.this[](String)
+  nameWithType: AppDirectoryLayout.this[string]
+  nameWithType.vb: AppDirectoryLayout.this[](String)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Item*
+  name: this
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout_Item_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.Item
+  isSpec: "True"
+  name.vb: this[]
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.this
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.this[]
+  nameWithType: AppDirectoryLayout.this
+  nameWithType.vb: AppDirectoryLayout.this[]
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.RootPath
+  name: RootPath
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout_RootPath
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.RootPath
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.RootPath
+  nameWithType: AppDirectoryLayout.RootPath
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.RootPath*
+  name: RootPath
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout_RootPath_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.RootPath
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.RootPath
+  nameWithType: AppDirectoryLayout.RootPath
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.TryGet(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory,System.String@)
+  name: TryGet(DefaultDirectory, out string)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout_TryGet_Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_System_String__
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.TryGet(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory,System.String@)
+  name.vb: TryGet(DefaultDirectory, String)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.TryGet(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory, out string)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.TryGet(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory, String)
+  nameWithType: AppDirectoryLayout.TryGet(DefaultDirectory, out string)
+  nameWithType.vb: AppDirectoryLayout.TryGet(DefaultDirectory, String)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.TryGet(System.String,System.String@)
+  name: TryGet(string, out string)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout_TryGet_System_String_System_String__
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.TryGet(System.String,System.String@)
+  name.vb: TryGet(String, String)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.TryGet(string, out string)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.TryGet(String, String)
+  nameWithType: AppDirectoryLayout.TryGet(string, out string)
+  nameWithType.vb: AppDirectoryLayout.TryGet(String, String)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.TryGet*
+  name: TryGet
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayout_TryGet_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.TryGet
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.TryGet
+  nameWithType: AppDirectoryLayout.TryGet
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory
+  name: AppDirectoryLayoutFactory
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory
+  nameWithType: AppDirectoryLayoutFactory
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.Create(System.Collections.Generic.IReadOnlyDictionary{System.String,System.String},System.String,System.Boolean)
+  name: Create(IReadOnlyDictionary<string, string>, string?, bool)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayoutFactory_Create_System_Collections_Generic_IReadOnlyDictionary_System_String_System_String__System_String_System_Boolean_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.Create(System.Collections.Generic.IReadOnlyDictionary{System.String,System.String},System.String,System.Boolean)
+  name.vb: Create(IReadOnlyDictionary(Of String, String), String, Boolean)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.Create(System.Collections.Generic.IReadOnlyDictionary<string, string>, string?, bool)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.Create(System.Collections.Generic.IReadOnlyDictionary(Of String, String), String, Boolean)
+  nameWithType: AppDirectoryLayoutFactory.Create(IReadOnlyDictionary<string, string>, string?, bool)
+  nameWithType.vb: AppDirectoryLayoutFactory.Create(IReadOnlyDictionary(Of String, String), String, Boolean)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.Create*
+  name: Create
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayoutFactory_Create_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.Create
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.Create
+  nameWithType: AppDirectoryLayoutFactory.Create
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.CreateDefault(System.Collections.Generic.IReadOnlyDictionary{Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory,System.String},System.String,System.Boolean)
+  name: CreateDefault(IReadOnlyDictionary<DefaultDirectory, string>?, string?, bool)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayoutFactory_CreateDefault_System_Collections_Generic_IReadOnlyDictionary_Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_System_String__System_String_System_Boolean_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.CreateDefault(System.Collections.Generic.IReadOnlyDictionary{Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory,System.String},System.String,System.Boolean)
+  name.vb: CreateDefault(IReadOnlyDictionary(Of DefaultDirectory, String), String, Boolean)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.CreateDefault(System.Collections.Generic.IReadOnlyDictionary<Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory, string>?, string?, bool)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.CreateDefault(System.Collections.Generic.IReadOnlyDictionary(Of Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory, String), String, Boolean)
+  nameWithType: AppDirectoryLayoutFactory.CreateDefault(IReadOnlyDictionary<DefaultDirectory, string>?, string?, bool)
+  nameWithType.vb: AppDirectoryLayoutFactory.CreateDefault(IReadOnlyDictionary(Of DefaultDirectory, String), String, Boolean)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.CreateDefault*
+  name: CreateDefault
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_AppDirectoryLayoutFactory_CreateDefault_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.CreateDefault
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.CreateDefault
+  nameWithType: AppDirectoryLayoutFactory.CreateDefault
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory
+  name: DefaultDirectory
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory
+  nameWithType: DefaultDirectory
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationCerts
+  name: ApplicationCerts
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_ApplicationCerts
+  commentId: F:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationCerts
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationCerts
+  nameWithType: DefaultDirectory.ApplicationCerts
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationData
+  name: ApplicationData
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_ApplicationData
+  commentId: F:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationData
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationData
+  nameWithType: DefaultDirectory.ApplicationData
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationLogFiles
+  name: ApplicationLogFiles
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_ApplicationLogFiles
+  commentId: F:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationLogFiles
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationLogFiles
+  nameWithType: DefaultDirectory.ApplicationLogFiles
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationSettings
+  name: ApplicationSettings
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_ApplicationSettings
+  commentId: F:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationSettings
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationSettings
+  nameWithType: DefaultDirectory.ApplicationSettings
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationState
+  name: ApplicationState
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_ApplicationState
+  commentId: F:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationState
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationState
+  nameWithType: DefaultDirectory.ApplicationState
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions
+  name: DefaultDirectoryExtensions
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions
+  nameWithType: DefaultDirectoryExtensions
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.GetDefaultFolderName(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  name: GetDefaultFolderName(DefaultDirectory)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectoryExtensions_GetDefaultFolderName_Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.GetDefaultFolderName(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.GetDefaultFolderName(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  nameWithType: DefaultDirectoryExtensions.GetDefaultFolderName(DefaultDirectory)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.GetDefaultFolderName*
+  name: GetDefaultFolderName
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectoryExtensions_GetDefaultFolderName_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.GetDefaultFolderName
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.GetDefaultFolderName
+  nameWithType: DefaultDirectoryExtensions.GetDefaultFolderName
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.GetKey(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  name: GetKey(DefaultDirectory)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectoryExtensions_GetKey_Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.GetKey(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.GetKey(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  nameWithType: DefaultDirectoryExtensions.GetKey(DefaultDirectory)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.GetKey*
+  name: GetKey
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectoryExtensions_GetKey_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.GetKey
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.GetKey
+  nameWithType: DefaultDirectoryExtensions.GetKey
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute
+  name: DefaultDirectoryNameAttribute
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute
+  nameWithType: DefaultDirectoryNameAttribute
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.#ctor(System.String)
+  name: DefaultDirectoryNameAttribute(string)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectoryNameAttribute__ctor_System_String_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.#ctor(System.String)
+  name.vb: New(String)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.DefaultDirectoryNameAttribute(string)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.New(String)
+  nameWithType: DefaultDirectoryNameAttribute.DefaultDirectoryNameAttribute(string)
+  nameWithType.vb: DefaultDirectoryNameAttribute.New(String)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.#ctor*
+  name: DefaultDirectoryNameAttribute
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectoryNameAttribute__ctor_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.DefaultDirectoryNameAttribute
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.New
+  nameWithType: DefaultDirectoryNameAttribute.DefaultDirectoryNameAttribute
+  nameWithType.vb: DefaultDirectoryNameAttribute.New
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.Name
+  name: Name
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectoryNameAttribute_Name
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.Name
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.Name
+  nameWithType: DefaultDirectoryNameAttribute.Name
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.Name*
+  name: Name
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectoryNameAttribute_Name_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.Name
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.Name
+  nameWithType: DefaultDirectoryNameAttribute.Name
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions
+  name: HostApplicationBuilderDirectoryLayoutExtensions
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions
+  nameWithType: HostApplicationBuilderDirectoryLayoutExtensions
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder)
+  name: AddDefaultDirectoryLayout(IHostApplicationBuilder)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_HostApplicationBuilderDirectoryLayoutExtensions_AddDefaultDirectoryLayout_Microsoft_Extensions_Hosting_IHostApplicationBuilder_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder)
+  nameWithType: HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout(IHostApplicationBuilder)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder,System.Collections.Generic.IReadOnlyDictionary{Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory,System.String})
+  name: AddDefaultDirectoryLayout(IHostApplicationBuilder, IReadOnlyDictionary<DefaultDirectory, string>)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_HostApplicationBuilderDirectoryLayoutExtensions_AddDefaultDirectoryLayout_Microsoft_Extensions_Hosting_IHostApplicationBuilder_System_Collections_Generic_IReadOnlyDictionary_Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_System_String__
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder,System.Collections.Generic.IReadOnlyDictionary{Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory,System.String})
+  name.vb: AddDefaultDirectoryLayout(IHostApplicationBuilder, IReadOnlyDictionary(Of DefaultDirectory, String))
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder, System.Collections.Generic.IReadOnlyDictionary<Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory, string>)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder, System.Collections.Generic.IReadOnlyDictionary(Of Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory, String))
+  nameWithType: HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout(IHostApplicationBuilder, IReadOnlyDictionary<DefaultDirectory, string>)
+  nameWithType.vb: HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout(IHostApplicationBuilder, IReadOnlyDictionary(Of DefaultDirectory, String))
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout*
+  name: AddDefaultDirectoryLayout
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_HostApplicationBuilderDirectoryLayoutExtensions_AddDefaultDirectoryLayout_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout
+  nameWithType: HostApplicationBuilderDirectoryLayoutExtensions.AddDefaultDirectoryLayout
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder,System.Collections.Generic.IReadOnlyDictionary{System.String,System.String})
+  name: AddDirectoryLayout(IHostApplicationBuilder, IReadOnlyDictionary<string, string>)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_HostApplicationBuilderDirectoryLayoutExtensions_AddDirectoryLayout_Microsoft_Extensions_Hosting_IHostApplicationBuilder_System_Collections_Generic_IReadOnlyDictionary_System_String_System_String__
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder,System.Collections.Generic.IReadOnlyDictionary{System.String,System.String})
+  name.vb: AddDirectoryLayout(IHostApplicationBuilder, IReadOnlyDictionary(Of String, String))
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder, System.Collections.Generic.IReadOnlyDictionary<string, string>)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder, System.Collections.Generic.IReadOnlyDictionary(Of String, String))
+  nameWithType: HostApplicationBuilderDirectoryLayoutExtensions.AddDirectoryLayout(IHostApplicationBuilder, IReadOnlyDictionary<string, string>)
+  nameWithType.vb: HostApplicationBuilderDirectoryLayoutExtensions.AddDirectoryLayout(IHostApplicationBuilder, IReadOnlyDictionary(Of String, String))
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDirectoryLayout*
+  name: AddDirectoryLayout
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_HostApplicationBuilderDirectoryLayoutExtensions_AddDirectoryLayout_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDirectoryLayout
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.AddDirectoryLayout
+  nameWithType: HostApplicationBuilderDirectoryLayoutExtensions.AddDirectoryLayout
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.GetDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder)
+  name: GetDirectoryLayout(IHostApplicationBuilder)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_HostApplicationBuilderDirectoryLayoutExtensions_GetDirectoryLayout_Microsoft_Extensions_Hosting_IHostApplicationBuilder_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.GetDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.GetDirectoryLayout(Microsoft.Extensions.Hosting.IHostApplicationBuilder)
+  nameWithType: HostApplicationBuilderDirectoryLayoutExtensions.GetDirectoryLayout(IHostApplicationBuilder)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.GetDirectoryLayout*
+  name: GetDirectoryLayout
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_HostApplicationBuilderDirectoryLayoutExtensions_GetDirectoryLayout_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.GetDirectoryLayout
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.GetDirectoryLayout
+  nameWithType: HostApplicationBuilderDirectoryLayoutExtensions.GetDirectoryLayout
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory
+  name: HostApplicationBuilderFactory
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory
+  nameWithType: HostApplicationBuilderFactory
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory.CreateWithDefaultDirectory(System.String[])
+  name: CreateWithDefaultDirectory(string[]?)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_HostApplicationBuilderFactory_CreateWithDefaultDirectory_System_String___
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory.CreateWithDefaultDirectory(System.String[])
+  name.vb: CreateWithDefaultDirectory(String())
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory.CreateWithDefaultDirectory(string[]?)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory.CreateWithDefaultDirectory(String())
+  nameWithType: HostApplicationBuilderFactory.CreateWithDefaultDirectory(string[]?)
+  nameWithType.vb: HostApplicationBuilderFactory.CreateWithDefaultDirectory(String())
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory.CreateWithDefaultDirectory*
+  name: CreateWithDefaultDirectory
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_HostApplicationBuilderFactory_CreateWithDefaultDirectory_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory.CreateWithDefaultDirectory
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory.CreateWithDefaultDirectory
+  nameWithType: HostApplicationBuilderFactory.CreateWithDefaultDirectory
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout
+  name: IAppDirectoryLayout
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout
+  nameWithType: IAppDirectoryLayout
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Get(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  name: Get(DefaultDirectory)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_IAppDirectoryLayout_Get_Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Get(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Get(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  nameWithType: IAppDirectoryLayout.Get(DefaultDirectory)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Get(System.String)
+  name: Get(string)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_IAppDirectoryLayout_Get_System_String_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Get(System.String)
+  name.vb: Get(String)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Get(string)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Get(String)
+  nameWithType: IAppDirectoryLayout.Get(string)
+  nameWithType.vb: IAppDirectoryLayout.Get(String)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Get*
+  name: Get
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_IAppDirectoryLayout_Get_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Get
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Get
+  nameWithType: IAppDirectoryLayout.Get
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.GetByKey
+  name: GetByKey
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_IAppDirectoryLayout_GetByKey
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.GetByKey
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.GetByKey
+  nameWithType: IAppDirectoryLayout.GetByKey
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.GetByKey*
+  name: GetByKey
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_IAppDirectoryLayout_GetByKey_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.GetByKey
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.GetByKey
+  nameWithType: IAppDirectoryLayout.GetByKey
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Item(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  name: this[DefaultDirectory]
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_IAppDirectoryLayout_Item_Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Item(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  name.vb: this[](DefaultDirectory)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.this[Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory]
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.this[](Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory)
+  nameWithType: IAppDirectoryLayout.this[DefaultDirectory]
+  nameWithType.vb: IAppDirectoryLayout.this[](DefaultDirectory)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Item(System.String)
+  name: this[string]
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_IAppDirectoryLayout_Item_System_String_
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Item(System.String)
+  name.vb: this[](String)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.this[string]
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.this[](String)
+  nameWithType: IAppDirectoryLayout.this[string]
+  nameWithType.vb: IAppDirectoryLayout.this[](String)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Item*
+  name: this
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_IAppDirectoryLayout_Item_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.Item
+  isSpec: "True"
+  name.vb: this[]
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.this
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.this[]
+  nameWithType: IAppDirectoryLayout.this
+  nameWithType.vb: IAppDirectoryLayout.this[]
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.RootPath
+  name: RootPath
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_IAppDirectoryLayout_RootPath
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.RootPath
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.RootPath
+  nameWithType: IAppDirectoryLayout.RootPath
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.RootPath*
+  name: RootPath
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_IAppDirectoryLayout_RootPath_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.RootPath
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.RootPath
+  nameWithType: IAppDirectoryLayout.RootPath
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.TryGet(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory,System.String@)
+  name: TryGet(DefaultDirectory, out string)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_IAppDirectoryLayout_TryGet_Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_System_String__
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.TryGet(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory,System.String@)
+  name.vb: TryGet(DefaultDirectory, String)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.TryGet(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory, out string)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.TryGet(Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory, String)
+  nameWithType: IAppDirectoryLayout.TryGet(DefaultDirectory, out string)
+  nameWithType.vb: IAppDirectoryLayout.TryGet(DefaultDirectory, String)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.TryGet(System.String,System.String@)
+  name: TryGet(string, out string)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_IAppDirectoryLayout_TryGet_System_String_System_String__
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.TryGet(System.String,System.String@)
+  name.vb: TryGet(String, String)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.TryGet(string, out string)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.TryGet(String, String)
+  nameWithType: IAppDirectoryLayout.TryGet(string, out string)
+  nameWithType.vb: IAppDirectoryLayout.TryGet(String, String)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.TryGet*
+  name: TryGet
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_IAppDirectoryLayout_TryGet_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.TryGet
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.TryGet
+  nameWithType: IAppDirectoryLayout.TryGet
