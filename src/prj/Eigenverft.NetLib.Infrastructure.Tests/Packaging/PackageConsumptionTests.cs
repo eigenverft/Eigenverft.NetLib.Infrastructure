@@ -102,7 +102,12 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
                 programPath,
                 """
                 using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
+                using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Diagnostics;
+                using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Sources;
                 using Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger;
+                using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets;
+                using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson;
+                using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values;
                 using Eigenverft.NetLib.Infrastructure.Security.Certificates;
                 using Eigenverft.NetLib.Infrastructure.Security.MachineBinding;
                 using Eigenverft.NetLib.Infrastructure.Text;
@@ -112,6 +117,10 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
                 var directories = builder.GetDirectoryLayout();
                 var bootstrapLogger = BootstrapLogger.CreateLogger("package-consumer");
                 _ = bootstrapLogger;
+                builder.ResetToMinimalConfigurationSources(
+                    includeCommandLineArguments: false,
+                    includeEnvironmentVariables: false);
+                builder.LogConfigurationResolution(bootstrapLogger);
 
                 string settingsDirectory = directories[DefaultDirectory.ApplicationSettings];
                 using var certificate = SelfSignedCertificateFactory.Create(
@@ -138,10 +147,30 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
                 _ = ReversibleStringTransforms.NormalizeReadablePassword(new byte[] { 0x70, 0x77 }, "passwordBytes");
                 _ = ReversibleStringTransforms.TryReverseCaesarPayload("13:cnpxntr-pbafhzre", out _);
 
+                ConfigurationValueCodec configurationCodec = ConfigurationValueCodecs.Base64;
+                string encodedConfigurationValue = configurationCodec.Encode("configuration-value");
+                bool decodedConfigurationValue = configurationCodec.TryDecode(
+                    encodedConfigurationValue,
+                    out string configurationValue);
+                JsonConfigurationCandidatePreparation candidatePreparation =
+                    JsonConfigurationCandidatePreparations.Base64;
+                var switchableOptions = new SwitchableJsonRegistrationOptions
+                {
+                    CandidatePreparation = candidatePreparation,
+                };
+                IConfigurationSetCoordinator configurationSet = builder
+                    .AddConfigurationSet("PackageSet", "Stable", "Candidate")
+                    .Coordinator;
+                ConfigurationSetSwitchResult configurationSetSwitch = configurationSet.TrySwitch("Candidate");
+                _ = switchableOptions;
+
                 return string.IsNullOrWhiteSpace(settingsDirectory)
                     || !certificate.HasPrivateKey
                     || string.IsNullOrWhiteSpace(base92)
                     || string.IsNullOrWhiteSpace(transformed)
+                    || !decodedConfigurationValue
+                    || configurationValue != "configuration-value"
+                    || configurationSetSwitch.Status != ConfigurationSetSwitchStatus.Succeeded
                     ? 1
                     : 0;
                 """);
