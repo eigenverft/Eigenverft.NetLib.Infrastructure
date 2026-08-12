@@ -40,6 +40,25 @@ public sealed class DirectoryLayoutTests
     }
 
     [TestMethod]
+    public void HostApplicationBuilderFactoryCreatesDefaultLayout()
+    {
+        HostApplicationBuilder builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory();
+        IAppDirectoryLayout layout = builder.GetDirectoryLayout();
+
+        Assert.AreEqual(Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory), layout.RootPath);
+        Assert.AreEqual(Path.Combine(AppContext.BaseDirectory, "AppSettings"), layout[DefaultDirectory.ApplicationSettings]);
+    }
+
+    [TestMethod]
+    public void HostApplicationBuilderFactoryAcceptsExplicitArguments()
+    {
+        HostApplicationBuilder builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory(new[] { "--SampleSetting=Expected" });
+
+        Assert.AreEqual("Expected", builder.Configuration["SampleSetting"]);
+        Assert.IsNotNull(builder.GetDirectoryLayout());
+    }
+
+    [TestMethod]
     public void HostBuilderExtensionProvidesSameLayoutBeforeAndAfterBuild()
     {
         string folderName = $"evf-layout-test-{Guid.NewGuid():N}";

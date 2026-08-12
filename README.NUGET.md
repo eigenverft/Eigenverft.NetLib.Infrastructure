@@ -13,7 +13,7 @@ The first public primitive provides predictable, executable-rooted application d
 | | |
 | --- | --- |
 | Package | `Eigenverft.NetLib.Infrastructure` |
-| Primary API | `builder.AddDefaultDirectoryLayout()` |
+| Primary API | `HostApplicationBuilderFactory.CreateWithDefaultDirectory()` |
 | Root | `AppContext.BaseDirectory` |
 | Default folders | `AppLogs`, `AppData`, `AppState`, `AppCerts`, `AppSettings` |
 | Host integration | Available before `Build()` and through DI afterwards |
@@ -36,15 +36,14 @@ Install-Package Eigenverft.NetLib.Infrastructure
 
 ```csharp
 using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
-using Microsoft.Extensions.Hosting;
 
-HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+var builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory();
+var directories = builder.GetDirectoryLayout();
 
-builder.AddDefaultDirectoryLayout();
-IAppDirectoryLayout directories = builder.GetDirectoryLayout();
+string settingsDirectory =
+    directories[DefaultDirectory.ApplicationSettings];
 
-Console.WriteLine(directories[DefaultDirectory.ApplicationLogFiles]);
-Console.WriteLine(directories[DefaultDirectory.ApplicationData]);
+Console.WriteLine(settingsDirectory);
 
 using IHost host = builder.Build();
 await host.RunAsync();
