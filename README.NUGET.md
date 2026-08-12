@@ -6,7 +6,7 @@ Small, reusable infrastructure primitives for .NET applications and Generic Host
 
 Provides predictable, executable-rooted application directories with automatic creation and writable validation.
 
-Also includes generic reversible string transforms, JSON-safe Base92 representation, machine binding, DPAPI machine-scope transforms, and certificate primitives.
+Also includes generic reversible string transforms, JSON-safe Base92 representation, machine binding, DPAPI machine-scope transforms, certificate primitives, and pre-host bootstrap logging.
 
 ---
 

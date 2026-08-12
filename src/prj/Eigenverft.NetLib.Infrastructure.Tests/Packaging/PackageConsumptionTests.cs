@@ -102,6 +102,7 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
                 programPath,
                 """
                 using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
+                using Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger;
                 using Eigenverft.NetLib.Infrastructure.Security.Certificates;
                 using Eigenverft.NetLib.Infrastructure.Security.MachineBinding;
                 using Eigenverft.NetLib.Infrastructure.Text;
@@ -109,6 +110,8 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
 
                 var builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory();
                 var directories = builder.GetDirectoryLayout();
+                var bootstrapLogger = BootstrapLogger.CreateLogger("package-consumer");
+                _ = bootstrapLogger;
 
                 string settingsDirectory = directories[DefaultDirectory.ApplicationSettings];
                 using var certificate = SelfSignedCertificateFactory.Create(
