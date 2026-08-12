@@ -5,10 +5,10 @@
   <head>
     <meta charset="utf-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-      <title>Class SelfSignedCertificateFactory
+      <title>Class ReversibleStringTransform
  | Eigenverft.NetLib.Infrastructure </title>
       <meta name="viewport" content="width=device-width">
-      <meta name="title" content="Class SelfSignedCertificateFactory
+      <meta name="title" content="Class ReversibleStringTransform
  | Eigenverft.NetLib.Infrastructure ">
     
       <link rel="shortcut icon" href="../favicon.ico">
@@ -141,8 +141,8 @@
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateResult.html" title="ManagedCertificateResult" class="">ManagedCertificateResult</a>
                           </li>
-                          <li class="active">
-                            <a href="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory.html" title="SelfSignedCertificateFactory" class="active">SelfSignedCertificateFactory</a>
+                          <li class="">
+                            <a href="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory.html" title="SelfSignedCertificateFactory" class="">SelfSignedCertificateFactory</a>
                           </li>
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateOptions.html" title="SelfSignedCertificateOptions" class="">SelfSignedCertificateOptions</a>
@@ -174,8 +174,8 @@
                       <a href="Eigenverft.NetLib.Infrastructure.Transformations.html" title="Eigenverft.NetLib.Infrastructure.Transformations" class="">Eigenverft.NetLib.Infrastructure.Transformations</a>
 
                         <ul class="nav level2">
-                          <li class="">
-                            <a href="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.html" title="ReversibleStringTransform" class="">ReversibleStringTransform</a>
+                          <li class="active">
+                            <a href="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.html" title="ReversibleStringTransform" class="active">ReversibleStringTransform</a>
                           </li>
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransforms.html" title="ReversibleStringTransforms" class="">ReversibleStringTransforms</a>
@@ -190,19 +190,19 @@
         </div>
         <div class="article row grid-right">
           <div class="col-md-10">
-            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory">
+            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform">
 
 
 
-  <h1 id="Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateFactory" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory" class="text-break">Class SelfSignedCertificateFactory
+  <h1 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform" class="text-break">Class ReversibleStringTransform
 </h1>
-  <div class="markdown level0 summary"><p>Creates self-signed certificates without storage or hosting dependencies.</p>
+  <div class="markdown level0 summary"><p>Represents one reversible transformation from a string to another string.</p>
 </div>
   <div class="markdown level0 conceptual"></div>
   <div class="inheritance">
     <h5>Inheritance</h5>
     <div class="level0"><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
-    <div class="level1"><span class="xref">SelfSignedCertificateFactory</span></div>
+    <div class="level1"><span class="xref">ReversibleStringTransform</span></div>
   </div>
   <div class="inheritedMembers">
     <h5>Inherited Members</h5>
@@ -219,38 +219,81 @@
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
     </div>
     <div>
-      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
-    </div>
-    <div>
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
     </div>
-    <div>
-      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
-    </div>
   </div>
-  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.html">Security</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.Certificates.html">Certificates</a></h6>
+  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Transformations.html">Transformations</a></h6>
   <h6><strong>Assembly</strong>: Eigenverft.NetLib.Infrastructure.dll</h6>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateFactory_syntax">Syntax</h5>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_syntax">Syntax</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static class SelfSignedCertificateFactory</code></pre>
+    <pre><code class="lang-csharp hljs">public sealed class ReversibleStringTransform</code></pre>
   </div>
-  <h3 id="methods">Methods
+  <h5 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_remarks"><strong>Remarks</strong></h5>
+  <div class="markdown level0 remarks"><p>
+This type is intentionally independent from JSON configuration, persisted wrapper tokens, configuration providers and
+source switching. A transform owns only the reversible value operation. Callers decide how transformed strings are
+selected, framed, persisted, published or migrated.
+</p>
+<p>
+A transform may provide cryptographic protection, machine binding, obfuscation or only a storage representation. Those
+roles are deliberately distinct. For example, Base64 and Base92 are representations, while ROT13 and Caesar are only
+analysis-friction layers; none of them is a confidentiality boundary.
+</p>
+<p>
+<a class="xref" href="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.html#Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_TryReverse_System_String_System_String__">TryReverse(string?, out string)</a> is transactional from the caller's perspective. On failure it returns the original transformed
+value rather than a partially reversed intermediate representation. Composed transforms preserve the same rule.
+</p>
+</div>
+  <h3 id="properties">Properties
 </h3>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateFactory_Create_Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateOptions_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory.Create(Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateOptions)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_Name.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.Name%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/SelfSignedCertificateFactory.cs/#L16">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L53">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateFactory_Create_" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory.Create*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateFactory_Create_Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateOptions_" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory.Create(Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateOptions)">Create(SelfSignedCertificateOptions)</h4>
-  <div class="markdown level1 summary"><p>Creates a self-signed certificate containing its private key.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_Name_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.Name*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_Name" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.Name">Name</h4>
+  <div class="markdown level1 summary"><p>Gets the descriptive transform name.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static X509Certificate2 Create(SelfSignedCertificateOptions options)</code></pre>
+    <pre><code class="lang-csharp hljs">public string Name { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h3 id="methods">Methods
+</h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_Apply_System_String_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.Apply(System.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L58">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_Apply_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.Apply*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_Apply_System_String_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.Apply(System.String)">Apply(string?)</h4>
+  <div class="markdown level1 summary"><p>Applies this transform to one string.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string Apply(string? value)</code></pre>
   </div>
   <h5 class="parameters">Parameters</h5>
   <table class="table table-bordered table-condensed">
@@ -263,9 +306,9 @@
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateOptions.html">SelfSignedCertificateOptions</a></td>
-        <td><span class="parametername">options</span></td>
-        <td><p>The certificate description.</p>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">value</span></td>
+        <td><p>The source value; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> is treated as empty.</p>
 </td>
       </tr>
     </tbody>
@@ -280,8 +323,98 @@
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.security.cryptography.x509certificates.x509certificate2">X509Certificate2</a></td>
-        <td><p>A caller-owned certificate containing its private key.</p>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><p>The transformed value.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_ToString.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.ToString%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L83">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_ToString_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.ToString*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_ToString" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.ToString">ToString()</h4>
+  <div class="markdown level1 summary"><p>Returns a string that represents the current object.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override string ToString()</code></pre>
+  </div>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><p>A string that represents the current object.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="overrides">Overrides</h5>
+  <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a></div>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_TryReverse_System_String_System_String__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverse(System.String%2CSystem.String%40)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L69">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_TryReverse_" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverse*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform_TryReverse_System_String_System_String__" data-uid="Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform.TryReverse(System.String,System.String@)">TryReverse(string?, out string)</h4>
+  <div class="markdown level1 summary"><p>Attempts to reverse this transform for one transformed string.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool TryReverse(string? transformedValue, out string originalValue)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">transformedValue</span></td>
+        <td><p>The transformed value; <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> is treated as empty.</p>
+</td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">originalValue</span></td>
+        <td><p>Receives the original value on success. On failure, receives <code class="paramref">transformedValue</code> unchanged.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when the complete transform reverses successfully; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
 </td>
       </tr>
     </tbody>
@@ -295,10 +428,10 @@
               <div class="contribution">
                 <ul class="nav">
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateFactory.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Transformations_ReversibleStringTransform.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Transformations.ReversibleStringTransform%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
                   </li>
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/SelfSignedCertificateFactory.cs/#L11" class="contribution-link">View Source</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Transformations/ReversibleStringTransforms.cs/#L31" class="contribution-link">View Source</a>
                   </li>
                 </ul>
               </div>

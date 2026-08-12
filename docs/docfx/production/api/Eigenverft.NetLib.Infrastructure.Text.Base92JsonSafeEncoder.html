@@ -5,10 +5,10 @@
   <head>
     <meta charset="utf-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-      <title>Class SelfSignedCertificateFactory
+      <title>Class Base92JsonSafeEncoder
  | Eigenverft.NetLib.Infrastructure </title>
       <meta name="viewport" content="width=device-width">
-      <meta name="title" content="Class SelfSignedCertificateFactory
+      <meta name="title" content="Class Base92JsonSafeEncoder
  | Eigenverft.NetLib.Infrastructure ">
     
       <link rel="shortcut icon" href="../favicon.ico">
@@ -141,8 +141,8 @@
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateResult.html" title="ManagedCertificateResult" class="">ManagedCertificateResult</a>
                           </li>
-                          <li class="active">
-                            <a href="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory.html" title="SelfSignedCertificateFactory" class="active">SelfSignedCertificateFactory</a>
+                          <li class="">
+                            <a href="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory.html" title="SelfSignedCertificateFactory" class="">SelfSignedCertificateFactory</a>
                           </li>
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateOptions.html" title="SelfSignedCertificateOptions" class="">SelfSignedCertificateOptions</a>
@@ -164,8 +164,8 @@
                       <a href="Eigenverft.NetLib.Infrastructure.Text.html" title="Eigenverft.NetLib.Infrastructure.Text" class="">Eigenverft.NetLib.Infrastructure.Text</a>
 
                         <ul class="nav level2">
-                          <li class="">
-                            <a href="Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder.html" title="Base92JsonSafeEncoder" class="">Base92JsonSafeEncoder</a>
+                          <li class="active">
+                            <a href="Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder.html" title="Base92JsonSafeEncoder" class="active">Base92JsonSafeEncoder</a>
                           </li>
                         </ul>
                     </li>
@@ -190,19 +190,20 @@
         </div>
         <div class="article row grid-right">
           <div class="col-md-10">
-            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory">
+            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder">
 
 
 
-  <h1 id="Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateFactory" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory" class="text-break">Class SelfSignedCertificateFactory
+  <h1 id="Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder" data-uid="Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder" class="text-break">Class Base92JsonSafeEncoder
 </h1>
-  <div class="markdown level0 summary"><p>Creates self-signed certificates without storage or hosting dependencies.</p>
+  <div class="markdown level0 summary"><p>Encodes arbitrary bytes with a canonical base-92 representation that can appear inside a JSON string without
+JSON string escaping.</p>
 </div>
   <div class="markdown level0 conceptual"></div>
   <div class="inheritance">
     <h5>Inheritance</h5>
     <div class="level0"><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
-    <div class="level1"><span class="xref">SelfSignedCertificateFactory</span></div>
+    <div class="level1"><span class="xref">Base92JsonSafeEncoder</span></div>
   </div>
   <div class="inheritedMembers">
     <h5>Inherited Members</h5>
@@ -228,29 +229,72 @@
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
     </div>
   </div>
-  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.html">Security</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.Certificates.html">Certificates</a></h6>
+  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Text.html">Text</a></h6>
   <h6><strong>Assembly</strong>: Eigenverft.NetLib.Infrastructure.dll</h6>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateFactory_syntax">Syntax</h5>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder_syntax">Syntax</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static class SelfSignedCertificateFactory</code></pre>
+    <pre><code class="lang-csharp hljs">public static class Base92JsonSafeEncoder</code></pre>
   </div>
-  <h3 id="methods">Methods
+  <h5 id="Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder_remarks"><strong>Remarks</strong></h5>
+  <div class="markdown level0 remarks"><p>The alphabet contains every printable ASCII character from U+0021 through U+007E except double quote
+(<code>&quot;</code>) and backslash (<code>&lt;/code&gt;). Space is excluded by starting at U+0021. The resulting 92 symbols are:
+<code>!#$%&amp;'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~</code>.</code></p>
+<p>Encoding interprets the non-leading-zero input bytes as one unsigned big-endian base-256 integer and converts
+it to base 92. Each leading zero byte is represented by one leading <code>!</code>, the zero-valued alphabet symbol.
+Empty input encodes as an empty string and no padding is used.</p>
+<p>This type provides representation only. Base92JsonSafe does not provide cryptographic protection and should not
+be treated as encryption. JSON-safe here means JSON-string-safe; characters such as <code>&lt;</code>, <code>&gt;</code>,
+<code>&amp;</code>, apostrophe, and slash remain part of the alphabet and may require separate handling in other contexts.</p>
+</div>
+  <h3 id="fields">Fields
 </h3>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateFactory_Create_Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateOptions_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory.Create(Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateOptions)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder_Alphabet.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder.Alphabet%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/SelfSignedCertificateFactory.cs/#L16">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Text/Base92JsonSafeEncoder.cs/#L30">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateFactory_Create_" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory.Create*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateFactory_Create_Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateOptions_" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory.Create(Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateOptions)">Create(SelfSignedCertificateOptions)</h4>
-  <div class="markdown level1 summary"><p>Creates a self-signed certificate containing its private key.</p>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder_Alphabet" data-uid="Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder.Alphabet">Alphabet</h4>
+  <div class="markdown level1 summary"><p>Gets the canonical 92-character alphabet in digit order from zero through 91.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static X509Certificate2 Create(SelfSignedCertificateOptions options)</code></pre>
+    <pre><code class="lang-csharp hljs">public const string Alphabet = &quot;!#$%&amp;&#39;()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}~&quot;</code></pre>
+  </div>
+  <h5 class="fieldValue">Field Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h3 id="methods">Methods
+</h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder_Decode_System_String_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder.Decode(System.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Text/Base92JsonSafeEncoder.cs/#L90">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder_Decode_" data-uid="Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder.Decode*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder_Decode_System_String_" data-uid="Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder.Decode(System.String)">Decode(string)</h4>
+  <div class="markdown level1 summary"><p>Decodes one canonical Base92JsonSafe string.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static byte[] Decode(string value)</code></pre>
   </div>
   <h5 class="parameters">Parameters</h5>
   <table class="table table-bordered table-condensed">
@@ -263,9 +307,9 @@
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateOptions.html">SelfSignedCertificateOptions</a></td>
-        <td><span class="parametername">options</span></td>
-        <td><p>The certificate description.</p>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">value</span></td>
+        <td><p>The encoded value.</p>
 </td>
       </tr>
     </tbody>
@@ -280,8 +324,135 @@
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.security.cryptography.x509certificates.x509certificate2">X509Certificate2</a></td>
-        <td><p>A caller-owned certificate containing its private key.</p>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>[]</td>
+        <td><p>The decoded bytes.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="exceptions">Exceptions</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Condition</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></td>
+        <td><p><code class="paramref">value</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.formatexception">FormatException</a></td>
+        <td><p><code class="paramref">value</code> contains a character outside the alphabet.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder_Encode_System_Byte___.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder.Encode(System.Byte%5B%5D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Text/Base92JsonSafeEncoder.cs/#L40">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder_Encode_" data-uid="Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder.Encode*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder_Encode_System_Byte___" data-uid="Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder.Encode(System.Byte[])">Encode(byte[])</h4>
+  <div class="markdown level1 summary"><p>Encodes bytes using the canonical Base92JsonSafe representation.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static string Encode(byte[] bytes)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>[]</td>
+        <td><span class="parametername">bytes</span></td>
+        <td><p>The bytes to encode.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><p>The Base92JsonSafe string.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder_TryDecode_System_String_System_Byte____.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder.TryDecode(System.String%2CSystem.Byte%5B%5D%40)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Text/Base92JsonSafeEncoder.cs/#L108">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder_TryDecode_" data-uid="Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder.TryDecode*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder_TryDecode_System_String_System_Byte____" data-uid="Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder.TryDecode(System.String,System.Byte[]@)">TryDecode(string?, out byte[])</h4>
+  <div class="markdown level1 summary"><p>Attempts to decode one canonical Base92JsonSafe string.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool TryDecode(string? value, out byte[] bytes)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">value</span></td>
+        <td><p>The encoded value.</p>
+</td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>[]</td>
+        <td><span class="parametername">bytes</span></td>
+        <td><p>Receives the decoded bytes on success.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when decoding succeeds; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
 </td>
       </tr>
     </tbody>
@@ -295,10 +466,10 @@
               <div class="contribution">
                 <ul class="nav">
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_SelfSignedCertificateFactory.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.SelfSignedCertificateFactory%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Text_Base92JsonSafeEncoder.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Text.Base92JsonSafeEncoder%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
                   </li>
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/SelfSignedCertificateFactory.cs/#L11" class="contribution-link">View Source</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Text/Base92JsonSafeEncoder.cs/#L25" class="contribution-link">View Source</a>
                   </li>
                 </ul>
               </div>
