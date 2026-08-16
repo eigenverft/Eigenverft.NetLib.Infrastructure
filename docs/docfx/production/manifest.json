@@ -394,6 +394,16 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonConfigurationEventArgs.yml",
       "output": {
         ".html": {
@@ -528,6 +538,16 @@
       "output": {
         ".html": {
           "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueKind.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.html"
         }
       },
       "version": ""

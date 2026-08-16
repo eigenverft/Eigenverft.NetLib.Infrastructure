@@ -2403,6 +2403,44 @@ references:
   isSpec: "True"
   fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationException.SourcePath
   nameWithType: JsonConfigurationSourcePreparationException.SourcePath
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection
+  name: JsonConfigurationValueProtection
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection
+  nameWithType: JsonConfigurationValueProtection
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForKeys(Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec,System.String[])
+  name: ForKeys(ConfigurationValueCodec, params string[])
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_JsonConfigurationValueProtection_ForKeys_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_Values_ConfigurationValueCodec_System_String___
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForKeys(Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec,System.String[])
+  name.vb: ForKeys(ConfigurationValueCodec, ParamArray String())
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForKeys(Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec, params string[])
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForKeys(Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec, ParamArray String())
+  nameWithType: JsonConfigurationValueProtection.ForKeys(ConfigurationValueCodec, params string[])
+  nameWithType.vb: JsonConfigurationValueProtection.ForKeys(ConfigurationValueCodec, ParamArray String())
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForKeys*
+  name: ForKeys
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_JsonConfigurationValueProtection_ForKeys_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForKeys
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForKeys
+  nameWithType: JsonConfigurationValueProtection.ForKeys
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForPaths(Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec,System.String[])
+  name: ForPaths(ConfigurationValueCodec, params string[])
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_JsonConfigurationValueProtection_ForPaths_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_Values_ConfigurationValueCodec_System_String___
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForPaths(Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec,System.String[])
+  name.vb: ForPaths(ConfigurationValueCodec, ParamArray String())
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForPaths(Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec, params string[])
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForPaths(Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec, ParamArray String())
+  nameWithType: JsonConfigurationValueProtection.ForPaths(ConfigurationValueCodec, params string[])
+  nameWithType.vb: JsonConfigurationValueProtection.ForPaths(ConfigurationValueCodec, ParamArray String())
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForPaths*
+  name: ForPaths
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_JsonConfigurationValueProtection_ForPaths_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForPaths
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.ForPaths
+  nameWithType: JsonConfigurationValueProtection.ForPaths
 - uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonConfigurationEventArgs
   name: SwitchableJsonConfigurationEventArgs
   href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonConfigurationEventArgs.html
@@ -2768,6 +2806,19 @@ references:
   isSpec: "True"
   fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.RuntimeFailurePolicy
   nameWithType: SwitchableJsonRegistrationOptions.RuntimeFailurePolicy
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.ValueProtection
+  name: ValueProtection
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_SwitchableJsonRegistrationOptions_ValueProtection
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.ValueProtection
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.ValueProtection
+  nameWithType: SwitchableJsonRegistrationOptions.ValueProtection
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.ValueProtection*
+  name: ValueProtection
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_SwitchableJsonRegistrationOptions_ValueProtection_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.ValueProtection
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.ValueProtection
+  nameWithType: SwitchableJsonRegistrationOptions.ValueProtection
 - uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRuntimeFailurePolicy
   name: SwitchableJsonRuntimeFailurePolicy
   href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRuntimeFailurePolicy.html
@@ -3405,6 +3456,37 @@ references:
   commentId: F:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueKind.Rot13
   fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueKind.Rot13
   nameWithType: ConfigurationValueKind.Rot13
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder
+  name: JsonConfigurationFileEncoder
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder
+  nameWithType: JsonConfigurationFileEncoder
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(System.String,System.Collections.Generic.IEnumerable{System.String},Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec,System.Boolean)
+  name: EncodeMatchingValuesInPlace(string, IEnumerable<string>, ConfigurationValueCodec, bool)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_Values_JsonConfigurationFileEncoder_EncodeMatchingValuesInPlace_System_String_System_Collections_Generic_IEnumerable_System_String__Eigenverft_NetLib_Infrastructure_Hosting_Configuration_Values_ConfigurationValueCodec_System_Boolean_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(System.String,System.Collections.Generic.IEnumerable{System.String},Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec,System.Boolean)
+  name.vb: EncodeMatchingValuesInPlace(String, IEnumerable(Of String), ConfigurationValueCodec, Boolean)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(string, System.Collections.Generic.IEnumerable<string>, Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec, bool)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(String, System.Collections.Generic.IEnumerable(Of String), Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec, Boolean)
+  nameWithType: JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(string, IEnumerable<string>, ConfigurationValueCodec, bool)
+  nameWithType.vb: JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(String, IEnumerable(Of String), ConfigurationValueCodec, Boolean)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(System.String,System.String,Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec,System.Boolean)
+  name: EncodeMatchingValuesInPlace(string, string, ConfigurationValueCodec, bool)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_Values_JsonConfigurationFileEncoder_EncodeMatchingValuesInPlace_System_String_System_String_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_Values_ConfigurationValueCodec_System_Boolean_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(System.String,System.String,Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec,System.Boolean)
+  name.vb: EncodeMatchingValuesInPlace(String, String, ConfigurationValueCodec, Boolean)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(string, string, Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec, bool)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(String, String, Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueCodec, Boolean)
+  nameWithType: JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(string, string, ConfigurationValueCodec, bool)
+  nameWithType.vb: JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(String, String, ConfigurationValueCodec, Boolean)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace*
+  name: EncodeMatchingValuesInPlace
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_Values_JsonConfigurationFileEncoder_EncodeMatchingValuesInPlace_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace
+  nameWithType: JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace
 - uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout
   name: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout
   href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.html
