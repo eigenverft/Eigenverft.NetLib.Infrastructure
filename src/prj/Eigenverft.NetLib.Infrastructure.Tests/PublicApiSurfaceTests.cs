@@ -39,8 +39,10 @@ namespace Eigenverft.NetLib.Infrastructure.Tests
                 typeof(IJsonConfigurationSourcePreparation),
                 typeof(JsonConfigurationCandidatePreparation),
                 typeof(JsonConfigurationCandidatePreparations),
+                typeof(JsonConfigurationValueProtection),
                 typeof(ConfigurationValueCodec),
                 typeof(ConfigurationValueCodecs),
+                typeof(JsonConfigurationFileEncoder),
                 typeof(ConfigurationPrecedenceDiagnosticsExtensions),
                 typeof(HostApplicationBuilderConfigurationExtensions),
             };

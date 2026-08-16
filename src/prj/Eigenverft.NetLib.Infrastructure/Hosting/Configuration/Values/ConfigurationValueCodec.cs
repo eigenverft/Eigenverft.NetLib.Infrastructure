@@ -181,5 +181,10 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values
             kind = default;
             return false;
         }
+
+        internal static bool HasRecognizedWrapper(string? value)
+        {
+            return TryUnwrap(value, out _, out _);
+        }
     }
 }

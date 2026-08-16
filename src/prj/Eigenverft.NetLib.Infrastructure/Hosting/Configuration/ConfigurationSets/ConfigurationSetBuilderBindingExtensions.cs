@@ -212,6 +212,13 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSe
             IConfigurationSetCoordinator coordinator = GetRequiredCoordinator(builder, setName);
             string initialPath = Path.Combine(rootPath, coordinator.ActiveValue, fileName);
 
+            ProtectConfigurationSetFiles(
+                builder,
+                coordinator,
+                rootPath,
+                options.ValueProtection,
+                new[] { fileName });
+
             builder.AddSwitchableJsonFile(switchableName, initialPath, options);
 
             try
@@ -316,6 +323,13 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSe
                         $"A switchable JSON configuration source named '{switchableName}' is already registered.");
                 }
             }
+
+            ProtectConfigurationSetFiles(
+                builder,
+                coordinator,
+                rootPath,
+                options.ValueProtection,
+                Array.ConvertAll(files, file => file.FileName));
 
             var registeredNames = new List<string>(files.Length);
             try
@@ -462,6 +476,30 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSe
             }
 
             return coordinator;
+        }
+
+        private static void ProtectConfigurationSetFiles(
+            IHostApplicationBuilder builder,
+            IConfigurationSetCoordinator coordinator,
+            string rootPath,
+            JsonConfigurationValueProtection? protection,
+            IEnumerable<string> fileNames)
+        {
+            if (protection is null)
+            {
+                return;
+            }
+
+            foreach (string allowedValue in coordinator.AllowedValues)
+            {
+                foreach (string fileName in fileNames)
+                {
+                    SwitchableJsonConfigurationExtensions.ProtectExistingFile(
+                        builder,
+                        Path.Combine(rootPath, allowedValue, fileName),
+                        protection);
+                }
+            }
         }
     }
 }

@@ -17,10 +17,12 @@ Also includes Configuration Sets, SwitchableJson, configuration-value codecs and
 | | |
 | --- | --- |
 | Package | `Eigenverft.NetLib.Infrastructure` |
-| Primary API | `HostApplicationBuilderFactory.CreateWithDefaultDirectory()` |
+| Primary host integration | `builder.AddDefaultDirectoryLayout()` |
+| Convenience builder | `HostApplicationBuilderFactory.CreateWithDefaultDirectory(args)` |
 | Root | `AppContext.BaseDirectory` |
 | Default folders | `AppLogs`, `AppData`, `AppState`, `AppCerts`, `AppSettings` |
 | Host integration | Available before `Build()` and through DI afterwards |
+| Also included | Runtime configuration, value codecs, machine binding, certificates, diagnostics, bootstrap logging |
 | Target frameworks | .NET 8 and .NET 10 |
 | License | MIT |
 
@@ -42,8 +44,10 @@ Install-Package Eigenverft.NetLib.Infrastructure
 using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
 using Microsoft.Extensions.Hosting;
 
-var builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory();
-var directories = builder.GetDirectoryLayout();
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+builder.AddDefaultDirectoryLayout();
+
+IAppDirectoryLayout directories = builder.GetDirectoryLayout();
 
 string settingsDirectory =
     directories[DefaultDirectory.ApplicationSettings];
@@ -52,6 +56,13 @@ Console.WriteLine(settingsDirectory);
 
 using IHost host = builder.Build();
 await host.RunAsync();
+```
+
+For the shortest setup, the factory is a shorthand for the same two calls:
+
+```csharp
+HostApplicationBuilder builder =
+    HostApplicationBuilderFactory.CreateWithDefaultDirectory(args);
 ```
 
 The standard layout is created directly below the executable directory:
@@ -126,27 +137,313 @@ AppDirectoryLayout directories = AppDirectoryLayoutFactory.CreateDefault();
 
 An explicit root can also be supplied to the factory for tools, tests, or custom bootstrap scenarios.
 
-## Configuration preferred API
+## 🔄 Switch complete configuration profiles
 
-The public configuration surface is intentionally centered on developer-facing contracts and registration helpers:
+A Configuration Set turns a technical collection of JSON files into one application-level choice:
 
-- `builder.AddConfigurationSet(...)` returns a `ConfigurationSetRegistration` for fluent startup binding. External runtime control uses `IConfigurationSetManager.TrySwitchRuntime(...)`; set-specific control can use keyed `IConfigurationSetCoordinator.TrySwitch(...)`.
-- `builder.AddSwitchableJsonFile(...)` registers a source; runtime control uses keyed `ISwitchableJsonConfiguration`.
-- `IConfigurationSetCoordinator.BindSwitchableJson(...)` is an advanced binding API for already existing runtimes and is supported only for coordinators created by NetLib configuration-set registration; it is not the runtime switch API.
-- `SwitchableJsonRegistrationOptions.CandidatePreparation` accepts `IJsonConfigurationSourcePreparation`; common preparations come from `JsonConfigurationCandidatePreparations`.
-- `ConfigurationValueCodecs` provides the built-in persisted codecs. External adapters can compose a public `ReversibleStringTransform` with `new ConfigurationValueCodec(...)` and then use `JsonConfigurationCandidatePreparations.Decode(...)`.
-- `ResetToMinimalConfigurationSources(...)` and `LogConfigurationResolution(...)` are Generic Host configuration utilities and work through `IHostApplicationBuilder`.
+| Set | Example values | Sources changed together |
+| --- | --- | --- |
+| Routing profile | `Primary`, `Canary`, `Failover` | Routes and clusters |
+| Operational profile | `Normal`, `Degraded`, `Incident` | Features, resilience, and diagnostics |
+| Feature or release bundle | `Stable`, `Beta` | A complete feature configuration, optionally on restart |
+| Environment or tenant profile | Application-defined values | One or more profile-specific settings files |
 
-Concrete coordinator, provider, runtime, pipeline, watcher, and persistence-format implementation types are intentionally internal. They are created and exposed through the public contracts above and are not required for normal consumer code.
+The directory overload follows `{rootPath}/{setValue}/{fileName}`. This example switches three operational files as one coordinated group:
 
-## Certificates
+```csharp
+string settings = directories[DefaultDirectory.ApplicationSettings];
+string operationsRoot = Path.Combine(settings, "Operations");
 
-`Eigenverft.NetLib.Infrastructure.Security.Certificates` provides host-independent X.509 helpers:
+builder
+    .AddConfigurationSet(
+        "OperationalProfile",
+        "Normal",
+        "Degraded",
+        "Incident")
+    .AddSwitchableJson(
+        operationsRoot,
+        "Features.json",
+        "Resilience.json",
+        "Diagnostics.json");
+```
 
-- `SelfSignedCertificateFactory.Create(...)` creates caller-owned self-signed certificates for TLS server/client, code-signing, and email-protection purposes using RSA or ECDSA profiles.
-- `ManagedCertificateFile.LoadOrCreate(...)` loads a managed PFX or returns a policy-controlled recovery certificate. `CertificateRecoveryMode.PreserveExisting` is the safe default and does not overwrite an existing unusable PFX.
+The example reads files such as `AppSettings/Operations/Normal/Features.json` and `AppSettings/Operations/Incident/Diagnostics.json`.
 
-The certificate APIs depend only on .NET cryptography and file-system primitives; ASP.NET Core, Kestrel, SNI, configuration, and logging remain outside this layer.
+Routing often uses differently named files. Map each participant independently when the directory convention does not fit:
+
+```csharp
+ConfigurationSetRegistration routing = builder.AddConfigurationSet(
+    "RoutingProfile",
+    "Primary",
+    "Canary",
+    "Failover");
+
+routing
+    .AddSwitchableJson(value => Path.Combine(
+        settings,
+        "Routing",
+        $"routes-{value.ToLowerInvariant()}.json"))
+    .AddSwitchableJson(value => Path.Combine(
+        settings,
+        "Routing",
+        $"clusters-{value.ToLowerInvariant()}.json"));
+
+// Alternative when every profile uses the same file names:
+// routing.AddSwitchableJson(routingRoot, "Routes.json", "Clusters.json");
+```
+
+Every mapped source is loaded before the coordinated value changes. A rejected candidate keeps the last fully coordinated profile active.
+
+## 🛡️ Prepare configuration before it goes live
+
+Candidate Preparation is a pre-publication pipeline over an isolated, parsed JSON snapshot:
+
+```text
+JSON file → parse → decode / normalize / validate → publish
+```
+
+### Why not just `AddJsonFile(...)`?
+
+The built-in .NET JSON provider is the right default for a fixed `appsettings` file that only needs loading and optional reload-on-change. SwitchableJson adds value when configuration changes are operational events that must be prepared, accepted, rejected, switched, or coordinated deliberately.
+
+| Concern | .NET `AddJsonFile(...)` | SwitchableJson and Configuration Sets |
+| --- | --- | --- |
+| Invalid changed file | No isolated candidate/commit boundary with a last-known-good guarantee | Parses and prepares first; rejection leaves the published snapshot untouched |
+| Before publication | Loads parsed JSON values | Can decode, normalize, migrate, derive, or validate an isolated snapshot |
+| Source identity | Uses the path registered at startup | Can prepare and atomically switch to another file without changing provider precedence |
+| Several related files | Each provider reloads independently | A Configuration Set prepares every participant before committing the group |
+| Operational feedback | Standard reload tokens and file-load exception handling | Typed results, failure kinds, lifecycle events, and active-source status |
+| Protected file values | Requires a separate provider or application convention | Opt-in startup protection writes selected values and decodes them before publication |
+
+Use the .NET default when those guarantees are unnecessary; use this package when a bad edit must not replace live settings or several operational concerns need one explicit acceptance boundary.
+
+Preparations can decode protected values, migrate legacy keys, normalize endpoints, calculate derived settings, or reject invalid combinations. An application-owned preparation implements `IJsonConfigurationSourcePreparation`; throwing rejects the candidate before it becomes visible.
+
+### Load one file without switching
+
+A switchable source can simply replace an ordinary JSON source. No switch call or Configuration Set is required to gain safe reload with last-known-good data:
+
+```csharp
+string settings = directories[DefaultDirectory.ApplicationSettings];
+string partnerConfiguration = Path.Combine(settings, "PartnerApi.json");
+
+builder.AddSwitchableJsonFile(
+    "PartnerApi",
+    partnerConfiguration,
+    reloadOnChange: true);
+```
+
+The keyed runtime handle remains available if the application needs switching later; otherwise the source behaves like a normal reloadable configuration provider.
+
+### Protect selected values independently
+
+Configuration-value codecs do not depend on SwitchableJson or Configuration Sets. Build one reusable protection recipe, then encode only secret-bearing properties in provisioning or migration code:
+
+```csharp
+// Additional application/domain factor. Recoverable from the binary,
+// so it complements but never replaces the deployment secret.
+const string embeddedApplicationFactor = "partner-api-v1";
+
+// Actual secrecy depends on securely supplying and protecting this value.
+string deploymentPassword =
+    Environment.GetEnvironmentVariable("APP_CONFIGURATION_PASSWORD")
+    ?? throw new InvalidOperationException(
+        "APP_CONFIGURATION_PASSWORD is required.");
+
+ConfigurationValueCodec protectedValues = ConfigurationValueCodecs.Compose(
+    ConfigurationValueCodecs.AesPassword(embeddedApplicationFactor),
+    ConfigurationValueCodecs.AesPassword(deploymentPassword),
+    ConfigurationValueCodecs.PhysicalMachineBoundAes());
+
+static string CreatePartnerConfigurationJson(
+    string endpoint,
+    string apiToken,
+    ConfigurationValueCodec protectedValues)
+{
+    return JsonSerializer.Serialize(new
+    {
+        PartnerApi = new
+        {
+            Endpoint = endpoint,
+            ApiToken = protectedValues.Encode(apiToken),
+        },
+    });
+}
+```
+
+The resulting file mixes ordinary and protected values:
+
+```json
+{
+  "PartnerApi": {
+    "Endpoint": "https://api.example.com",
+    "ApiToken": "enc:a3s6p1:<generated payload>"
+  }
+}
+```
+
+`Endpoint` remains readable while `ApiToken` receives the complete composed protection. Selection happens explicitly at the `Encode(...)` call, not by guessing from the JSON key. Apply it to API keys, access tokens, passwords, or client secrets rather than routes, endpoints, flags, or other ordinary configuration. The selected codecs and their order form an application-owned structural factor without storing the complete recipe as a password string. The embedded application factor adds a separate domain-specific layer. Both remain recoverable through code analysis and complement rather than replace the deployment secret. `TryDecode(...)` is available when the codec is used independently. When `PhysicalMachineBoundAes()` participates, provision the encoded value on its target machine.
+
+### Combine both for transparent profile loading
+
+Add `ValueProtection` when existing clear-text values should be protected automatically at startup and decoded before a profile becomes visible:
+
+```csharp
+string operationsRoot = Path.Combine(settings, "Operations");
+
+// Recoverable from the binary: useful as an application/domain factor,
+// but not a secret boundary by itself.
+const string applicationFactor = "worker-operational-profile-v1";
+
+// Actual secrecy depends on securely supplying and protecting this value.
+string deploymentPassword =
+    Environment.GetEnvironmentVariable("APP_CONFIGURATION_PASSWORD")
+    ?? throw new InvalidOperationException(
+        "APP_CONFIGURATION_PASSWORD is required.");
+
+ConfigurationValueCodec protectedValues = ConfigurationValueCodecs.Compose(
+    ConfigurationValueCodecs.AesPassword(applicationFactor),
+    ConfigurationValueCodecs.AesPassword(deploymentPassword),
+    ConfigurationValueCodecs.PhysicalMachineBoundAes());
+
+var sourceOptions = new SwitchableJsonRegistrationOptions
+{
+    ReloadOnChange = true,
+    ValueProtection = JsonConfigurationValueProtection.ForKeys(
+        protectedValues,
+        "*ApiKey*",
+        "*Token*",
+        "Password"),
+
+    // ValueProtection decodes first; application validation is optional:
+    // CandidatePreparation = JsonConfigurationCandidatePreparations.From(
+    //     "OperationalPolicy",
+    //     new OperationalPolicyPreparation()),
+};
+
+ConfigurationSetRegistration operationalProfile =
+    builder.AddConfigurationSet(
+        "OperationalProfile",
+        "Normal",
+        "Degraded",
+        "Incident");
+
+operationalProfile
+    .AddSwitchableJson(
+        operationsRoot,
+        sourceOptions,
+        "Features.json")
+    .AddSwitchableJson(
+        operationsRoot,
+        "Resilience.json",
+        "Diagnostics.json");
+```
+
+This protects matching values in `Features.json` for `Normal`, `Degraded`, and `Incident`; `Resilience.json` and `Diagnostics.json` remain outside that rule because they are registered by a separate call. `ForKeys(...)` matches the final JSON key name regardless of nesting. Use `ForPaths(...)`, for example `PartnerApi:*:ApiKey`, when the complete colon-separated configuration path should decide.
+
+During registration, matching values in existing files are encoded once and changed JSON is atomically rewritten in formatted form. The provider and its watcher are created only afterwards, so the write cannot trigger its own reload. On initial load, reload, and profile switch, the matching codec envelopes are decoded before the optional `CandidatePreparation`; application validation therefore receives clear text. Ordinary values pass through unchanged. A later external clear-text edit is only read at runtime and is protected on the next process start. Missing files are not created by protection and retain the normal optional and switch-failure behavior.
+
+## 🎛️ Control and observe desired state
+
+Register a self-describing state file when operators or a control plane should persist the desired profile:
+
+```csharp
+string stateFile = Path.Combine(
+    directories[DefaultDirectory.ApplicationState],
+    "ConfigurationSets.json");
+
+IConfigurationSetStateStore stateStore =
+    builder.AddConfigurationSetStateFile(stateFile);
+
+using IHost host = builder.Build();
+ConfigurationSetStateApplyResult applied = stateStore.TrySetDesiredValue(
+    "OperationalProfile",
+    "Degraded");
+
+// For transient, non-persistent control instead:
+// host.Services.GetRequiredService<IConfigurationSetManager>()
+//     .TrySwitchRuntime("OperationalProfile", "Normal", out _);
+```
+
+The state store can watch for changes, expose active-versus-desired drift, and report values waiting for restart. Mark restart-bound sets with `.ApplyMode(ConfigurationSetApplyMode.StartupOnly)`. `IConfigurationSetEventHub` provides process-wide or per-set completion notifications, while manager and store status snapshots expose consistency and participant state.
+
+## 🔐 Understand composition
+
+Composition is available at three deliberate layers:
+
+| Need | API |
+| --- | --- |
+| Reversible in-memory string pipeline | `ReversibleStringTransforms.Compose(...)` |
+| Self-describing persisted value pipeline | `ConfigurationValueCodecs.Compose(...)` |
+| Ordered whole-candidate preparation pipeline | `JsonConfigurationCandidatePreparations.Compose(...)` |
+
+Codecs encode from first to last and decode in reverse order. A failed composed decode returns the original persisted value unchanged. In the example, decoding requires the same application-owned composition, the embedded application factor, the deployment password, and the original machine identity. Composition is program behavior rather than a hard-coded recipe string; the embedded factor is an additional recoverable layer. The deployment password remains the secret factor and provides secrecy only when its delivery and storage are protected.
+
+After successful Candidate Preparation, clear values are intentionally available to the running process through `IConfiguration`, options binding, and DI.
+
+Use Windows-only `DpapiMachine`, cross-platform `AesPassword(...)`, lightweight `PhysicalMachineBoundAes()`, or a composition that matches the application's deployment model.
+
+DPAPI LocalMachine is not a user or administrator boundary, and physical-machine binding is file-copy resistance rather than hardware-backed key storage. `Base64`, `Base92JsonSafe`, `Rot13`, and `Caesar(...)` are representations or analysis friction, not encryption.
+
+## 🖥️ Read the machine fingerprint
+
+```csharp
+if (PhysicalMachineBinding.TryGetFingerprint(out string fingerprint))
+{
+    Console.WriteLine(fingerprint);
+}
+```
+
+The fingerprint is stable machine information, not a secret. It uses the platform UUID on Windows, Linux, and macOS and can be unavailable on systems that do not expose a valid UUID.
+
+## 🔏 Create or recover certificates
+
+Load a valid PFX or create a usable self-signed replacement with an explicit recovery policy:
+
+```csharp
+string pfxPath = Path.Combine(
+    directories[DefaultDirectory.ApplicationCerts],
+    "worker.pfx");
+string pfxPassword =
+    Environment.GetEnvironmentVariable("APP_PFX_PASSWORD")
+    ?? throw new InvalidOperationException("APP_PFX_PASSWORD is required.");
+
+ManagedCertificateResult managed = ManagedCertificateFile.LoadOrCreate(
+    new ManagedCertificateFileOptions
+    {
+        FilePath = pfxPath,
+        Password = pfxPassword,
+        Replacement = new SelfSignedCertificateOptions
+        {
+            Subject = new CertificateSubject
+            {
+                CommonName = "worker.example",
+            },
+            Purpose = CertificatePurpose.TlsServer,
+            DnsNames = new[] { "worker.example" },
+        },
+    });
+
+using X509Certificate2 certificate = managed.Certificate;
+Console.WriteLine($"{managed.Action}; persisted: {managed.Persisted}");
+```
+
+`CertificateRecoveryMode.PreserveExisting` is the safe default: it creates a missing PFX but never overwrites an existing unusable credential. The result still provides an in-memory recovery certificate and reports load or persistence failures. Use `SelfSignedCertificateFactory.Create(...)` directly when no managed file lifecycle is needed.
+
+## 🪵 Diagnose startup before the host exists
+
+```csharp
+ILogger startupLogger =
+    BootstrapLogger<Program>.CreateLogger(builder.Configuration);
+
+builder.LogConfigurationResolution(startupLogger);
+```
+
+The bootstrap logger works before the host and DI container exist. It uses an already initialized Serilog logger when available and otherwise falls back to Microsoft logging. `CreateRequiredSerilogLogger(...)` provides a strict, isolated JSON-configured Serilog bootstrap channel when fallback is not acceptable.
+
+`LogConfigurationResolution(...)` reports provider precedence and complete key-shadowing chains without logging configuration values. `ResetToMinimalConfigurationSources(...)` is available when an application intentionally wants to replace the default Generic Host sources; call it before adding custom providers because it clears the existing source collection.
+
+Concrete providers, runtimes, watchers, and persistence formats remain internal; normal consumers use the registration helpers and public contracts shown above.
 
 ## 🎯 Target frameworks
 
@@ -159,7 +456,7 @@ A .NET 9 consumer can use the compatible `net8.0` asset.
 
 ## 📚 Documentation
 
-- [GitHub Pages documentation](https://eigenverft.github.io/Eigenverft.NetLib.Infrastructure/)
+- [Guides and API reference](https://eigenverft.github.io/Eigenverft.NetLib.Infrastructure/docfx/production/)
 
 ## 🧪 Build and test
 

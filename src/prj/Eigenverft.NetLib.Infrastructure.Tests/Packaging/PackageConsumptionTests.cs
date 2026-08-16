@@ -162,24 +162,35 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
                     out string configurationValue);
                 JsonConfigurationCandidatePreparation candidatePreparation =
                     JsonConfigurationCandidatePreparations.Base64;
+                JsonConfigurationValueProtection valueProtection =
+                    JsonConfigurationValueProtection.ForKeys(configurationCodec, "*ApiKey*");
                 var switchableOptions = new SwitchableJsonRegistrationOptions
                 {
-                    CandidatePreparation = candidatePreparation,
+                    ValueProtection = valueProtection,
                 };
                 string switchableDirectory = Path.Combine(
                     Path.GetTempPath(),
                     $"Eigenverft.NetLib.PackageConsumer-{Guid.NewGuid():N}");
-                Directory.CreateDirectory(switchableDirectory);
-                string stablePath = Path.Combine(switchableDirectory, "Stable.json");
-                string candidatePath = Path.Combine(switchableDirectory, "Candidate.json");
-                File.WriteAllText(stablePath, "{ \"PackageMarker\": \"Stable\" }");
-                File.WriteAllText(candidatePath, "{ \"PackageMarker\": \"Candidate\" }");
+                string stableDirectory = Path.Combine(switchableDirectory, "Stable");
+                string candidateDirectory = Path.Combine(switchableDirectory, "Candidate");
+                Directory.CreateDirectory(stableDirectory);
+                Directory.CreateDirectory(candidateDirectory);
+                string stablePath = Path.Combine(stableDirectory, "Settings.json");
+                string candidatePath = Path.Combine(candidateDirectory, "Settings.json");
+                File.WriteAllText(stablePath, "{ \"PackageMarker\": \"Stable\", \"ApiKey\": \"stable-secret\" }");
+                File.WriteAllText(candidatePath, "{ \"PackageMarker\": \"Candidate\", \"ApiKey\": \"candidate-secret\" }");
+                _ = JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(
+                    stablePath,
+                    "*ApiKey*",
+                    configurationCodec);
 
                 ConfigurationSetRegistration configurationSet = builder
                     .AddConfigurationSet("PackageSet", "Stable", "Candidate");
                 configurationSet.AddSwitchableJson(
-                    value => value == "Stable" ? stablePath : candidatePath);
-                _ = switchableOptions;
+                    switchableDirectory,
+                    switchableOptions,
+                    "Settings.json");
+                _ = candidatePreparation;
 
                 using IHost host = builder.Build();
                 IConfigurationSetManager configurationSetManager =
@@ -200,6 +211,9 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Packaging
                         || !configurationSetSwitched
                         || configurationSetSwitch?.Status != ConfigurationSetSwitchStatus.Succeeded
                         || builder.Configuration["PackageMarker"] != "Candidate"
+                        || builder.Configuration["ApiKey"] != "candidate-secret"
+                        || !File.ReadAllText(stablePath).Contains("enc:q7m2n4:", StringComparison.Ordinal)
+                        || !File.ReadAllText(candidatePath).Contains("enc:q7m2n4:", StringComparison.Ordinal)
                         ? 1
                         : 0;
                 }

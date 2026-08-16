@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 using Microsoft.Extensions.Configuration;
@@ -90,6 +91,19 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
                     $"A switchable JSON configuration source named '{name}' is already registered.");
             }
 
+            ProtectExistingFile(builder, initialPath, options.ValueProtection);
+
+            var preparations = new List<IJsonConfigurationSourcePreparation>(2);
+            if (options.ValueProtection is not null)
+            {
+                preparations.Add(options.ValueProtection.Decoder);
+            }
+
+            if (options.CandidatePreparation is not null)
+            {
+                preparations.Add(options.CandidatePreparation);
+            }
+
             var runtime = new SwitchableJsonConfigurationRuntime(
                 name,
                 builder.Environment.ContentRootPath,
@@ -98,9 +112,7 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
                 options.ReloadOnChange,
                 options.ReloadDelayMilliseconds,
                 options.RuntimeFailurePolicy,
-                options.CandidatePreparation is null
-                    ? Array.Empty<IJsonConfigurationSourcePreparation>()
-                    : new IJsonConfigurationSourcePreparation[] { options.CandidatePreparation });
+                preparations);
 
             IConfigurationBuilder configurationBuilder = builder.Configuration;
             var source = new SwitchableJsonConfigurationSource(runtime);
@@ -124,6 +136,24 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
             }
 
             return builder;
+        }
+
+        internal static void ProtectExistingFile(
+            IHostApplicationBuilder builder,
+            string path,
+            JsonConfigurationValueProtection? protection)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentException.ThrowIfNullOrWhiteSpace(path);
+            if (protection is null)
+            {
+                return;
+            }
+
+            string fullPath = Path.IsPathFullyQualified(path)
+                ? Path.GetFullPath(path)
+                : Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, path));
+            protection.ProtectExistingFile(fullPath);
         }
 
         internal static bool TryGetRegisteredRuntimeHandle(
