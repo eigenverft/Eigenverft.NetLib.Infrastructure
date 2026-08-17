@@ -1,4 +1,0 @@
-interface:
-  display_name: "Review Practical Usability"
-  short_description: "Review friction wins and missing obvious capabilities"
-  default_prompt: "Use $review-practical-usability to perform a strictly read-only practical usability review of the selected subject. If the subject or scope remains too unclear, stop without producing the buckets, ask 'What the hell do you want me to review?', and name the specific ambiguity. Otherwise preserve the three original bucket names and order, report only concrete observations, do not force findings or judge aesthetics, and do not add scores, compliance verdicts, implementation plans, or unrelated review sections."
