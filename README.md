@@ -430,7 +430,7 @@ Console.WriteLine($"{managed.Action}; persisted: {managed.Persisted}");
 
 `CertificateRecoveryMode.PreserveExisting` is the safe default: it creates a missing PFX but never overwrites an existing unusable credential. The result still provides an in-memory recovery certificate and reports load or persistence failures. Use `SelfSignedCertificateFactory.Create(...)` directly when no managed file lifecycle is needed.
 
-## 🪵 Diagnose startup before the host exists
+## 🔎 See which configuration source wins
 
 ```csharp
 ILogger startupLogger =
@@ -439,9 +439,26 @@ ILogger startupLogger =
 builder.LogConfigurationResolution(startupLogger);
 ```
 
+Call `LogConfigurationResolution(...)` after registering configuration sources and before `Build()`. It reports provider precedence and every complete key-shadowing chain:
+
+```text
+Config precedence (highest -> lowest): args -> envars -> json:appsettings.Production.json -> json:appsettings.json
+Configuration key collisions found: 1.
+Config key collision on PartnerApi:ApiKey; winner envars shadows json:appsettings.Production.json shadows json:appsettings.json
+```
+
+Only configuration key paths and provider origins are logged—never configuration values. This makes environment-variable overrides and accidentally shadowed JSON settings visible without dumping secrets.
+
+## 🪵 Log startup before the host exists
+
+```csharp
+ILogger startupLogger =
+    BootstrapLogger<Program>.CreateLogger(builder.Configuration);
+```
+
 The bootstrap logger works before the host and DI container exist. It uses an already initialized Serilog logger when available and otherwise falls back to Microsoft logging. `CreateRequiredSerilogLogger(...)` provides a strict, isolated JSON-configured Serilog bootstrap channel when fallback is not acceptable.
 
-`LogConfigurationResolution(...)` reports provider precedence and complete key-shadowing chains without logging configuration values. `ResetToMinimalConfigurationSources(...)` is available when an application intentionally wants to replace the default Generic Host sources; call it before adding custom providers because it clears the existing source collection.
+`ResetToMinimalConfigurationSources(...)` is available when an application intentionally wants to replace the default Generic Host sources; call it before adding custom providers because it clears the existing source collection.
 
 Concrete providers, runtimes, watchers, and persistence formats remain internal; normal consumers use the registration helpers and public contracts shown above.
 
