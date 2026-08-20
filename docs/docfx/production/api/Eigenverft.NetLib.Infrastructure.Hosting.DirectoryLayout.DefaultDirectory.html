@@ -1,16 +1,15 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!--[if IE]><![endif]-->
 <html>
 
   <head>
     <meta charset="utf-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-      <title>Enum DefaultDirectory
- | Eigenverft.NetLib.Infrastructure </title>
+      <title>Enum DefaultDirectory | Eigenverft.NetLib.Infrastructure </title>
       <meta name="viewport" content="width=device-width">
-      <meta name="title" content="Enum DefaultDirectory
- | Eigenverft.NetLib.Infrastructure ">
+      <meta name="title" content="Enum DefaultDirectory | Eigenverft.NetLib.Infrastructure ">
     
+    <meta name="description" content="Identifies standard directories used by a self-contained .NET application.">
       <link rel="shortcut icon" href="../favicon.ico">
       <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
       <link rel="stylesheet" href="../styles/docfx.css">
@@ -399,8 +398,7 @@
 
 
 
-  <h1 id="Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory" class="text-break">Enum DefaultDirectory
-</h1>
+  <h1 id="Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory" class="text-break">Enum DefaultDirectory</h1>
   <div class="markdown level0 summary"><p>Identifies standard directories used by a self-contained .NET application.</p>
 </div>
   <div class="markdown level0 conceptual"></div>
@@ -419,7 +417,7 @@
         <th>Description</th>
       </tr>
     <thead>
-    <tbody>
+    </thead></thead><tbody>
       <tr>
         <td id="Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_ApplicationCerts">ApplicationCerts</td>
         <td><p>Application certificates.</p>
@@ -436,6 +434,11 @@
 </td>
       </tr>
       <tr>
+        <td id="Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_ApplicationProtectionKeys">ApplicationProtectionKeys</td>
+        <td><p>ASP.NET Core Data Protection key-ring files for portable application protection state.</p>
+</td>
+      </tr>
+      <tr>
         <td id="Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_ApplicationSettings">ApplicationSettings</td>
         <td><p>Application configuration files.</p>
 </td>
@@ -443,13 +446,12 @@
       <tr>
         <td id="Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_ApplicationState">ApplicationState</td>
         <td><p>Persistent internal application state that should remain operationally separate from ordinary application data
-and configuration. Suitable for infrastructure-owned state such as a Data Protection key ring. The separate
-directory reduces accidental co-exposure with settings/data paths but is not by itself an operating-system access
-control boundary; deployments remain responsible for appropriate file-system permissions.</p>
+and configuration. The separate directory reduces accidental co-exposure with settings/data paths but is not by
+itself an operating-system access control boundary; deployments remain responsible for appropriate file-system permissions.</p>
 </td>
       </tr>
     </tbody>
-  </thead></thead></table>
+  </table>
   <h3 id="extensionmethods">Extension Methods</h3>
   <div>
       <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectoryExtensions_GetDefaultFolderName_Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_">DefaultDirectoryExtensions.GetDefaultFolderName(DefaultDirectory)</a>

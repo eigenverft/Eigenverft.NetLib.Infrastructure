@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!--[if IE]><![endif]-->
 <html>
 
@@ -8,6 +8,7 @@
       <title>Getting started | Eigenverft.NetLib.Infrastructure </title>
       <meta name="viewport" content="width=device-width">
       <meta name="title" content="Getting started | Eigenverft.NetLib.Infrastructure ">
+    
     
       <link rel="shortcut icon" href="../favicon.ico">
       <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
@@ -111,7 +112,7 @@ IAppDirectoryLayout directories = builder.GetDirectoryLayout();
 using IHost host = builder.Build();
 await host.RunAsync();
 </code></pre>
-<p>The default layout is rooted at <code>AppContext.BaseDirectory</code> and creates <code>AppLogs</code>, <code>AppData</code>, <code>AppState</code>, <code>AppCerts</code>, and <code>AppSettings</code>. Every mapped directory is created and checked for write access during registration.</p>
+<p>The default layout is rooted at <code>AppContext.BaseDirectory</code> and creates <code>AppLogs</code>, <code>AppData</code>, <code>AppState</code>, <code>AppProtectionKeys</code>, <code>AppCerts</code>, and <code>AppSettings</code>. Every mapped directory is created and checked for write access during registration.</p>
 <p>After <code>Build()</code>, the same layout is available as <code>IAppDirectoryLayout</code> through normal constructor injection.</p>
 <h2 id="custom-names">Custom names</h2>
 <pre><code class="lang-csharp">builder.AddDefaultDirectoryLayout(

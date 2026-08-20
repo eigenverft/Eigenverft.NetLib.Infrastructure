@@ -3681,6 +3681,12 @@ references:
   commentId: F:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationLogFiles
   fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationLogFiles
   nameWithType: DefaultDirectory.ApplicationLogFiles
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationProtectionKeys
+  name: ApplicationProtectionKeys
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_ApplicationProtectionKeys
+  commentId: F:Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationProtectionKeys
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationProtectionKeys
+  nameWithType: DefaultDirectory.ApplicationProtectionKeys
 - uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.ApplicationSettings
   name: ApplicationSettings
   href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.html#Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout_DefaultDirectory_ApplicationSettings
