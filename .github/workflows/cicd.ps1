@@ -170,11 +170,13 @@ $GitHubPagesStagingRootPath = Get-Path -Paths @("$OutputRootPath","pages")
 $GitHubPagesReportsChannelStagingPath = Get-Path -Paths @("$GitHubPagesStagingRootPath","reports",$BranchDeploymentConfig.Channel.Value)
 $GitHubPagesDocFxChannelStagingPath = Get-Path -Paths @("$GitHubPagesStagingRootPath","docfx",$BranchDeploymentConfig.Channel.Value)
 
-# Initialize the array to accumulate projects.
+# Main pipeline preparation: discover every solution below src and resolve its projects.
+# The resulting solution-to-project execution plan drives all subsequent build, test,
+# pack, publish, documentation, reporting, and distribution stages.
 $SolutionFileInfos = Find-FilesByPattern -Path "$GitRepositoryRoot\src" -Pattern "*.sln;*.slnx"
 $SolutionProjectPaths = @()
 foreach ($solutionFile in $SolutionFileInfos) {
-    # all ready sorted by the drydock.exe
+    # Drydock returns the project paths in their deterministic execution order.
     $CurrentProjectPaths = Invoke-ProcessTyped -Executable "drydock.exe" -Arguments @( "sln", "--location", "$($solutionFile.FullName)") -ReturnType 'Objects'
     $SolutionProjectPaths += [pscustomobject]@{ Sln =$solutionFile; Prj = ($CurrentProjectPaths | ForEach-Object { Get-Item $_ }) };
 }
@@ -580,7 +582,11 @@ else
     Write-Host "Documentation snapshots updated locally at '$GitHubPagesReportsChannelPath' and '$GitHubPagesDocFxChannelPath'. Git commit/push skipped outside CI."
 }
 
-# additional publish copys
+# Enrich every project publish tree before creating distributable drops.
+# A repository can contain multiple solutions and every solution can contain multiple projects.
+# Their publish trees remain isolated as publish/<solution>/<project>/<channel>/<version>.
+# Compliance files are copied next to the binaries; DocFX output is kept below a
+# project-specific DOCFX directory so aggregated documentation remains distinguishable.
 foreach ($SolutionProjectPath in $SolutionProjectPaths) {
     foreach ($ProjectFileInfo in $SolutionProjectPath.Prj) {
         $SolutionFileInfo = $SolutionProjectPath.Sln
@@ -596,7 +602,8 @@ foreach ($SolutionProjectPath in $SolutionProjectPaths) {
      }
 }
 
-# additional publish cleanups
+# Remove build-only symbol files from every enriched project publish tree.
+# All repository-, solution-, and project-level drops below are created from these cleaned trees.
 foreach ($SolutionProjectPath in $SolutionProjectPaths) {
     foreach ($ProjectFileInfo in $SolutionProjectPath.Prj) {
         $SolutionFileInfo = $SolutionProjectPath.Sln
@@ -605,7 +612,14 @@ foreach ($SolutionProjectPath in $SolutionProjectPaths) {
      }
 }
 
-# repository based drops of files.
+# Every aggregation level below is exposed as:
+# - <channel>/<version>: version-specific snapshot
+# - <channel>/latest: refreshed copy of the latest version in that channel
+# - distributed: refreshed channel-independent distribution
+# - zipped/<name>.<version>-<affix>.zip: NuGet-style file name for a regular ZIP archive
+
+# Build the repository-level all-in-one drop by flattening the publish trees of every
+# project from every solution. Project output file names are therefore expected to be unique.
 $RepoPublishDirectory = New-Directory -Paths @($RepoPublishRootPath,$ChannelVersionRelativePath)
 foreach ($SolutionProjectPath in $SolutionProjectPaths) {
     $SolutionFileInfo = $SolutionProjectPath.Sln
@@ -622,7 +636,8 @@ $nugetFileEmulation = Join-Text -InputObject @("$nugetFilePart1","$($BranchDeplo
 Compress-Directory -SourceDirectory "$RepoPublishDirectory" -DestinationFile "$(Get-Path -Paths @($RepositoryDropRootPath,$GitRepositoryName,"zipped","$nugetFileEmulation.zip"))"
 
 
-# solution based drops of files.
+# Build one solution-level drop by flattening all project publish trees belonging to that
+# solution. The solution staging directory is cleared first to prevent stale artifacts.
 foreach ($SolutionProjectPath in $SolutionProjectPaths) {
     $SolutionFileInfo = $SolutionProjectPath.Sln
     $SolutionPublishDirectory = New-Directory -Paths @($SlnPublishRootPath,$SolutionFileInfo.BaseName,$ChannelVersionRelativePath)
@@ -639,7 +654,8 @@ foreach ($SolutionProjectPath in $SolutionProjectPaths) {
     Compress-Directory -SourceDirectory "$SolutionPublishDirectory" -DestinationFile "$(Get-Path -Paths @($SolutionsDropRootPath,$SolutionFileInfo.BaseName,"zipped","$nugetFileEmulation.zip"))"
 }
 
-# project based drops of files.
+# Build one project-level drop for every solution/project association.
+# Project drops are keyed by project base name, which must be unique across the repository.
 foreach ($SolutionProjectPath in $SolutionProjectPaths) {
     $SolutionFileInfo = $SolutionProjectPath.Sln
     foreach ($ProjectFileInfo in $SolutionProjectPath.Prj) {
