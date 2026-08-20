@@ -25,6 +25,7 @@ public sealed class DirectoryLayoutTests
             Assert.AreEqual(Path.Combine(root, "AppLogs"), layout[DefaultDirectory.ApplicationLogFiles]);
             Assert.AreEqual(Path.Combine(root, "AppData"), layout[DefaultDirectory.ApplicationData]);
             Assert.AreEqual(Path.Combine(root, "AppState"), layout[DefaultDirectory.ApplicationState]);
+            Assert.AreEqual(Path.Combine(root, "AppProtectionKeys"), layout[DefaultDirectory.ApplicationProtectionKeys]);
             Assert.AreEqual(Path.Combine(root, "AppCerts"), layout[DefaultDirectory.ApplicationCerts]);
             Assert.AreEqual(Path.Combine(root, "AppSettings"), layout[DefaultDirectory.ApplicationSettings]);
 
@@ -107,6 +108,7 @@ public sealed class DirectoryLayoutTests
             Assert.AreEqual("State", Path.GetFileName(layout[DefaultDirectory.ApplicationData]));
             Assert.AreEqual("AppLogs", Path.GetFileName(layout[DefaultDirectory.ApplicationLogFiles]));
             Assert.AreEqual("AppState", Path.GetFileName(layout[DefaultDirectory.ApplicationState]));
+            Assert.AreEqual("AppProtectionKeys", Path.GetFileName(layout[DefaultDirectory.ApplicationProtectionKeys]));
             Assert.AreEqual("AppCerts", Path.GetFileName(layout[DefaultDirectory.ApplicationCerts]));
             Assert.AreEqual("AppSettings", Path.GetFileName(layout[DefaultDirectory.ApplicationSettings]));
         }

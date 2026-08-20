@@ -21,7 +21,7 @@ using IHost host = builder.Build();
 await host.RunAsync();
 ```
 
-The default layout is rooted at `AppContext.BaseDirectory` and creates `AppLogs`, `AppData`, `AppState`, `AppCerts`, and `AppSettings`. Every mapped directory is created and checked for write access during registration.
+The default layout is rooted at `AppContext.BaseDirectory` and creates `AppLogs`, `AppData`, `AppState`, `AppProtectionKeys`, `AppCerts`, and `AppSettings`. Every mapped directory is created and checked for write access during registration.
 
 After `Build()`, the same layout is available as `IAppDirectoryLayout` through normal constructor injection.
 

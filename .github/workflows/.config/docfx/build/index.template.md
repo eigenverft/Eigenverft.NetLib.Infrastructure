@@ -22,7 +22,7 @@ builder.AddDefaultDirectoryLayout();
 IAppDirectoryLayout directories = builder.GetDirectoryLayout();
 ```
 
-The current package provides executable-rooted application directories with automatic creation and writable validation. The default set is `AppLogs`, `AppData`, `AppState`, `AppCerts`, and `AppSettings`.
+The current package provides executable-rooted application directories with automatic creation and writable validation. The default set is `AppLogs`, `AppData`, `AppState`, `AppProtectionKeys`, `AppCerts`, and `AppSettings`.
 
 Continue with the [introduction](docs/introduction.md), the [getting started guide](docs/getting-started.md), or browse the generated API reference.
 

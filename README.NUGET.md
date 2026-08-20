@@ -17,7 +17,7 @@ Also includes Configuration Sets, SwitchableJson, configuration-value codecs and
 | Package | `Eigenverft.NetLib.Infrastructure` |
 | Primary API | `HostApplicationBuilderFactory.CreateWithDefaultDirectory()` |
 | Root | `AppContext.BaseDirectory` |
-| Default folders | `AppLogs`, `AppData`, `AppState`, `AppCerts`, `AppSettings` |
+| Default folders | `AppLogs`, `AppData`, `AppState`, `AppProtectionKeys`, `AppCerts`, `AppSettings` |
 | Host integration | Available before `Build()` and through DI afterwards |
 | Target frameworks | .NET 8 and .NET 10 |
 | License | MIT |
@@ -59,6 +59,7 @@ The standard layout is created directly below the executable directory:
 ├─ AppLogs/
 ├─ AppData/
 ├─ AppState/
+├─ AppProtectionKeys/
 ├─ AppCerts/
 └─ AppSettings/
 ```

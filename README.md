@@ -20,7 +20,7 @@ Also includes Configuration Sets, SwitchableJson, configuration-value codecs and
 | Primary host integration | `builder.AddDefaultDirectoryLayout()` |
 | Convenience builder | `HostApplicationBuilderFactory.CreateWithDefaultDirectory(args)` |
 | Root | `AppContext.BaseDirectory` |
-| Default folders | `AppLogs`, `AppData`, `AppState`, `AppCerts`, `AppSettings` |
+| Default folders | `AppLogs`, `AppData`, `AppState`, `AppProtectionKeys`, `AppCerts`, `AppSettings` |
 | Host integration | Available before `Build()` and through DI afterwards |
 | Also included | Runtime configuration, value codecs, machine binding, certificates, diagnostics, bootstrap logging |
 | Target frameworks | .NET 8 and .NET 10 |
@@ -72,6 +72,7 @@ The standard layout is created directly below the executable directory:
 ├─ AppLogs/
 ├─ AppData/
 ├─ AppState/
+├─ AppProtectionKeys/
 ├─ AppCerts/
 └─ AppSettings/
 ```
