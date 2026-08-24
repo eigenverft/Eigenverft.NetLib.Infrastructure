@@ -798,7 +798,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions",
-      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.yml\" sourcestartlinenumber=\"1\">Extension methods to register <xref href=\"Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601\" data-throw-if-not-resolved=\"false\"></xref> in the service collection.</p>\n"
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.yml\" sourcestartlinenumber=\"1\">Extension methods for registering <xref href=\"Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601\" data-throw-if-not-resolved=\"false\"></xref> as a singleton service.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -812,7 +812,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>",
-      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.yml\" sourcestartlinenumber=\"1\">File-backed JSON document manager with optional reload-on-change and a non-persisted working copy.</p>\n"
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.yml\" sourcestartlinenumber=\"1\">Manages a typed JSON document with two deliberately separate mutable branches: the file-backed\n<xref href=\"Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.Current\" data-throw-if-not-resolved=\"false\"></xref> state and a non-persisted <xref href=\"Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.RuntimeWorkingCopy\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
     },
     {
       "type": "ManagedReference",

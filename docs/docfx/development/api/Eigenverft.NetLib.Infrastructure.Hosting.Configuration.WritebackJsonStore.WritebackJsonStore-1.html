@@ -9,7 +9,7 @@
       <meta name="viewport" content="width=device-width">
       <meta name="title" content="Class WritebackJsonStore&lt;T&gt; | Eigenverft.NetLib.Infrastructure ">
     
-    <meta name="description" content="File-backed JSON document manager with optional reload-on-change and a non-persisted working copy.">
+    <meta name="description" content="Manages a typed JSON document with two deliberately separate mutable branches: the file-backed  state and a non-persisted .">
       <link rel="shortcut icon" href="../favicon.ico">
       <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
       <link rel="stylesheet" href="../styles/docfx.css">
@@ -439,7 +439,8 @@
 
 
   <h1 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1" class="text-break">Class WritebackJsonStore&lt;T&gt;</h1>
-  <div class="markdown level0 summary"><p>File-backed JSON document manager with optional reload-on-change and a non-persisted working copy.</p>
+  <div class="markdown level0 summary"><p>Manages a typed JSON document with two deliberately separate mutable branches: the file-backed
+<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a> state and a non-persisted <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy">RuntimeWorkingCopy</a>.</p>
 </div>
   <div class="markdown level0 conceptual"></div>
   <div class="inheritance">
@@ -494,6 +495,25 @@
       </tr>
     </tbody>
   </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_remarks"><strong>Remarks</strong></h5>
+  <div class="markdown level0 remarks"><p>
+The store captures <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot">InitialSnapshot</a> once when it is created. <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a> represents
+the document that was most recently loaded from or written to the backing file. <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy">RuntimeWorkingCopy</a>
+is an intentionally detached in-memory branch for runtime-only work that must not implicitly modify the file.
+</p>
+<p>
+Use <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateCurrentAndSave_System_Action__0__System_Boolean_">MutateCurrentAndSave(Action&lt;T&gt;, bool)</a> when a change is intended to become persisted configuration. Use
+<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateRuntimeWorkingCopy_System_Action__0__System_Boolean_">MutateRuntimeWorkingCopy(Action&lt;T&gt;, bool)</a> when code needs to work with the same typed model without persisting
+those changes. Changes to <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a> do not automatically overwrite <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy">RuntimeWorkingCopy</a>;
+call <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromCurrent_System_Boolean_">RestoreRuntimeWorkingCopyFromCurrent(bool)</a> explicitly when the runtime branch should discard its
+own changes and start again from the current file-backed state.
+</p>
+<p>
+The store is not an <code>IConfiguration</code> provider and does not trigger configuration reloads itself. It can
+be used beside normal JSON configuration or SwitchableJson with reload-on-change enabled: a successful write
+changes the file, and the configuration provider remains responsible for observing and publishing that change.
+</p>
+</div>
   <h3 id="constructors">Constructors
 </h3>
   <span class="small pull-right mobile-hide">
@@ -501,12 +521,12 @@
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1__ctor_System_String_System_Boolean_System_Text_Json_JsonSerializerOptions_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.%23ctor(System.String%2CSystem.Boolean%2CSystem.Text.Json.JsonSerializerOptions)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L66">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L146">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1__ctor_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.#ctor*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1__ctor_System_String_System_Boolean_System_Text_Json_JsonSerializerOptions_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.#ctor(System.String,System.Boolean,System.Text.Json.JsonSerializerOptions)">WritebackJsonStore(string, bool, JsonSerializerOptions?)</h4>
-  <div class="markdown level1 summary"><p>Initializes a new file-backed JSON store.
-If the file does not exist, it is created using a new <code class="typeparamref">T</code> instance.</p>
+  <div class="markdown level1 summary"><p>Initializes a typed file-backed JSON store and creates independent current and runtime working branches
+from the document state observed at construction time.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
@@ -526,23 +546,28 @@ If the file does not exist, it is created using a new <code class="typeparamref"
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
         <td><span class="parametername">filePath</span></td>
-        <td><p>Path of the JSON file.</p>
+        <td><p>Absolute or relative path of the backing JSON document.</p>
 </td>
       </tr>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
         <td><span class="parametername">watchForExternalChanges</span></td>
-        <td><p>When true, external file edits trigger reload.</p>
+        <td><p>When <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a>, watches the backing file and reloads successful external changes into
+<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a>. The runtime working copy remains intentionally detached.</p>
 </td>
       </tr>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.text.json.jsonserializeroptions">JsonSerializerOptions</a></td>
         <td><span class="parametername">options</span></td>
-        <td><p>Optional serializer options. If null, defaults are used.</p>
+        <td><p>Optional JSON serializer options. When <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>, store defaults are used.</p>
 </td>
       </tr>
     </tbody>
   </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1__ctor_System_String_System_Boolean_System_Text_Json_JsonSerializerOptions__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>If the file does not exist, a new <code class="typeparamref">T</code> is used and persisted. The state captured after
+construction becomes <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot">InitialSnapshot</a> for the lifetime of this instance.</p>
+</div>
   <h3 id="properties">Properties
 </h3>
   <span class="small pull-right mobile-hide">
@@ -550,12 +575,11 @@ If the file does not exist, it is created using a new <code class="typeparamref"
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.Current%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L45">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L94">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.Current*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.Current">Current</h4>
-  <div class="markdown level1 summary"><p>Gets the current in-memory instance.
-Treat it as read-only; use <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateAndSave_System_Action__0__System_Boolean_">MutateAndSave(Action&lt;T&gt;, bool)</a> to change it safely.</p>
+  <div class="markdown level1 summary"><p>Gets the current file-backed branch of the typed document.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
@@ -577,16 +601,27 @@ Treat it as read-only; use <a class="xref" href="Eigenverft.NetLib.Infrastructur
       </tr>
     </tbody>
   </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current_remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>
+This value is updated by <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateCurrentAndSave_System_Action__0__System_Boolean_">MutateCurrentAndSave(Action&lt;T&gt;, bool)</a>, by the restore methods that target
+<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a>, and by <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ReloadCurrentFromFile_System_Boolean_">ReloadCurrentFromFile(bool)</a>. When file watching is enabled,
+successful external file changes are also reloaded into this branch.
+</p>
+<p>
+Treat the returned instance as read-only. Direct property mutation bypasses persistence and change
+notifications. Use <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateCurrentAndSave_System_Action__0__System_Boolean_">MutateCurrentAndSave(Action&lt;T&gt;, bool)</a> for controlled persisted changes.
+</p>
+</div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_FilePath.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.FilePath%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L39">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L78">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_FilePath_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.FilePath*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_FilePath" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.FilePath">FilePath</h4>
-  <div class="markdown level1 summary"><p>Gets the absolute file path used by this instance.</p>
+  <div class="markdown level1 summary"><p>Gets the absolute path of the JSON document managed by this store.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
@@ -613,11 +648,12 @@ Treat it as read-only; use <a class="xref" href="Eigenverft.NetLib.Infrastructur
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.InitialSnapshot%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L49">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L106">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.InitialSnapshot*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.InitialSnapshot">InitialSnapshot</h4>
-  <div class="markdown level1 summary"><p>Gets a deep copy of the initial document as it was loaded or created during construction.</p>
+  <div class="markdown level1 summary"><p>Gets a deep copy of the document state captured when this store was created, before any store operation,
+external reload, persisted mutation, or runtime-only mutation.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
@@ -639,22 +675,26 @@ Treat it as read-only; use <a class="xref" href="Eigenverft.NetLib.Infrastructur
       </tr>
     </tbody>
   </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot_remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>The snapshot is the stable rollback baseline for the lifetime of the store. It is never replaced when
+<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a> reloads or changes. A deep copy is returned so callers cannot mutate the stored
+baseline.</p>
+</div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_WorkingCopy.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.WorkingCopy%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.RuntimeWorkingCopy%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L56">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L129">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_WorkingCopy_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.WorkingCopy*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_WorkingCopy" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.WorkingCopy">WorkingCopy</h4>
-  <div class="markdown level1 summary"><p>Gets the in-memory working copy initialized from <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot">InitialSnapshot</a> and never written to disk.
-Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateWorkingCopy_System_Action__0__System_Boolean_">MutateWorkingCopy(Action&lt;T&gt;, bool)</a> for thread-safe updates.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RuntimeWorkingCopy*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RuntimeWorkingCopy">RuntimeWorkingCopy</h4>
+  <div class="markdown level1 summary"><p>Gets the detached in-memory working branch intended for runtime-only use.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public T WorkingCopy { get; }</code></pre>
+    <pre><code class="lang-csharp hljs">public T RuntimeWorkingCopy { get; }</code></pre>
   </div>
   <h5 class="propertyValue">Property Value</h5>
   <table class="table table-bordered table-condensed">
@@ -671,6 +711,23 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
       </tr>
     </tbody>
   </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy_remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>
+The runtime working copy starts as a deep copy of <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot">InitialSnapshot</a>. Mutating it does not
+modify <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a> and never writes the backing JSON file. Likewise, persisted changes and file
+reloads do not automatically overwrite this branch.
+</p>
+<p>
+Use <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateRuntimeWorkingCopy_System_Action__0__System_Boolean_">MutateRuntimeWorkingCopy(Action&lt;T&gt;, bool)</a> for controlled changes,
+<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromCurrent_System_Boolean_">RestoreRuntimeWorkingCopyFromCurrent(bool)</a> to discard runtime-only changes and resynchronize from
+the current file-backed state, or <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromInitialSnapshot_System_Boolean_">RestoreRuntimeWorkingCopyFromInitialSnapshot(bool)</a> to return the
+runtime branch to the store's original startup state.
+</p>
+<p>
+Treat the returned instance as read-only outside the store mutation methods so that
+<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopyChanged">RuntimeWorkingCopyChanged</a> remains a reliable notification boundary.
+</p>
+</div>
   <h3 id="methods">Methods
 </h3>
   <span class="small pull-right mobile-hide">
@@ -678,11 +735,11 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Dispose.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.Dispose%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L235">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L447">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Dispose_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.Dispose*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Dispose" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.Dispose">Dispose()</h4>
-  <div class="markdown level1 summary"><p>Disposes resources associated with this instance.</p>
+  <div class="markdown level1 summary"><p>Stops file watching and releases timer resources owned by this store.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
@@ -691,19 +748,19 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
   </div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_GetSnapshot.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.GetSnapshot%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_GetCurrentSnapshot.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.GetCurrentSnapshot%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L231">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L443">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_GetSnapshot_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.GetSnapshot*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_GetSnapshot" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.GetSnapshot">GetSnapshot()</h4>
-  <div class="markdown level1 summary"><p>Creates a deep snapshot of the current document by serializing and deserializing it.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_GetCurrentSnapshot_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.GetCurrentSnapshot*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_GetCurrentSnapshot" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.GetCurrentSnapshot">GetCurrentSnapshot()</h4>
+  <div class="markdown level1 summary"><p>Creates and returns a deep snapshot of <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public T GetSnapshot()</code></pre>
+    <pre><code class="lang-csharp hljs">public T GetCurrentSnapshot()</code></pre>
   </div>
   <h5 class="returns">Returns</h5>
   <table class="table table-bordered table-condensed">
@@ -720,21 +777,26 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
       </tr>
     </tbody>
   </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_GetCurrentSnapshot_remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>Use this method when a caller needs an independently mutable copy of the current file-backed state without
+changing the store. To work with the store's dedicated runtime branch, use <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy">RuntimeWorkingCopy</a>
+and <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateRuntimeWorkingCopy_System_Action__0__System_Boolean_">MutateRuntimeWorkingCopy(Action&lt;T&gt;, bool)</a> instead.</p>
+</div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateAndSave_System_Action__0__System_Boolean_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.MutateAndSave(System.Action%7B%600%7D%2CSystem.Boolean)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateCurrentAndSave_System_Action__0__System_Boolean_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.MutateCurrentAndSave(System.Action%7B%600%7D%2CSystem.Boolean)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L96">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L185">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateAndSave_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateAndSave*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateAndSave_System_Action__0__System_Boolean_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateAndSave(System.Action{`0},System.Boolean)">MutateAndSave(Action&lt;T&gt;, bool)</h4>
-  <div class="markdown level1 summary"><p>Applies changes to the current document and writes the result to disk.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateCurrentAndSave_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateCurrentAndSave*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateCurrentAndSave_System_Action__0__System_Boolean_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateCurrentAndSave(System.Action{`0},System.Boolean)">MutateCurrentAndSave(Action&lt;T&gt;, bool)</h4>
+  <div class="markdown level1 summary"><p>Mutates <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a> and writes the resulting document to the backing JSON file.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public void MutateAndSave(Action&lt;T&gt; mutate, bool notify = true)</code></pre>
+    <pre><code class="lang-csharp hljs">public void MutateCurrentAndSave(Action&lt;T&gt; mutate, bool notify = true)</code></pre>
   </div>
   <h5 class="parameters">Parameters</h5>
   <table class="table table-bordered table-condensed">
@@ -749,30 +811,37 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.action-1">Action</a>&lt;T&gt;</td>
         <td><span class="parametername">mutate</span></td>
-        <td></td>
+        <td><p>Mutation applied to the current file-backed branch.</p>
+</td>
       </tr>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
         <td><span class="parametername">notify</span></td>
-        <td></td>
+        <td><p>When <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a>, raises <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_CurrentChanged">CurrentChanged</a> after the save completes.</p>
+</td>
       </tr>
     </tbody>
   </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateCurrentAndSave_System_Action__0__System_Boolean__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>This is the explicit writeback path. It does not change <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy">RuntimeWorkingCopy</a>; use
+<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromCurrent_System_Boolean_">RestoreRuntimeWorkingCopyFromCurrent(bool)</a> separately when the runtime branch should adopt the
+newly persisted state.</p>
+</div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateWorkingCopy_System_Action__0__System_Boolean_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.MutateWorkingCopy(System.Action%7B%600%7D%2CSystem.Boolean)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateRuntimeWorkingCopy_System_Action__0__System_Boolean_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.MutateRuntimeWorkingCopy(System.Action%7B%600%7D%2CSystem.Boolean)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L124">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L223">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateWorkingCopy_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateWorkingCopy*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateWorkingCopy_System_Action__0__System_Boolean_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateWorkingCopy(System.Action{`0},System.Boolean)">MutateWorkingCopy(Action&lt;T&gt;, bool)</h4>
-  <div class="markdown level1 summary"><p>Applies changes to the in-memory working copy only. The working copy is never written to disk.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateRuntimeWorkingCopy_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateRuntimeWorkingCopy*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateRuntimeWorkingCopy_System_Action__0__System_Boolean_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateRuntimeWorkingCopy(System.Action{`0},System.Boolean)">MutateRuntimeWorkingCopy(Action&lt;T&gt;, bool)</h4>
+  <div class="markdown level1 summary"><p>Mutates <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy">RuntimeWorkingCopy</a> without modifying <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a> or writing the backing file.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public void MutateWorkingCopy(Action&lt;T&gt; mutate, bool notify = true)</code></pre>
+    <pre><code class="lang-csharp hljs">public void MutateRuntimeWorkingCopy(Action&lt;T&gt; mutate, bool notify = true)</code></pre>
   </div>
   <h5 class="parameters">Parameters</h5>
   <table class="table table-bordered table-condensed">
@@ -787,30 +856,36 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.action-1">Action</a>&lt;T&gt;</td>
         <td><span class="parametername">mutate</span></td>
-        <td></td>
+        <td><p>Mutation applied only to the detached runtime working branch.</p>
+</td>
       </tr>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
         <td><span class="parametername">notify</span></td>
-        <td></td>
+        <td><p>When <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a>, raises <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopyChanged">RuntimeWorkingCopyChanged</a> after the mutation completes.</p>
+</td>
       </tr>
     </tbody>
   </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateRuntimeWorkingCopy_System_Action__0__System_Boolean__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>Use this path for transient runtime work with the typed settings model when the persisted configuration must
+remain unchanged. The runtime branch stays detached until an explicit restore method is called.</p>
+</div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ReloadFromFile_System_Boolean_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.ReloadFromFile(System.Boolean)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ReloadCurrentFromFile_System_Boolean_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.ReloadCurrentFromFile(System.Boolean)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L202">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L407">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ReloadFromFile_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ReloadFromFile*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ReloadFromFile_System_Boolean_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ReloadFromFile(System.Boolean)">ReloadFromFile(bool)</h4>
-  <div class="markdown level1 summary"><p>Reloads the document from disk and replaces the current in-memory instance.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ReloadCurrentFromFile_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ReloadCurrentFromFile*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ReloadCurrentFromFile_System_Boolean_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ReloadCurrentFromFile(System.Boolean)">ReloadCurrentFromFile(bool)</h4>
+  <div class="markdown level1 summary"><p>Reloads the backing JSON file and replaces <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a> with the successfully loaded document.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public bool ReloadFromFile(bool notify = true)</code></pre>
+    <pre><code class="lang-csharp hljs">public bool ReloadCurrentFromFile(bool notify = true)</code></pre>
   </div>
   <h5 class="parameters">Parameters</h5>
   <table class="table table-bordered table-condensed">
@@ -825,7 +900,8 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
         <td><span class="parametername">notify</span></td>
-        <td></td>
+        <td><p>When <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a>, raises <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_CurrentChanged">CurrentChanged</a> after a successful reload.</p>
+</td>
       </tr>
     </tbody>
   </table>
@@ -840,25 +916,31 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
     <tbody>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
-        <td></td>
+        <td><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when a document was loaded and applied; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
+</td>
       </tr>
     </tbody>
   </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ReloadCurrentFromFile_System_Boolean__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>The runtime working copy remains untouched. When file watching is enabled this method is also used internally
+after debouncing external file-system notifications.</p>
+</div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ResetToInitialAndSave_System_Boolean_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.ResetToInitialAndSave(System.Boolean)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreAllFromInitialSnapshotAndSave_System_Boolean_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.RestoreAllFromInitialSnapshotAndSave(System.Boolean)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L151">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L365">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ResetToInitialAndSave_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ResetToInitialAndSave*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ResetToInitialAndSave_System_Boolean_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ResetToInitialAndSave(System.Boolean)">ResetToInitialAndSave(bool)</h4>
-  <div class="markdown level1 summary"><p>Resets the current document to the initial snapshot and persists it to disk.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreAllFromInitialSnapshotAndSave_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreAllFromInitialSnapshotAndSave*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreAllFromInitialSnapshotAndSave_System_Boolean_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreAllFromInitialSnapshotAndSave(System.Boolean)">RestoreAllFromInitialSnapshotAndSave(bool)</h4>
+  <div class="markdown level1 summary"><p>Performs a full store rollback by restoring both <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a> and
+<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy">RuntimeWorkingCopy</a> from <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot">InitialSnapshot</a> and persisting the restored current state.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public void ResetToInitialAndSave(bool notify = true)</code></pre>
+    <pre><code class="lang-csharp hljs">public void RestoreAllFromInitialSnapshotAndSave(bool notify = true)</code></pre>
   </div>
   <h5 class="parameters">Parameters</h5>
   <table class="table table-bordered table-condensed">
@@ -873,25 +955,33 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
         <td><span class="parametername">notify</span></td>
-        <td></td>
+        <td><p>When <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a>, raises both <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_CurrentChanged">CurrentChanged</a> and
+<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopyChanged">RuntimeWorkingCopyChanged</a> after the rollback completes.</p>
+</td>
       </tr>
     </tbody>
   </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreAllFromInitialSnapshotAndSave_System_Boolean__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>Use this operation when the complete store should return to the state observed at construction time. The
+backing file is rewritten from <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot">InitialSnapshot</a> and both mutable branches are reset to deep
+copies of that same baseline.</p>
+</div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ResetWorkingCopy_System_Boolean_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.ResetWorkingCopy(System.Boolean)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreCurrentFromInitialSnapshotAndSave_System_Boolean_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.RestoreCurrentFromInitialSnapshotAndSave(System.Boolean)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L177">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L258">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ResetWorkingCopy_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ResetWorkingCopy*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ResetWorkingCopy_System_Boolean_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ResetWorkingCopy(System.Boolean)">ResetWorkingCopy(bool)</h4>
-  <div class="markdown level1 summary"><p>Resets the working copy back to the initial snapshot. No disk I/O occurs.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreCurrentFromInitialSnapshotAndSave_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreCurrentFromInitialSnapshotAndSave*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreCurrentFromInitialSnapshotAndSave_System_Boolean_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreCurrentFromInitialSnapshotAndSave(System.Boolean)">RestoreCurrentFromInitialSnapshotAndSave(bool)</h4>
+  <div class="markdown level1 summary"><p>Restores <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a> from <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot">InitialSnapshot</a> and writes that original state back to
+the backing JSON file.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public void ResetWorkingCopy(bool notify = true)</code></pre>
+    <pre><code class="lang-csharp hljs">public void RestoreCurrentFromInitialSnapshotAndSave(bool notify = true)</code></pre>
   </div>
   <h5 class="parameters">Parameters</h5>
   <table class="table table-bordered table-condensed">
@@ -906,26 +996,109 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
         <td><span class="parametername">notify</span></td>
-        <td></td>
+        <td><p>When <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a>, raises <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_CurrentChanged">CurrentChanged</a> after the save completes.</p>
+</td>
       </tr>
     </tbody>
   </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreCurrentFromInitialSnapshotAndSave_System_Boolean__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>Only the persisted/current branch is restored. <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy">RuntimeWorkingCopy</a> is deliberately left
+untouched. Use <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreAllFromInitialSnapshotAndSave_System_Boolean_">RestoreAllFromInitialSnapshotAndSave(bool)</a> when both branches must roll back together.</p>
+</div>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromCurrent_System_Boolean_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.RestoreRuntimeWorkingCopyFromCurrent(System.Boolean)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L294">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromCurrent_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreRuntimeWorkingCopyFromCurrent*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromCurrent_System_Boolean_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreRuntimeWorkingCopyFromCurrent(System.Boolean)">RestoreRuntimeWorkingCopyFromCurrent(bool)</h4>
+  <div class="markdown level1 summary"><p>Replaces <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy">RuntimeWorkingCopy</a> with a deep copy of the current file-backed state.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void RestoreRuntimeWorkingCopyFromCurrent(bool notify = true)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td><span class="parametername">notify</span></td>
+        <td><p>When <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a>, raises <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopyChanged">RuntimeWorkingCopyChanged</a> after the restore completes.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromCurrent_System_Boolean__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>This discards all runtime-only changes and makes the runtime branch start again from <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a>.
+No disk I/O occurs. This method is useful after a persisted mutation or external reload when runtime code
+explicitly chooses to adopt the current configuration state.</p>
+</div>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromInitialSnapshot_System_Boolean_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.RestoreRuntimeWorkingCopyFromInitialSnapshot(System.Boolean)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L328">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromInitialSnapshot_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreRuntimeWorkingCopyFromInitialSnapshot*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromInitialSnapshot_System_Boolean_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreRuntimeWorkingCopyFromInitialSnapshot(System.Boolean)">RestoreRuntimeWorkingCopyFromInitialSnapshot(bool)</h4>
+  <div class="markdown level1 summary"><p>Replaces <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy">RuntimeWorkingCopy</a> with a deep copy of <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot">InitialSnapshot</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void RestoreRuntimeWorkingCopyFromInitialSnapshot(bool notify = true)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td><span class="parametername">notify</span></td>
+        <td><p>When <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a>, raises <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopyChanged">RuntimeWorkingCopyChanged</a> after the restore completes.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromInitialSnapshot_System_Boolean__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>This discards all runtime-only changes and returns the runtime branch to the state observed when the store
+was created. <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a> and the backing JSON file are not modified.</p>
+</div>
   <h3 id="events">Events
 </h3>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_DocumentChanged.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.DocumentChanged%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_CurrentChanged.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.CurrentChanged%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L29">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L58">View Source</a>
   </span>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_DocumentChanged" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.DocumentChanged">DocumentChanged</h4>
-  <div class="markdown level1 summary"><p>Raised after the current document has been reloaded from disk or saved.</p>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_CurrentChanged" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.CurrentChanged">CurrentChanged</h4>
+  <div class="markdown level1 summary"><p>Raised after <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a> is changed by a successful store operation or by a successful reload
+of an externally changed backing file.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public event Action&lt;T, T&gt;? DocumentChanged</code></pre>
+    <pre><code class="lang-csharp hljs">public event Action&lt;T, T&gt;? CurrentChanged</code></pre>
   </div>
   <h5 class="eventType">Event Type</h5>
   <table class="table table-bordered table-condensed">
@@ -942,18 +1115,20 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
       </tr>
     </tbody>
   </table>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_DocumentChanged_remarks">Remarks</h5>
-  <div class="markdown level1 remarks"><p>The first argument is the previous snapshot, the second is the new snapshot.</p>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_CurrentChanged_remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>The first argument is a deep snapshot of the previous <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a> value and the second argument
+is a deep snapshot of the new value. The event is not raised when an operation is called with
+<code>notify: false</code>.</p>
 </div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ErrorOccurred.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.ErrorOccurred%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L36">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L75">View Source</a>
   </span>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ErrorOccurred" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ErrorOccurred">ErrorOccurred</h4>
-  <div class="markdown level1 summary"><p>Raised when an internal exception is caught and handled.</p>
+  <div class="markdown level1 summary"><p>Raised when the store catches and handles an internal file-system, reload, or serialization error.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
@@ -975,20 +1150,24 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
       </tr>
     </tbody>
   </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ErrorOccurred_remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>This event reports handled background errors, such as watcher-driven reload failures. Operations that
+cannot complete may still throw after the error has been reported.</p>
+</div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_WorkingCopyChanged.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.WorkingCopyChanged%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopyChanged.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601.RuntimeWorkingCopyChanged%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L33">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L68">View Source</a>
   </span>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_WorkingCopyChanged" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.WorkingCopyChanged">WorkingCopyChanged</h4>
-  <div class="markdown level1 summary"><p>Raised after the in-memory working copy has been mutated via <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateWorkingCopy_System_Action__0__System_Boolean_">MutateWorkingCopy(Action&lt;T&gt;, bool)</a>.</p>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopyChanged" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RuntimeWorkingCopyChanged">RuntimeWorkingCopyChanged</h4>
+  <div class="markdown level1 summary"><p>Raised after <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy">RuntimeWorkingCopy</a> is explicitly mutated or restored.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public event Action&lt;T, T&gt;? WorkingCopyChanged</code></pre>
+    <pre><code class="lang-csharp hljs">public event Action&lt;T, T&gt;? RuntimeWorkingCopyChanged</code></pre>
   </div>
   <h5 class="eventType">Event Type</h5>
   <table class="table table-bordered table-condensed">
@@ -1005,8 +1184,10 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
       </tr>
     </tbody>
   </table>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_WorkingCopyChanged_remarks">Remarks</h5>
-  <div class="markdown level1 remarks"><p>The first argument is the previous snapshot, the second is the new snapshot.</p>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopyChanged_remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>The first argument is a deep snapshot of the previous runtime working copy and the second argument is a
+deep snapshot of the new value. Runtime-working-copy changes never write the backing file. The event is
+not raised when an operation is called with <code>notify: false</code>.</p>
 </div>
   <h3 id="implements">Implements</h3>
   <div>
@@ -1024,7 +1205,7 @@ Prefer <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configurat
                     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%601%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
                   </li>
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L10" class="contribution-link">View Source</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/WritebackJsonStore.cs/#L32" class="contribution-link">View Source</a>
                   </li>
                 </ul>
               </div>

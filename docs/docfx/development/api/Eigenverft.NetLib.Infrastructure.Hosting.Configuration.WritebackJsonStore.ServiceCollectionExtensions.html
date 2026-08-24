@@ -9,7 +9,7 @@
       <meta name="viewport" content="width=device-width">
       <meta name="title" content="Class ServiceCollectionExtensions | Eigenverft.NetLib.Infrastructure ">
     
-    <meta name="description" content="Extension methods to register  in the service collection.">
+    <meta name="description" content="Extension methods for registering  as a singleton service.">
       <link rel="shortcut icon" href="../favicon.ico">
       <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
       <link rel="stylesheet" href="../styles/docfx.css">
@@ -439,7 +439,7 @@
 
 
   <h1 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_ServiceCollectionExtensions" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions" class="text-break">Class ServiceCollectionExtensions</h1>
-  <div class="markdown level0 summary"><p>Extension methods to register <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html">WritebackJsonStore&lt;T&gt;</a> in the service collection.</p>
+  <div class="markdown level0 summary"><p>Extension methods for registering <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html">WritebackJsonStore&lt;T&gt;</a> as a singleton service.</p>
 </div>
   <div class="markdown level0 conceptual"></div>
   <div class="inheritance">
@@ -484,7 +484,7 @@
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_ServiceCollectionExtensions_AddWritebackJsonStore__1_Microsoft_Extensions_DependencyInjection_IServiceCollection_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore___0__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore%60%601(Microsoft.Extensions.DependencyInjection.IServiceCollection%2CEigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore%7B%60%600%7D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/IServiceCollection.cs/#L51">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/IServiceCollection.cs/#L68">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_ServiceCollectionExtensions_AddWritebackJsonStore_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_ServiceCollectionExtensions_AddWritebackJsonStore__1_Microsoft_Extensions_DependencyInjection_IServiceCollection_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore___0__" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore``1(Microsoft.Extensions.DependencyInjection.IServiceCollection,Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore{``0})">AddWritebackJsonStore&lt;T&gt;(IServiceCollection, WritebackJsonStore&lt;T&gt;)</h4>
@@ -508,7 +508,7 @@
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.dependencyinjection.iservicecollection">IServiceCollection</a></td>
         <td><span class="parametername">services</span></td>
-        <td><p>The service collection to add the registration to.</p>
+        <td><p>The service collection to add the singleton registration to.</p>
 </td>
       </tr>
       <tr>
@@ -530,7 +530,7 @@
     <tbody>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.dependencyinjection.iservicecollection">IServiceCollection</a></td>
-        <td><p>The same service collection so that additional calls can be chained.</p>
+        <td><p>The same service collection so additional registrations can be chained.</p>
 </td>
       </tr>
     </tbody>
@@ -546,13 +546,13 @@
     <tbody>
       <tr>
         <td><span class="parametername">T</span></td>
-        <td><p>The settings/document type managed by the store.</p>
+        <td><p>The typed settings or document model managed by the store.</p>
 </td>
       </tr>
     </tbody>
   </table>
   <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_ServiceCollectionExtensions_AddWritebackJsonStore__1_Microsoft_Extensions_DependencyInjection_IServiceCollection_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore___0___examples">Examples</h5>
-  <pre><code class="lang-csharp">var store = new WritebackJsonStore&lt;Settings&gt;(path);
+  <pre><code class="lang-csharp">var store = new WritebackJsonStore&lt;RuntimeSettings&gt;(path);
 services.AddWritebackJsonStore(store);</code></pre>
 
   <h5 class="exceptions">Exceptions</h5>
@@ -566,7 +566,7 @@ services.AddWritebackJsonStore(store);</code></pre>
     <tbody>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></td>
-        <td><p>Thrown when <code class="paramref">services</code> or <code class="paramref">instance</code> is null.</p>
+        <td><p>Thrown when <code class="paramref">services</code> or <code class="paramref">instance</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
 </td>
       </tr>
     </tbody>
@@ -576,11 +576,11 @@ services.AddWritebackJsonStore(store);</code></pre>
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_ServiceCollectionExtensions_AddWritebackJsonStore__1_Microsoft_Extensions_DependencyInjection_IServiceCollection_System_String_System_Boolean_System_Text_Json_JsonSerializerOptions_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore%60%601(Microsoft.Extensions.DependencyInjection.IServiceCollection%2CSystem.String%2CSystem.Boolean%2CSystem.Text.Json.JsonSerializerOptions)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/IServiceCollection.cs/#L29">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/WritebackJsonStore/IServiceCollection.cs/#L44">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_ServiceCollectionExtensions_AddWritebackJsonStore_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_ServiceCollectionExtensions_AddWritebackJsonStore__1_Microsoft_Extensions_DependencyInjection_IServiceCollection_System_String_System_Boolean_System_Text_Json_JsonSerializerOptions_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore``1(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String,System.Boolean,System.Text.Json.JsonSerializerOptions)">AddWritebackJsonStore&lt;T&gt;(IServiceCollection, string, bool, JsonSerializerOptions?)</h4>
-  <div class="markdown level1 summary"><p>Creates a <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html">WritebackJsonStore&lt;T&gt;</a> instance and registers it as a singleton.</p>
+  <div class="markdown level1 summary"><p>Creates a <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html">WritebackJsonStore&lt;T&gt;</a> for the specified JSON document and registers it as a singleton.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
@@ -600,25 +600,26 @@ services.AddWritebackJsonStore(store);</code></pre>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.dependencyinjection.iservicecollection">IServiceCollection</a></td>
         <td><span class="parametername">services</span></td>
-        <td><p>The service collection to add the registration to.</p>
+        <td><p>The service collection to add the singleton registration to.</p>
 </td>
       </tr>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
         <td><span class="parametername">filePath</span></td>
-        <td><p>The absolute or relative path of the JSON settings file.</p>
+        <td><p>Absolute or relative path of the backing JSON document.</p>
 </td>
       </tr>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
         <td><span class="parametername">watchForExternalChanges</span></td>
-        <td><p>When true, a file watcher monitors the file and reloads it on external changes.</p>
+        <td><p>When <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a>, the store watches the backing file and reloads successful external changes into
+<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a>.</p>
 </td>
       </tr>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.text.json.jsonserializeroptions">JsonSerializerOptions</a></td>
         <td><span class="parametername">serializerOptions</span></td>
-        <td><p>Optional JSON serializer options. When null, sensible defaults are used (indented, trailing commas allowed).</p>
+        <td><p>Optional serializer options used for load, clone, and save operations.</p>
 </td>
       </tr>
     </tbody>
@@ -634,7 +635,7 @@ services.AddWritebackJsonStore(store);</code></pre>
     <tbody>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.dependencyinjection.iservicecollection">IServiceCollection</a></td>
-        <td><p>The same service collection so that additional calls can be chained.</p>
+        <td><p>The same service collection so additional registrations can be chained.</p>
 </td>
       </tr>
     </tbody>
@@ -650,18 +651,26 @@ services.AddWritebackJsonStore(store);</code></pre>
     <tbody>
       <tr>
         <td><span class="parametername">T</span></td>
-        <td><p>The settings/document type managed by the store.</p>
+        <td><p>The typed settings or document model managed by the store.</p>
 </td>
       </tr>
     </tbody>
   </table>
   <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_ServiceCollectionExtensions_AddWritebackJsonStore__1_Microsoft_Extensions_DependencyInjection_IServiceCollection_System_String_System_Boolean_System_Text_Json_JsonSerializerOptions__remarks">Remarks</h5>
-  <div class="markdown level1 remarks"><p>This store supports read–modify–write (writeback) scenarios and can optionally watch the backing file for external changes.
-It also exposes a non-persisted <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_WorkingCopy">WorkingCopy</a> for staging operations (for example decrypting values)
-without writing them back to disk.</p>
+  <div class="markdown level1 remarks"><p>
+The registered store exposes two deliberately separate mutable branches. <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current">Current</a>
+is the file-backed state changed through <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateCurrentAndSave_System_Action__0__System_Boolean_">MutateCurrentAndSave(Action&lt;T&gt;, bool)</a> or external
+reloads. <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy">RuntimeWorkingCopy</a> is a detached in-memory branch for runtime-only
+work that must not implicitly change the JSON document.
+</p>
+<p>
+A persisted mutation can be observed independently by normal JSON configuration or SwitchableJson when that
+configuration source has reload-on-change enabled. The writeback store itself does not trigger configuration
+reloads or participate in configuration-source switching.
+</p>
 </div>
   <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_ServiceCollectionExtensions_AddWritebackJsonStore__1_Microsoft_Extensions_DependencyInjection_IServiceCollection_System_String_System_Boolean_System_Text_Json_JsonSerializerOptions__examples">Examples</h5>
-  <pre><code class="lang-csharp">services.AddWritebackJsonStore&lt;Settings&gt;("Settings/Eigenverft.App.ReverseProxy.settings.json");</code></pre>
+  <pre><code class="lang-csharp">services.AddWritebackJsonStore&lt;RuntimeSettings&gt;("Settings/runtime-settings.json");</code></pre>
 
   <h5 class="exceptions">Exceptions</h5>
   <table class="table table-bordered table-condensed">
@@ -674,7 +683,7 @@ without writing them back to disk.</p>
     <tbody>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></td>
-        <td><p>Thrown when <code class="paramref">services</code> or <code class="paramref">filePath</code> is null.</p>
+        <td><p>Thrown when <code class="paramref">services</code> or <code class="paramref">filePath</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
 </td>
       </tr>
     </tbody>
