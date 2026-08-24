@@ -984,6 +984,20 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.yml\" sourcestartlinenumber=\"1\">Provides adapters from standard Microsoft logging contracts to deferred logging.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.yml",
       "output": {
         ".html": {

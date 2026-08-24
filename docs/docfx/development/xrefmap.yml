@@ -4513,6 +4513,34 @@ references:
   isSpec: "True"
   fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLogger.LogWarning
   nameWithType: DeferredLogger.LogWarning
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions
+  name: DeferredLoggerExtensions
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions
+  nameWithType: DeferredLoggerExtensions
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred(Microsoft.Extensions.Logging.ILogger)
+  name: ToDeferred(ILogger)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions_ToDeferred_Microsoft_Extensions_Logging_ILogger_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred(Microsoft.Extensions.Logging.ILogger)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred(Microsoft.Extensions.Logging.ILogger)
+  nameWithType: DeferredLoggerExtensions.ToDeferred(ILogger)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred*
+  name: ToDeferred
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions_ToDeferred_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred
+  nameWithType: DeferredLoggerExtensions.ToDeferred
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred``1(Microsoft.Extensions.Logging.ILogger{``0})
+  name: ToDeferred<TCategoryName>(ILogger<TCategoryName>)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions_ToDeferred__1_Microsoft_Extensions_Logging_ILogger___0__
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred``1(Microsoft.Extensions.Logging.ILogger{``0})
+  name.vb: ToDeferred(Of TCategoryName)(ILogger(Of TCategoryName))
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred<TCategoryName>(Microsoft.Extensions.Logging.ILogger<TCategoryName>)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred(Of TCategoryName)(Microsoft.Extensions.Logging.ILogger(Of TCategoryName))
+  nameWithType: DeferredLoggerExtensions.ToDeferred<TCategoryName>(ILogger<TCategoryName>)
+  nameWithType.vb: DeferredLoggerExtensions.ToDeferred(Of TCategoryName)(ILogger(Of TCategoryName))
 - uid: Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory
   name: DeferredLoggerFactory
   href: api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.html
