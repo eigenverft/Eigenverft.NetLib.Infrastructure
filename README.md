@@ -773,13 +773,19 @@ Console.WriteLine($"{managed.Action}; persisted: {managed.Persisted}");
 ## 🔎 See which configuration source wins
 
 ```csharp
-ILogger startupLogger =
-    BootstrapLogger<Program>.CreateLogger(builder.Configuration);
+private static readonly ILogger StartupLogger = BootstrapLogger<Program>.CreateLogger();
 
-builder.LogConfigurationResolution(startupLogger);
+public static async Task Main(string[] args)
+{
+    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+    builder.Configuration.AddJsonFile("other-settings.json", optional: true, reloadOnChange: true);
+    builder.LogConfigurationResolution(StartupLogger);
+    using IHost host = builder.Build();
+    await host.RunAsync();
+}
 ```
 
-Call `LogConfigurationResolution(...)` after registering configuration sources and before `Build()`. It reports provider precedence and every complete key-shadowing chain:
+Call `LogConfigurationResolution(...)` after registering the application's configuration sources and before `Build()`. It inspects the builder's current configuration-provider stack and writes the result through the supplied logger. It reports provider precedence and every complete key-shadowing chain:
 
 ```text
 Config precedence (highest -> lowest): args -> envars -> json:appsettings.Production.json -> json:appsettings.json
