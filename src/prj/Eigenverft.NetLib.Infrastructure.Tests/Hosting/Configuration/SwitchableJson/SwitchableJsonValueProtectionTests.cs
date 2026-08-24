@@ -155,6 +155,119 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Switchabl
                 JsonConfigurationValueProtection.ForPaths(ConfigurationValueCodecs.Base64, " "));
         }
 
+        [TestMethod]
+        public void RecoveryReturnsOnlyProtectedRuntimeValues()
+        {
+            using var directory = new TemporaryDirectory();
+            directory.Write(
+                "settings.json",
+                "{ \"PartnerApi\": { \"ApiKey\": \"secret\", \"Endpoint\": \"https://example.test\" } }");
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+
+            builder.AddSwitchableJsonFile(
+                "settings",
+                "settings.json",
+                Options(JsonConfigurationValueProtection.ForKeys(ConfigurationValueCodecs.Base64, "ApiKey")));
+
+#pragma warning disable EVFRECOVERY001
+            var recovered = ConfigurationValueRecovery.RecoverProtectedValues(builder.Configuration);
+#pragma warning restore EVFRECOVERY001
+
+            Assert.HasCount(1, recovered);
+            Assert.AreEqual("secret", recovered["PartnerApi:ApiKey"]);
+            Assert.IsFalse(recovered.ContainsKey("PartnerApi:Endpoint"));
+        }
+
+        [TestMethod]
+        public void RecoveryUsesNormalProviderPrecedenceForDuplicateProtectedKeys()
+        {
+            using var directory = new TemporaryDirectory();
+            directory.Write("first.json", "{ \"ApiKey\": \"first-secret\" }");
+            directory.Write("second.json", "{ \"ApiKey\": \"second-secret\" }");
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+
+            builder.AddSwitchableJsonFile(
+                "first",
+                "first.json",
+                Options(JsonConfigurationValueProtection.ForKeys(ConfigurationValueCodecs.Base64, "ApiKey")));
+            builder.AddSwitchableJsonFile(
+                "second",
+                "second.json",
+                Options(JsonConfigurationValueProtection.ForKeys(ConfigurationValueCodecs.Base64, "ApiKey")));
+
+#pragma warning disable EVFRECOVERY001
+            var recovered = ConfigurationValueRecovery.RecoverProtectedValues(builder.Configuration);
+#pragma warning restore EVFRECOVERY001
+
+            Assert.HasCount(1, recovered);
+            Assert.AreEqual("second-secret", recovered["ApiKey"]);
+        }
+
+        [TestMethod]
+        public void RecoverySucceedsForCopiedValueWhenEquivalentProtectionContextIsAvailable()
+        {
+            using var directory = new TemporaryDirectory();
+            string persistedValue = ConfigurationValueCodecs.AesPassword("shared-password").Encode("secret");
+            directory.Write("settings.json", $"{{ \"ApiKey\": \"{persistedValue}\" }}");
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+
+            builder.AddSwitchableJsonFile(
+                "settings",
+                "settings.json",
+                Options(JsonConfigurationValueProtection.ForKeys(
+                    ConfigurationValueCodecs.AesPassword("shared-password"),
+                    "ApiKey")));
+
+#pragma warning disable EVFRECOVERY001
+            var recovered = ConfigurationValueRecovery.RecoverProtectedValues(builder.Configuration);
+#pragma warning restore EVFRECOVERY001
+
+            Assert.AreEqual("secret", recovered["ApiKey"]);
+        }
+
+        [TestMethod]
+        public void RecoveryThrowsWhenProtectedValueCouldNotBeDecodedInCurrentRuntimeContext()
+        {
+            using var directory = new TemporaryDirectory();
+            string persistedValue = ConfigurationValueCodecs.AesPassword("original-password").Encode("secret");
+            directory.Write("settings.json", $"{{ \"ApiKey\": \"{persistedValue}\" }}");
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+
+            builder.AddSwitchableJsonFile(
+                "settings",
+                "settings.json",
+                Options(JsonConfigurationValueProtection.ForKeys(
+                    ConfigurationValueCodecs.AesPassword("different-password"),
+                    "ApiKey")));
+
+#pragma warning disable EVFRECOVERY001
+            InvalidOperationException exception = Assert.ThrowsExactly<InvalidOperationException>(() =>
+                ConfigurationValueRecovery.RecoverProtectedValues(builder.Configuration));
+#pragma warning restore EVFRECOVERY001
+
+            StringAssert.Contains(exception.Message, "ApiKey");
+            StringAssert.Contains(exception.Message, "settings");
+            StringAssert.Contains(exception.Message, "AesPassword");
+            StringAssert.Contains(exception.Message, "current runtime context");
+            StringAssert.Contains(exception.Message, "original server");
+        }
+
+        [TestMethod]
+        public void RecoveryReturnsEmptyWhenNoValueProtectionIsRegistered()
+        {
+            using var directory = new TemporaryDirectory();
+            directory.Write("settings.json", "{ \"ApiKey\": \"plain\" }");
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+
+            builder.AddSwitchableJsonFile("settings", "settings.json");
+
+#pragma warning disable EVFRECOVERY001
+            var recovered = ConfigurationValueRecovery.RecoverProtectedValues(builder.Configuration);
+#pragma warning restore EVFRECOVERY001
+
+            Assert.HasCount(0, recovered);
+        }
+
         private static SwitchableJsonRegistrationOptions Options(JsonConfigurationValueProtection protection)
         {
             return new SwitchableJsonRegistrationOptions { ValueProtection = protection };
