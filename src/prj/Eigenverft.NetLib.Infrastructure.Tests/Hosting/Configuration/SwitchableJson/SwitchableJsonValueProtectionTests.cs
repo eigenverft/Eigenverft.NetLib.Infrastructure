@@ -204,6 +204,55 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Switchabl
         }
 
         [TestMethod]
+        public void RecoverySucceedsForCopiedValueWhenEquivalentProtectionContextIsAvailable()
+        {
+            using var directory = new TemporaryDirectory();
+            string persistedValue = ConfigurationValueCodecs.AesPassword("shared-password").Encode("secret");
+            directory.Write("settings.json", $"{{ \"ApiKey\": \"{persistedValue}\" }}");
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+
+            builder.AddSwitchableJsonFile(
+                "settings",
+                "settings.json",
+                Options(JsonConfigurationValueProtection.ForKeys(
+                    ConfigurationValueCodecs.AesPassword("shared-password"),
+                    "ApiKey")));
+
+#pragma warning disable EVFRECOVERY001
+            var recovered = ConfigurationValueRecovery.RecoverProtectedValues(builder.Configuration);
+#pragma warning restore EVFRECOVERY001
+
+            Assert.AreEqual("secret", recovered["ApiKey"]);
+        }
+
+        [TestMethod]
+        public void RecoveryThrowsWhenProtectedValueCouldNotBeDecodedInCurrentRuntimeContext()
+        {
+            using var directory = new TemporaryDirectory();
+            string persistedValue = ConfigurationValueCodecs.AesPassword("original-password").Encode("secret");
+            directory.Write("settings.json", $"{{ \"ApiKey\": \"{persistedValue}\" }}");
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+
+            builder.AddSwitchableJsonFile(
+                "settings",
+                "settings.json",
+                Options(JsonConfigurationValueProtection.ForKeys(
+                    ConfigurationValueCodecs.AesPassword("different-password"),
+                    "ApiKey")));
+
+#pragma warning disable EVFRECOVERY001
+            InvalidOperationException exception = Assert.ThrowsExactly<InvalidOperationException>(() =>
+                ConfigurationValueRecovery.RecoverProtectedValues(builder.Configuration));
+#pragma warning restore EVFRECOVERY001
+
+            StringAssert.Contains(exception.Message, "ApiKey");
+            StringAssert.Contains(exception.Message, "settings");
+            StringAssert.Contains(exception.Message, "AesPassword");
+            StringAssert.Contains(exception.Message, "current runtime context");
+            StringAssert.Contains(exception.Message, "original server");
+        }
+
+        [TestMethod]
         public void RecoveryReturnsEmptyWhenNoValueProtectionIsRegistered()
         {
             using var directory = new TemporaryDirectory();

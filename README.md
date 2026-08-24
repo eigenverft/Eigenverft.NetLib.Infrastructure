@@ -386,17 +386,17 @@ Use Windows-only `DpapiMachine`, cross-platform `AesPassword(...)`, lightweight 
 
 DPAPI LocalMachine is not a user or administrator boundary, and physical-machine binding is file-copy resistance rather than hardware-backed key storage. `Base64`, `Base92JsonSafe`, `Rot13`, and `Caesar(...)` are representations or analysis friction, not encryption.
 
-## 🧯 Recover protected values locally
+## 🧪 Recover protected values
 
-For explicit local recovery or debugging, the running configuration can expose the clear-text values that NetLib value-protection rules already decoded and published:
+For explicit recovery or debugging, the running configuration can expose the clear-text values that NetLib value-protection rules decoded and published:
 
 ```csharp
-#pragma warning disable EVFRECOVERY001 // Temporary local recovery only.
+#pragma warning disable EVFRECOVERY001 // Temporary recovery only.
 var recovered = ConfigurationValueRecovery.RecoverProtectedValues(builder.Configuration);
 #pragma warning restore EVFRECOVERY001
 ```
 
-Inspect `recovered` in the debugger to see the affected full configuration paths and their current clear-text runtime values. The helper does not decode backing files or bypass protection; it reads only active SwitchableJson provider values selected by registered `ValueProtection` rules. `EVFRECOVERY001` is intentionally an experimental, build-stopping diagnostic until explicitly suppressed so temporary recovery code is hard to add accidentally and should be removed when the recovery session is finished.
+Inspect `recovered` in the debugger to see the affected full configuration paths and their current clear-text runtime values. A copied configuration can be recovered on a developer machine when the configured codec is not host-bound and the same required inputs, such as passwords or key material, are available. If a selected value still carries its persisted protection envelope, recovery throws instead of returning ciphertext; the exception includes the configured codec name and points out that machine-bound protection such as DPAPI LocalMachine or `PhysicalMachineBoundAes()` may require running the same bootstrap and recovery call on the original application server. The helper does not bypass protection or create a second decoding path; it inspects the values produced by the normal SwitchableJson load pipeline. `EVFRECOVERY001` is intentionally an experimental, build-stopping diagnostic until explicitly suppressed so temporary recovery code is hard to add accidentally and should be removed when the recovery session is finished.
 
 ## 🖥️ Read the machine fingerprint
 
