@@ -10,7 +10,7 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Writeback
     public sealed class WritebackJsonStoreTests
     {
         [TestMethod]
-        public void InitialSnapshotCurrentAndRuntimeCopyStartFromSameDocument()
+        public void InitialSnapshotCurrentAndRuntimeWorkingCopyStartFromSameDocument()
         {
             using var directory = new TemporaryDirectory();
             string path = directory.Write("settings.json", "{ \"YarpRoute\": \"Variant1\" }");
@@ -18,57 +18,165 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Writeback
 
             Assert.AreEqual("Variant1", store.InitialSnapshot.YarpRoute);
             Assert.AreEqual("Variant1", store.Current.YarpRoute);
-            Assert.AreEqual("Variant1", store.RuntimeCopy.YarpRoute);
+            Assert.AreEqual("Variant1", store.RuntimeWorkingCopy.YarpRoute);
         }
 
         [TestMethod]
-        public void MutateRuntimeCopyDoesNotChangePersistedBranchOrBackingFile()
+        public void MutateRuntimeWorkingCopyDoesNotChangeCurrentOrBackingFile()
         {
             using var directory = new TemporaryDirectory();
             string path = directory.Write("settings.json", "{ \"YarpRoute\": \"Variant1\" }");
             using var store = new WritebackJsonStore<RoutingSettings>(path, watchForExternalChanges: false);
-            int notifications = 0;
-            store.RuntimeCopyChanged += (_, _) => notifications++;
+            int runtimeNotifications = 0;
+            int currentNotifications = 0;
+            store.RuntimeWorkingCopyChanged += (_, _) => runtimeNotifications++;
+            store.CurrentChanged += (_, _) => currentNotifications++;
 
-            store.MutateRuntimeCopy(settings => settings.YarpRoute = "Variant2");
+            store.MutateRuntimeWorkingCopy(settings => settings.YarpRoute = "RuntimeOnly");
 
-            Assert.AreEqual("Variant2", store.RuntimeCopy.YarpRoute);
+            Assert.AreEqual("RuntimeOnly", store.RuntimeWorkingCopy.YarpRoute);
             Assert.AreEqual("Variant1", store.Current.YarpRoute);
             Assert.AreEqual("Variant1", store.InitialSnapshot.YarpRoute);
             Assert.AreEqual("Variant1", ReadRoute(path));
+            Assert.AreEqual(1, runtimeNotifications);
+            Assert.AreEqual(0, currentNotifications);
+        }
+
+        [TestMethod]
+        public void MutateCurrentAndSaveChangesCurrentAndDiskButLeavesRuntimeWorkingCopyDetached()
+        {
+            using var directory = new TemporaryDirectory();
+            string path = directory.Write("settings.json", "{ \"YarpRoute\": \"Variant1\" }");
+            using var store = new WritebackJsonStore<RoutingSettings>(path, watchForExternalChanges: false);
+            int currentNotifications = 0;
+            int runtimeNotifications = 0;
+            store.CurrentChanged += (_, _) => currentNotifications++;
+            store.RuntimeWorkingCopyChanged += (_, _) => runtimeNotifications++;
+
+            store.MutateRuntimeWorkingCopy(settings => settings.YarpRoute = "RuntimeOnly");
+            runtimeNotifications = 0;
+
+            store.MutateCurrentAndSave(settings => settings.YarpRoute = "Variant2");
+
+            Assert.AreEqual("Variant2", store.Current.YarpRoute);
+            Assert.AreEqual("Variant2", ReadRoute(path));
+            Assert.AreEqual("RuntimeOnly", store.RuntimeWorkingCopy.YarpRoute);
+            Assert.AreEqual("Variant1", store.InitialSnapshot.YarpRoute);
+            Assert.AreEqual(1, currentNotifications);
+            Assert.AreEqual(0, runtimeNotifications);
+        }
+
+        [TestMethod]
+        public void RestoreRuntimeWorkingCopyFromCurrentDiscardsRuntimeChangesWithoutWritingDisk()
+        {
+            using var directory = new TemporaryDirectory();
+            string path = directory.Write("settings.json", "{ \"YarpRoute\": \"Variant1\" }");
+            using var store = new WritebackJsonStore<RoutingSettings>(path, watchForExternalChanges: false);
+
+            store.MutateCurrentAndSave(settings => settings.YarpRoute = "Variant2");
+            store.MutateRuntimeWorkingCopy(settings => settings.YarpRoute = "RuntimeOnly");
+            int notifications = 0;
+            store.RuntimeWorkingCopyChanged += (_, _) => notifications++;
+
+            store.RestoreRuntimeWorkingCopyFromCurrent();
+
+            Assert.AreEqual("Variant2", store.RuntimeWorkingCopy.YarpRoute);
+            Assert.AreEqual("Variant2", store.Current.YarpRoute);
+            Assert.AreEqual("Variant2", ReadRoute(path));
+            Assert.AreEqual("Variant1", store.InitialSnapshot.YarpRoute);
             Assert.AreEqual(1, notifications);
         }
 
         [TestMethod]
-        public void MutateAndSaveChangesPersistedBranchButLeavesRuntimeCopyDetached()
+        public void RestoreRuntimeWorkingCopyFromInitialSnapshotLeavesCurrentAndDiskUntouched()
         {
             using var directory = new TemporaryDirectory();
             string path = directory.Write("settings.json", "{ \"YarpRoute\": \"Variant1\" }");
             using var store = new WritebackJsonStore<RoutingSettings>(path, watchForExternalChanges: false);
 
-            store.MutateRuntimeCopy(settings => settings.YarpRoute = "RuntimeOnly");
-            store.MutateAndSave(settings => settings.YarpRoute = "Variant2");
+            store.MutateCurrentAndSave(settings => settings.YarpRoute = "Variant2");
+            store.MutateRuntimeWorkingCopy(settings => settings.YarpRoute = "RuntimeOnly");
 
+            store.RestoreRuntimeWorkingCopyFromInitialSnapshot();
+
+            Assert.AreEqual("Variant1", store.RuntimeWorkingCopy.YarpRoute);
             Assert.AreEqual("Variant2", store.Current.YarpRoute);
             Assert.AreEqual("Variant2", ReadRoute(path));
-            Assert.AreEqual("RuntimeOnly", store.RuntimeCopy.YarpRoute);
             Assert.AreEqual("Variant1", store.InitialSnapshot.YarpRoute);
         }
 
         [TestMethod]
-        public void ResetRuntimeCopyReturnsToInitialSnapshotWithoutWritingDisk()
+        public void RestoreCurrentFromInitialSnapshotAndSaveLeavesRuntimeWorkingCopyUntouched()
         {
             using var directory = new TemporaryDirectory();
             string path = directory.Write("settings.json", "{ \"YarpRoute\": \"Variant1\" }");
             using var store = new WritebackJsonStore<RoutingSettings>(path, watchForExternalChanges: false);
 
-            store.MutateRuntimeCopy(settings => settings.YarpRoute = "RuntimeOnly");
-            store.MutateAndSave(settings => settings.YarpRoute = "Variant2");
-            store.ResetRuntimeCopy();
+            store.MutateCurrentAndSave(settings => settings.YarpRoute = "Variant2");
+            store.MutateRuntimeWorkingCopy(settings => settings.YarpRoute = "RuntimeOnly");
 
-            Assert.AreEqual("Variant1", store.RuntimeCopy.YarpRoute);
-            Assert.AreEqual("Variant2", store.Current.YarpRoute);
-            Assert.AreEqual("Variant2", ReadRoute(path));
+            store.RestoreCurrentFromInitialSnapshotAndSave();
+
+            Assert.AreEqual("Variant1", store.Current.YarpRoute);
+            Assert.AreEqual("Variant1", ReadRoute(path));
+            Assert.AreEqual("RuntimeOnly", store.RuntimeWorkingCopy.YarpRoute);
+            Assert.AreEqual("Variant1", store.InitialSnapshot.YarpRoute);
+        }
+
+        [TestMethod]
+        public void RestoreAllFromInitialSnapshotAndSaveRollsBackCurrentDiskAndRuntimeWorkingCopy()
+        {
+            using var directory = new TemporaryDirectory();
+            string path = directory.Write("settings.json", "{ \"YarpRoute\": \"Variant1\" }");
+            using var store = new WritebackJsonStore<RoutingSettings>(path, watchForExternalChanges: false);
+
+            store.MutateCurrentAndSave(settings => settings.YarpRoute = "Variant2");
+            store.MutateRuntimeWorkingCopy(settings => settings.YarpRoute = "RuntimeOnly");
+            int currentNotifications = 0;
+            int runtimeNotifications = 0;
+            store.CurrentChanged += (_, _) => currentNotifications++;
+            store.RuntimeWorkingCopyChanged += (_, _) => runtimeNotifications++;
+
+            store.RestoreAllFromInitialSnapshotAndSave();
+
+            Assert.AreEqual("Variant1", store.Current.YarpRoute);
+            Assert.AreEqual("Variant1", store.RuntimeWorkingCopy.YarpRoute);
+            Assert.AreEqual("Variant1", store.InitialSnapshot.YarpRoute);
+            Assert.AreEqual("Variant1", ReadRoute(path));
+            Assert.AreEqual(1, currentNotifications);
+            Assert.AreEqual(1, runtimeNotifications);
+        }
+
+        [TestMethod]
+        public void ReloadCurrentFromFileDoesNotImplicitlyReplaceRuntimeWorkingCopy()
+        {
+            using var directory = new TemporaryDirectory();
+            string path = directory.Write("settings.json", "{ \"YarpRoute\": \"Variant1\" }");
+            using var store = new WritebackJsonStore<RoutingSettings>(path, watchForExternalChanges: false);
+
+            store.MutateRuntimeWorkingCopy(settings => settings.YarpRoute = "RuntimeOnly");
+            File.WriteAllText(path, "{ \"YarpRoute\": \"Variant3\" }");
+
+            bool reloaded = store.ReloadCurrentFromFile();
+
+            Assert.IsTrue(reloaded);
+            Assert.AreEqual("Variant3", store.Current.YarpRoute);
+            Assert.AreEqual("RuntimeOnly", store.RuntimeWorkingCopy.YarpRoute);
+            Assert.AreEqual("Variant1", store.InitialSnapshot.YarpRoute);
+        }
+
+        [TestMethod]
+        public void GetCurrentSnapshotReturnsIndependentCopy()
+        {
+            using var directory = new TemporaryDirectory();
+            string path = directory.Write("settings.json", "{ \"YarpRoute\": \"Variant1\" }");
+            using var store = new WritebackJsonStore<RoutingSettings>(path, watchForExternalChanges: false);
+
+            RoutingSettings snapshot = store.GetCurrentSnapshot();
+            snapshot.YarpRoute = "Detached";
+
+            Assert.AreEqual("Variant1", store.Current.YarpRoute);
+            Assert.AreEqual("Variant1", ReadRoute(path));
         }
 
         private static string? ReadRoute(string path)

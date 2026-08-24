@@ -5,24 +5,40 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore
 {
-    /// <summary>Extension methods to register <see cref="WritebackJsonStore{T}"/> in the service collection.</summary>
+    /// <summary>Extension methods for registering <see cref="WritebackJsonStore{T}"/> as a singleton service.</summary>
     public static class ServiceCollectionExtensions
     {
-        /// <summary>Creates a <see cref="WritebackJsonStore{T}"/> instance and registers it as a singleton.</summary>
+        /// <summary>
+        /// Creates a <see cref="WritebackJsonStore{T}"/> for the specified JSON document and registers it as a singleton.
+        /// </summary>
+        /// <typeparam name="T">The typed settings or document model managed by the store.</typeparam>
+        /// <param name="services">The service collection to add the singleton registration to.</param>
+        /// <param name="filePath">Absolute or relative path of the backing JSON document.</param>
+        /// <param name="watchForExternalChanges">
+        /// When <see langword="true"/>, the store watches the backing file and reloads successful external changes into
+        /// <see cref="WritebackJsonStore{T}.Current"/>.
+        /// </param>
+        /// <param name="serializerOptions">Optional serializer options used for load, clone, and save operations.</param>
+        /// <returns>The same service collection so additional registrations can be chained.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="services"/> or <paramref name="filePath"/> is <see langword="null"/>.
+        /// </exception>
         /// <remarks>
-        /// This store supports read–modify–write (writeback) scenarios and can optionally watch the backing file for external changes.
-        /// It also exposes a separate non-persisted <see cref="WritebackJsonStore{T}.RuntimeCopy"/> for runtime-only mutations that must not modify the backing JSON document.
+        /// <para>
+        /// The registered store exposes two deliberately separate mutable branches. <see cref="WritebackJsonStore{T}.Current"/>
+        /// is the file-backed state changed through <see cref="WritebackJsonStore{T}.MutateCurrentAndSave"/> or external
+        /// reloads. <see cref="WritebackJsonStore{T}.RuntimeWorkingCopy"/> is a detached in-memory branch for runtime-only
+        /// work that must not implicitly change the JSON document.
+        /// </para>
+        /// <para>
+        /// A persisted mutation can be observed independently by normal JSON configuration or SwitchableJson when that
+        /// configuration source has reload-on-change enabled. The writeback store itself does not trigger configuration
+        /// reloads or participate in configuration-source switching.
+        /// </para>
         /// </remarks>
-        /// <typeparam name="T">The settings/document type managed by the store.</typeparam>
-        /// <param name="services">The service collection to add the registration to.</param>
-        /// <param name="filePath">The absolute or relative path of the JSON settings file.</param>
-        /// <param name="watchForExternalChanges">When true, a file watcher monitors the file and reloads it on external changes.</param>
-        /// <param name="serializerOptions">Optional JSON serializer options. When null, sensible defaults are used (indented, trailing commas allowed).</param>
-        /// <returns>The same service collection so that additional calls can be chained.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> or <paramref name="filePath"/> is null.</exception>
         /// <example>
         /// <code>
-        /// services.AddWritebackJsonStore&lt;Settings&gt;("Settings/Eigenverft.App.ReverseProxy.settings.json");
+        /// services.AddWritebackJsonStore&lt;RuntimeSettings&gt;("Settings/runtime-settings.json");
         /// </code>
         /// </example>
         public static IServiceCollection AddWritebackJsonStore<T>(this IServiceCollection services, string filePath, bool watchForExternalChanges = true, JsonSerializerOptions? serializerOptions = null) where T : class, new()
@@ -36,14 +52,16 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonSt
         }
 
         /// <summary>Registers an existing <see cref="WritebackJsonStore{T}"/> instance as a singleton.</summary>
-        /// <typeparam name="T">The settings/document type managed by the store.</typeparam>
-        /// <param name="services">The service collection to add the registration to.</param>
+        /// <typeparam name="T">The typed settings or document model managed by the store.</typeparam>
+        /// <param name="services">The service collection to add the singleton registration to.</param>
         /// <param name="instance">The existing store instance to register.</param>
-        /// <returns>The same service collection so that additional calls can be chained.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> or <paramref name="instance"/> is null.</exception>
+        /// <returns>The same service collection so additional registrations can be chained.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="services"/> or <paramref name="instance"/> is <see langword="null"/>.
+        /// </exception>
         /// <example>
         /// <code>
-        /// var store = new WritebackJsonStore&lt;Settings&gt;(path);
+        /// var store = new WritebackJsonStore&lt;RuntimeSettings&gt;(path);
         /// services.AddWritebackJsonStore(store);
         /// </code>
         /// </example>
