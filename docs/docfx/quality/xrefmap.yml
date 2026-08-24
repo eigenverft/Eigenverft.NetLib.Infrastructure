@@ -3456,6 +3456,25 @@ references:
   commentId: F:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueKind.Rot13
   fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueKind.Rot13
   nameWithType: ConfigurationValueKind.Rot13
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery
+  name: ConfigurationValueRecovery
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery
+  nameWithType: ConfigurationValueRecovery
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.RecoverProtectedValues(Microsoft.Extensions.Configuration.IConfiguration)
+  name: RecoverProtectedValues(IConfiguration)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_Values_ConfigurationValueRecovery_RecoverProtectedValues_Microsoft_Extensions_Configuration_IConfiguration_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.RecoverProtectedValues(Microsoft.Extensions.Configuration.IConfiguration)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.RecoverProtectedValues(Microsoft.Extensions.Configuration.IConfiguration)
+  nameWithType: ConfigurationValueRecovery.RecoverProtectedValues(IConfiguration)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.RecoverProtectedValues*
+  name: RecoverProtectedValues
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_Values_ConfigurationValueRecovery_RecoverProtectedValues_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.RecoverProtectedValues
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.RecoverProtectedValues
+  nameWithType: ConfigurationValueRecovery.RecoverProtectedValues
 - uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder
   name: JsonConfigurationFileEncoder
   href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.html
@@ -3487,6 +3506,323 @@ references:
   isSpec: "True"
   fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace
   nameWithType: JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore
+  name: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.html
+  commentId: N:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore
+  nameWithType: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions
+  name: ServiceCollectionExtensions
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions
+  nameWithType: ServiceCollectionExtensions
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore*
+  name: AddWritebackJsonStore
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_ServiceCollectionExtensions_AddWritebackJsonStore_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore
+  nameWithType: ServiceCollectionExtensions.AddWritebackJsonStore
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore``1(Microsoft.Extensions.DependencyInjection.IServiceCollection,Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore{``0})
+  name: AddWritebackJsonStore<T>(IServiceCollection, WritebackJsonStore<T>)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_ServiceCollectionExtensions_AddWritebackJsonStore__1_Microsoft_Extensions_DependencyInjection_IServiceCollection_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore___0__
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore``1(Microsoft.Extensions.DependencyInjection.IServiceCollection,Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore{``0})
+  name.vb: AddWritebackJsonStore(Of T)(IServiceCollection, WritebackJsonStore(Of T))
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection, Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore(Of T)(Microsoft.Extensions.DependencyInjection.IServiceCollection, Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T))
+  nameWithType: ServiceCollectionExtensions.AddWritebackJsonStore<T>(IServiceCollection, WritebackJsonStore<T>)
+  nameWithType.vb: ServiceCollectionExtensions.AddWritebackJsonStore(Of T)(IServiceCollection, WritebackJsonStore(Of T))
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore``1(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String,System.Boolean,System.Text.Json.JsonSerializerOptions)
+  name: AddWritebackJsonStore<T>(IServiceCollection, string, bool, JsonSerializerOptions?)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_ServiceCollectionExtensions_AddWritebackJsonStore__1_Microsoft_Extensions_DependencyInjection_IServiceCollection_System_String_System_Boolean_System_Text_Json_JsonSerializerOptions_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore``1(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String,System.Boolean,System.Text.Json.JsonSerializerOptions)
+  name.vb: AddWritebackJsonStore(Of T)(IServiceCollection, String, Boolean, JsonSerializerOptions)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection, string, bool, System.Text.Json.JsonSerializerOptions?)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.ServiceCollectionExtensions.AddWritebackJsonStore(Of T)(Microsoft.Extensions.DependencyInjection.IServiceCollection, String, Boolean, System.Text.Json.JsonSerializerOptions)
+  nameWithType: ServiceCollectionExtensions.AddWritebackJsonStore<T>(IServiceCollection, string, bool, JsonSerializerOptions?)
+  nameWithType.vb: ServiceCollectionExtensions.AddWritebackJsonStore(Of T)(IServiceCollection, String, Boolean, JsonSerializerOptions)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1
+  name: WritebackJsonStore<T>
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1
+  name.vb: WritebackJsonStore(Of T)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T)
+  nameWithType: WritebackJsonStore<T>
+  nameWithType.vb: WritebackJsonStore(Of T)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.#ctor(System.String,System.Boolean,System.Text.Json.JsonSerializerOptions)
+  name: WritebackJsonStore(string, bool, JsonSerializerOptions?)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1__ctor_System_String_System_Boolean_System_Text_Json_JsonSerializerOptions_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.#ctor(System.String,System.Boolean,System.Text.Json.JsonSerializerOptions)
+  name.vb: New(String, Boolean, JsonSerializerOptions)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.WritebackJsonStore(string, bool, System.Text.Json.JsonSerializerOptions?)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).New(String, Boolean, System.Text.Json.JsonSerializerOptions)
+  nameWithType: WritebackJsonStore<T>.WritebackJsonStore(string, bool, JsonSerializerOptions?)
+  nameWithType.vb: WritebackJsonStore(Of T).New(String, Boolean, JsonSerializerOptions)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.#ctor*
+  name: WritebackJsonStore
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1__ctor_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.#ctor
+  isSpec: "True"
+  name.vb: New
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.WritebackJsonStore
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).New
+  nameWithType: WritebackJsonStore<T>.WritebackJsonStore
+  nameWithType.vb: WritebackJsonStore(Of T).New
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.Current
+  name: Current
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.Current
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.Current
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).Current
+  nameWithType: WritebackJsonStore<T>.Current
+  nameWithType.vb: WritebackJsonStore(Of T).Current
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.Current*
+  name: Current
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Current_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.Current
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.Current
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).Current
+  nameWithType: WritebackJsonStore<T>.Current
+  nameWithType.vb: WritebackJsonStore(Of T).Current
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.CurrentChanged
+  name: CurrentChanged
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_CurrentChanged
+  commentId: E:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.CurrentChanged
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.CurrentChanged
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).CurrentChanged
+  nameWithType: WritebackJsonStore<T>.CurrentChanged
+  nameWithType.vb: WritebackJsonStore(Of T).CurrentChanged
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.Dispose
+  name: Dispose()
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Dispose
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.Dispose
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.Dispose()
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).Dispose()
+  nameWithType: WritebackJsonStore<T>.Dispose()
+  nameWithType.vb: WritebackJsonStore(Of T).Dispose()
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.Dispose*
+  name: Dispose
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_Dispose_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.Dispose
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.Dispose
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).Dispose
+  nameWithType: WritebackJsonStore<T>.Dispose
+  nameWithType.vb: WritebackJsonStore(Of T).Dispose
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ErrorOccurred
+  name: ErrorOccurred
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ErrorOccurred
+  commentId: E:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ErrorOccurred
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.ErrorOccurred
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).ErrorOccurred
+  nameWithType: WritebackJsonStore<T>.ErrorOccurred
+  nameWithType.vb: WritebackJsonStore(Of T).ErrorOccurred
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.FilePath
+  name: FilePath
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_FilePath
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.FilePath
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.FilePath
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).FilePath
+  nameWithType: WritebackJsonStore<T>.FilePath
+  nameWithType.vb: WritebackJsonStore(Of T).FilePath
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.FilePath*
+  name: FilePath
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_FilePath_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.FilePath
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.FilePath
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).FilePath
+  nameWithType: WritebackJsonStore<T>.FilePath
+  nameWithType.vb: WritebackJsonStore(Of T).FilePath
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.GetCurrentSnapshot
+  name: GetCurrentSnapshot()
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_GetCurrentSnapshot
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.GetCurrentSnapshot
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.GetCurrentSnapshot()
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).GetCurrentSnapshot()
+  nameWithType: WritebackJsonStore<T>.GetCurrentSnapshot()
+  nameWithType.vb: WritebackJsonStore(Of T).GetCurrentSnapshot()
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.GetCurrentSnapshot*
+  name: GetCurrentSnapshot
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_GetCurrentSnapshot_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.GetCurrentSnapshot
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.GetCurrentSnapshot
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).GetCurrentSnapshot
+  nameWithType: WritebackJsonStore<T>.GetCurrentSnapshot
+  nameWithType.vb: WritebackJsonStore(Of T).GetCurrentSnapshot
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.InitialSnapshot
+  name: InitialSnapshot
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.InitialSnapshot
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.InitialSnapshot
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).InitialSnapshot
+  nameWithType: WritebackJsonStore<T>.InitialSnapshot
+  nameWithType.vb: WritebackJsonStore(Of T).InitialSnapshot
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.InitialSnapshot*
+  name: InitialSnapshot
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_InitialSnapshot_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.InitialSnapshot
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.InitialSnapshot
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).InitialSnapshot
+  nameWithType: WritebackJsonStore<T>.InitialSnapshot
+  nameWithType.vb: WritebackJsonStore(Of T).InitialSnapshot
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateCurrentAndSave(System.Action{`0},System.Boolean)
+  name: MutateCurrentAndSave(Action<T>, bool)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateCurrentAndSave_System_Action__0__System_Boolean_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateCurrentAndSave(System.Action{`0},System.Boolean)
+  name.vb: MutateCurrentAndSave(Action(Of T), Boolean)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.MutateCurrentAndSave(System.Action<T>, bool)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).MutateCurrentAndSave(System.Action(Of T), Boolean)
+  nameWithType: WritebackJsonStore<T>.MutateCurrentAndSave(Action<T>, bool)
+  nameWithType.vb: WritebackJsonStore(Of T).MutateCurrentAndSave(Action(Of T), Boolean)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateCurrentAndSave*
+  name: MutateCurrentAndSave
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateCurrentAndSave_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateCurrentAndSave
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.MutateCurrentAndSave
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).MutateCurrentAndSave
+  nameWithType: WritebackJsonStore<T>.MutateCurrentAndSave
+  nameWithType.vb: WritebackJsonStore(Of T).MutateCurrentAndSave
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateRuntimeWorkingCopy(System.Action{`0},System.Boolean)
+  name: MutateRuntimeWorkingCopy(Action<T>, bool)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateRuntimeWorkingCopy_System_Action__0__System_Boolean_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateRuntimeWorkingCopy(System.Action{`0},System.Boolean)
+  name.vb: MutateRuntimeWorkingCopy(Action(Of T), Boolean)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.MutateRuntimeWorkingCopy(System.Action<T>, bool)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).MutateRuntimeWorkingCopy(System.Action(Of T), Boolean)
+  nameWithType: WritebackJsonStore<T>.MutateRuntimeWorkingCopy(Action<T>, bool)
+  nameWithType.vb: WritebackJsonStore(Of T).MutateRuntimeWorkingCopy(Action(Of T), Boolean)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateRuntimeWorkingCopy*
+  name: MutateRuntimeWorkingCopy
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_MutateRuntimeWorkingCopy_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.MutateRuntimeWorkingCopy
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.MutateRuntimeWorkingCopy
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).MutateRuntimeWorkingCopy
+  nameWithType: WritebackJsonStore<T>.MutateRuntimeWorkingCopy
+  nameWithType.vb: WritebackJsonStore(Of T).MutateRuntimeWorkingCopy
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ReloadCurrentFromFile(System.Boolean)
+  name: ReloadCurrentFromFile(bool)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ReloadCurrentFromFile_System_Boolean_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ReloadCurrentFromFile(System.Boolean)
+  name.vb: ReloadCurrentFromFile(Boolean)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.ReloadCurrentFromFile(bool)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).ReloadCurrentFromFile(Boolean)
+  nameWithType: WritebackJsonStore<T>.ReloadCurrentFromFile(bool)
+  nameWithType.vb: WritebackJsonStore(Of T).ReloadCurrentFromFile(Boolean)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ReloadCurrentFromFile*
+  name: ReloadCurrentFromFile
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_ReloadCurrentFromFile_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.ReloadCurrentFromFile
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.ReloadCurrentFromFile
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).ReloadCurrentFromFile
+  nameWithType: WritebackJsonStore<T>.ReloadCurrentFromFile
+  nameWithType.vb: WritebackJsonStore(Of T).ReloadCurrentFromFile
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreAllFromInitialSnapshotAndSave(System.Boolean)
+  name: RestoreAllFromInitialSnapshotAndSave(bool)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreAllFromInitialSnapshotAndSave_System_Boolean_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreAllFromInitialSnapshotAndSave(System.Boolean)
+  name.vb: RestoreAllFromInitialSnapshotAndSave(Boolean)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.RestoreAllFromInitialSnapshotAndSave(bool)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).RestoreAllFromInitialSnapshotAndSave(Boolean)
+  nameWithType: WritebackJsonStore<T>.RestoreAllFromInitialSnapshotAndSave(bool)
+  nameWithType.vb: WritebackJsonStore(Of T).RestoreAllFromInitialSnapshotAndSave(Boolean)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreAllFromInitialSnapshotAndSave*
+  name: RestoreAllFromInitialSnapshotAndSave
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreAllFromInitialSnapshotAndSave_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreAllFromInitialSnapshotAndSave
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.RestoreAllFromInitialSnapshotAndSave
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).RestoreAllFromInitialSnapshotAndSave
+  nameWithType: WritebackJsonStore<T>.RestoreAllFromInitialSnapshotAndSave
+  nameWithType.vb: WritebackJsonStore(Of T).RestoreAllFromInitialSnapshotAndSave
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreCurrentFromInitialSnapshotAndSave(System.Boolean)
+  name: RestoreCurrentFromInitialSnapshotAndSave(bool)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreCurrentFromInitialSnapshotAndSave_System_Boolean_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreCurrentFromInitialSnapshotAndSave(System.Boolean)
+  name.vb: RestoreCurrentFromInitialSnapshotAndSave(Boolean)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.RestoreCurrentFromInitialSnapshotAndSave(bool)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).RestoreCurrentFromInitialSnapshotAndSave(Boolean)
+  nameWithType: WritebackJsonStore<T>.RestoreCurrentFromInitialSnapshotAndSave(bool)
+  nameWithType.vb: WritebackJsonStore(Of T).RestoreCurrentFromInitialSnapshotAndSave(Boolean)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreCurrentFromInitialSnapshotAndSave*
+  name: RestoreCurrentFromInitialSnapshotAndSave
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreCurrentFromInitialSnapshotAndSave_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreCurrentFromInitialSnapshotAndSave
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.RestoreCurrentFromInitialSnapshotAndSave
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).RestoreCurrentFromInitialSnapshotAndSave
+  nameWithType: WritebackJsonStore<T>.RestoreCurrentFromInitialSnapshotAndSave
+  nameWithType.vb: WritebackJsonStore(Of T).RestoreCurrentFromInitialSnapshotAndSave
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreRuntimeWorkingCopyFromCurrent(System.Boolean)
+  name: RestoreRuntimeWorkingCopyFromCurrent(bool)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromCurrent_System_Boolean_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreRuntimeWorkingCopyFromCurrent(System.Boolean)
+  name.vb: RestoreRuntimeWorkingCopyFromCurrent(Boolean)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.RestoreRuntimeWorkingCopyFromCurrent(bool)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).RestoreRuntimeWorkingCopyFromCurrent(Boolean)
+  nameWithType: WritebackJsonStore<T>.RestoreRuntimeWorkingCopyFromCurrent(bool)
+  nameWithType.vb: WritebackJsonStore(Of T).RestoreRuntimeWorkingCopyFromCurrent(Boolean)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreRuntimeWorkingCopyFromCurrent*
+  name: RestoreRuntimeWorkingCopyFromCurrent
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromCurrent_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreRuntimeWorkingCopyFromCurrent
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.RestoreRuntimeWorkingCopyFromCurrent
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).RestoreRuntimeWorkingCopyFromCurrent
+  nameWithType: WritebackJsonStore<T>.RestoreRuntimeWorkingCopyFromCurrent
+  nameWithType.vb: WritebackJsonStore(Of T).RestoreRuntimeWorkingCopyFromCurrent
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreRuntimeWorkingCopyFromInitialSnapshot(System.Boolean)
+  name: RestoreRuntimeWorkingCopyFromInitialSnapshot(bool)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromInitialSnapshot_System_Boolean_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreRuntimeWorkingCopyFromInitialSnapshot(System.Boolean)
+  name.vb: RestoreRuntimeWorkingCopyFromInitialSnapshot(Boolean)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.RestoreRuntimeWorkingCopyFromInitialSnapshot(bool)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).RestoreRuntimeWorkingCopyFromInitialSnapshot(Boolean)
+  nameWithType: WritebackJsonStore<T>.RestoreRuntimeWorkingCopyFromInitialSnapshot(bool)
+  nameWithType.vb: WritebackJsonStore(Of T).RestoreRuntimeWorkingCopyFromInitialSnapshot(Boolean)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreRuntimeWorkingCopyFromInitialSnapshot*
+  name: RestoreRuntimeWorkingCopyFromInitialSnapshot
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RestoreRuntimeWorkingCopyFromInitialSnapshot_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RestoreRuntimeWorkingCopyFromInitialSnapshot
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.RestoreRuntimeWorkingCopyFromInitialSnapshot
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).RestoreRuntimeWorkingCopyFromInitialSnapshot
+  nameWithType: WritebackJsonStore<T>.RestoreRuntimeWorkingCopyFromInitialSnapshot
+  nameWithType.vb: WritebackJsonStore(Of T).RestoreRuntimeWorkingCopyFromInitialSnapshot
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RuntimeWorkingCopy
+  name: RuntimeWorkingCopy
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RuntimeWorkingCopy
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.RuntimeWorkingCopy
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).RuntimeWorkingCopy
+  nameWithType: WritebackJsonStore<T>.RuntimeWorkingCopy
+  nameWithType.vb: WritebackJsonStore(Of T).RuntimeWorkingCopy
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RuntimeWorkingCopy*
+  name: RuntimeWorkingCopy
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopy_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RuntimeWorkingCopy
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.RuntimeWorkingCopy
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).RuntimeWorkingCopy
+  nameWithType: WritebackJsonStore<T>.RuntimeWorkingCopy
+  nameWithType.vb: WritebackJsonStore(Of T).RuntimeWorkingCopy
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RuntimeWorkingCopyChanged
+  name: RuntimeWorkingCopyChanged
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore-1.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_WritebackJsonStore_WritebackJsonStore_1_RuntimeWorkingCopyChanged
+  commentId: E:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore`1.RuntimeWorkingCopyChanged
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore<T>.RuntimeWorkingCopyChanged
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore.WritebackJsonStore(Of T).RuntimeWorkingCopyChanged
+  nameWithType: WritebackJsonStore<T>.RuntimeWorkingCopyChanged
+  nameWithType.vb: WritebackJsonStore(Of T).RuntimeWorkingCopyChanged
 - uid: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout
   name: Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout
   href: api/Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.html

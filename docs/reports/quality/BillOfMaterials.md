@@ -2,5 +2,5 @@
 
 | ProjectName | Package | ResolvedVersion |
 |-------------|---------|-----------------|
-| Eigenverft.NetLib.Infrastructure | Microsoft.Extensions.Hosting | 10.0.0 |
 | Eigenverft.NetLib.Infrastructure | Microsoft.Extensions.Hosting | 8.0.1 |
+| Eigenverft.NetLib.Infrastructure | Microsoft.Extensions.Hosting | 10.0.0 |
