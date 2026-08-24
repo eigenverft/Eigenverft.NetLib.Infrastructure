@@ -1,26 +1,25 @@
 # 🧱 Eigenverft.NetLib.Infrastructure
 
-[![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Infrastructure?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Infrastructure?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![Targets](https://img.shields.io/badge/targets-.NET%208%20%7C%2010-512BD4?logo=dotnet&logoColor=white)](#-target-frameworks) [![License](https://img.shields.io/github/license/eigenverft/Eigenverft.NetLib.Infrastructure?logo=mit)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE)
+[![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Infrastructure?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Infrastructure?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![Build Status](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=build)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-.NET%208%20%7C%2010-512BD4?logo=dotnet&logoColor=white)](#-target-frameworks) [![License](https://img.shields.io/github/license/eigenverft/Eigenverft.NetLib.Infrastructure?logo=mit)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE)
 
-Small, reusable infrastructure primitives for .NET applications and Generic Host-based services.
+Host-independent operational infrastructure for .NET applications and Generic Host-based services.
 
-Provides predictable, executable-rooted application directories with automatic creation and writable validation.
-
-Also includes Configuration Sets, SwitchableJson, configuration-value codecs and preparations, generic reversible string transforms, JSON-safe Base92 representation, machine binding, DPAPI machine-scope transforms, certificate primitives, configuration diagnostics, and pre-host bootstrap logging.
+NetLib provides predictable writable storage plus safe loading, validation, protection, reload, and
+coordination of operational configuration. It keeps bad JSON candidates away from live settings,
+switches complete application-defined profiles, and supplies reusable certificate, diagnostics, and
+bootstrap primitives.
 
 ---
 
 ## ✨ At a glance
 
-| | |
-| --- | --- |
-| Package | `Eigenverft.NetLib.Infrastructure` |
-| Primary API | `HostApplicationBuilderFactory.CreateWithDefaultDirectory()` |
-| Root | `AppContext.BaseDirectory` |
-| Default folders | `AppLogs`, `AppData`, `AppState`, `AppProtectionKeys`, `AppCerts`, `AppSettings` |
-| Host integration | Available before `Build()` and through DI afterwards |
-| Target frameworks | .NET 8 and .NET 10 |
-| License | MIT |
+| Capability | Problem solved | Starting point |
+| --- | --- | --- |
+| Application directories | Predictable writable storage below the executable | `AddDefaultDirectoryLayout()` |
+| SwitchableJson | Last-known-good JSON loading and safe reloads | `AddSwitchableJsonFile(...)` |
+| Configuration Sets | Coordinated multi-file profiles | `AddConfigurationSet(...)` |
+| Value preparation and protection | Validate, transform, or protect persisted values before publication | `SwitchableJsonRegistrationOptions` |
+| Certificates and diagnostics | Managed certificate recovery, configuration provenance, and bootstrap logging | Public certificate and hosting helpers |
 
 ## 📦 Installation
 
@@ -36,12 +35,15 @@ Install-Package Eigenverft.NetLib.Infrastructure
 
 ## 🚀 Quick start
 
+### Create the host foundation
+
 ```csharp
 using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
 using Microsoft.Extensions.Hosting;
 
-var builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory();
-var directories = builder.GetDirectoryLayout();
+HostApplicationBuilder builder =
+    HostApplicationBuilderFactory.CreateWithDefaultDirectory();
+IAppDirectoryLayout directories = builder.GetDirectoryLayout();
 
 string settingsDirectory =
     directories[DefaultDirectory.ApplicationSettings];
@@ -51,6 +53,35 @@ Console.WriteLine(settingsDirectory);
 using IHost host = builder.Build();
 await host.RunAsync();
 ```
+
+### Add last-known-good JSON reloads
+
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson;
+using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
+using Microsoft.Extensions.Hosting;
+
+HostApplicationBuilder builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory();
+IAppDirectoryLayout directories = builder.GetDirectoryLayout();
+
+string operationalSettings = Path.Combine(
+    directories[DefaultDirectory.ApplicationSettings],
+    "OperationalSettings.json");
+
+builder.AddSwitchableJsonFile(
+    name: "OperationalSettings",
+    initialPath: operationalSettings,
+    optional: false,
+    reloadOnChange: true);
+
+using IHost host = builder.Build();
+await host.RunAsync();
+```
+
+The required initial file must exist. Invalid later edits are rejected and the previous
+configuration snapshot stays active.
+
+## Application directory layout
 
 The standard layout is created directly below the executable directory:
 
@@ -120,7 +151,116 @@ AppDirectoryLayout directories = AppDirectoryLayoutFactory.CreateDefault();
 
 An explicit root can also be supplied to the factory for tools, tests, or custom bootstrap scenarios.
 
-## Configuration preferred API
+## Safe operational configuration
+
+SwitchableJson prepares a changed or alternative JSON file before publication and keeps the
+last-known-good snapshot when the candidate is missing, invalid, or rejected. Configuration Sets
+coordinate several switchable sources under one application-defined value, preventing related
+sources from silently using different profiles. Typical sets include operational modes,
+proxy behavior, build generations, feature collections, environments, and deployment lanes.
+Applications decide when to switch and may keep that choice transient or persist it as desired
+state.
+
+| Use case | Example values | Sources changed together |
+| --- | --- | --- |
+| Reverse-proxy topology | `Primary`, `Canary`, `Failover` | Routes, clusters, and health policy |
+| Operational observability | `Normal`, `Verbose`, `Incident` | Logging, diagnostics, and tracing |
+| Traffic and download limits | `Restricted`, `Normal`, `Burst` | Rate limits, concurrency, bandwidth, and size limits |
+| Resilience policy | `Normal`, `Degraded`, `Emergency` | Timeouts, retries, circuit breakers, and fallbacks |
+| Feature or release set | `Stable`, `Preview`, `Rollback` | Features, endpoint exposure, and UI capabilities |
+| Application availability | `Open`, `ReadOnly`, `Maintenance` | Endpoint access, write policy, jobs, and maintenance responses |
+| Asset or content set | `Current`, `Campaign`, `Legacy` | Asset manifests, templates, branding, and content paths |
+| Backend integration topology | `Primary`, `Secondary`, `Offline` | Service endpoints, queue targets, and credential references |
+| Retention and data lifecycle | `Short`, `Standard`, `Archive` | Retention periods, cleanup windows, and archive policy |
+| Capacity and performance | `Economy`, `Balanced`, `Peak` | Concurrency, batching, caching, and background-work limits |
+
+These are application-defined policies. Runtime switching requires reload-aware consumers;
+startup-fixed behavior should be controlled through the desired-state store with
+`ConfigurationSetApplyMode.StartupOnly` rather than a direct runtime switch.
+
+For example, a reverse proxy can keep complete primary and failover generations side by side:
+
+```text
+AppSettings/Routing/
+├── Primary/Routes.json
+├── Primary/Clusters.json
+├── Failover/Routes.json
+└── Failover/Clusters.json
+```
+
+Register both files as one choice so a bad route or cluster candidate cannot publish half a
+generation:
+
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets;
+using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson;
+
+string routingRoot = Path.Combine(
+    directories[DefaultDirectory.ApplicationSettings],
+    "Routing");
+
+SwitchableJsonRegistrationOptions routingSourceOptions = new()
+{
+    // Follow valid edits within whichever routing generation is active.
+    ReloadOnChange = true,
+};
+
+builder
+    .AddConfigurationSet(
+        // Logical identity used by runtime and desired-state operations.
+        name: "RoutingProfile",
+        // Start with AppSettings/Routing/Primary/*.json.
+        initialValue: "Primary",
+        // Permit a deliberate transition to the reviewed fallback generation.
+        additionalAllowedValues: ["Failover"])
+    .AddSwitchableJson(
+        // Resolve <root>/<value>/<fileName> for both participants.
+        rootPath: routingRoot,
+        options: routingSourceOptions,
+        fileNames: ["Routes.json", "Clusters.json"]);
+```
+
+Both candidates are prepared first; if either is missing or invalid, `Primary` remains active.
+Connect an admin UI or automation through an application-owned DI service:
+
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets;
+using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
+using Microsoft.Extensions.DependencyInjection;
+
+string profileStateFile = Path.Combine(
+    directories[DefaultDirectory.ApplicationState],
+    "ConfigurationSets.json");
+
+// Register persistent desired-state control in addition to ephemeral runtime control.
+builder.AddConfigurationSetStateFile(path: profileStateFile);
+builder.Services.AddSingleton<RoutingProfileService>();
+
+public sealed class RoutingProfileService(
+    IConfigurationSetManager configurationSets,
+    IConfigurationSetDesiredStateStore desiredState)
+{
+    // Change only the running process.
+    public bool TrySwitchCurrentProcess(
+        string value,
+        out ConfigurationSetSwitchResult? result) =>
+        configurationSets.TrySwitchRuntime(
+            setName: "RoutingProfile", value: value, result: out result);
+
+    // Persist the operator's selection and honor the configured apply mode.
+    public ConfigurationSetStateApplyResult SetDesiredProfile(string value) =>
+        desiredState.TrySetDesiredValue(
+            setName: "RoutingProfile", value: value);
+}
+```
+
+The same service shape works for traffic limits, resilience, maintenance, feature, or logging
+profiles. An admin controller may inject it, display the active, desired, and allowed values from
+`IConfigurationSetDesiredStateStore.GetDesiredStateStatus()`, and translate a reviewed UI action
+into a switch. NetLib coordinates and reports the transition; the application remains responsible
+for authentication, authorization, and audit logging.
+
+### Preferred API
 
 The public configuration surface is intentionally centered on developer-facing contracts and registration helpers:
 

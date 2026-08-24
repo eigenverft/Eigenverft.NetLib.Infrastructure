@@ -1,30 +1,30 @@
 # 🧱 Eigenverft.NetLib.Infrastructure
 
-<!-- Maintenance note: This GitHub README has a NuGet/CommonMark counterpart in README.NUGET.md. Keep shared public-facing content aligned. -->
+<!-- Maintenance note: Keep README.NUGET.md aligned with this README for shared prose, examples, headings, badges, and feature descriptions. Use absolute NuGet/GitHub URLs there where this README can use repository-relative links; otherwise keep shared content in sync. -->
 
 [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Infrastructure?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Infrastructure?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![Build Status](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=build)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-.NET%208%20%7C%2010-512BD4?logo=dotnet&logoColor=white)](#-target-frameworks) [![License](https://img.shields.io/github/license/eigenverft/Eigenverft.NetLib.Infrastructure?logo=mit)](LICENSE)
 
-Small, reusable infrastructure primitives for .NET applications and Generic Host-based services.
+Host-independent operational infrastructure for .NET applications and Generic Host-based services.
 
-Provides predictable, executable-rooted application directories with automatic creation and writable validation.
-
-Also includes Configuration Sets, SwitchableJson, configuration-value codecs and preparations, generic reversible string transforms, JSON-safe Base92 representation, machine binding, DPAPI machine-scope transforms, certificate primitives, configuration diagnostics, and pre-host bootstrap logging.
+NetLib gives an application predictable writable storage and a safe way to load, validate, protect,
+reload, and coordinate operational configuration. It is useful when a bad JSON edit must not replace
+live settings, several files must move to one reviewed profile together, or certificates and startup
+diagnostics must be available before the normal host lifecycle is ready.
 
 ---
 
 ## ✨ At a glance
 
-| | |
-| --- | --- |
-| Package | `Eigenverft.NetLib.Infrastructure` |
-| Primary host integration | `builder.AddDefaultDirectoryLayout()` |
-| Convenience builder | `HostApplicationBuilderFactory.CreateWithDefaultDirectory(args)` |
-| Root | `AppContext.BaseDirectory` |
-| Default folders | `AppLogs`, `AppData`, `AppState`, `AppProtectionKeys`, `AppCerts`, `AppSettings` |
-| Host integration | Available before `Build()` and through DI afterwards |
-| Also included | Runtime configuration, value codecs, machine binding, certificates, diagnostics, bootstrap logging |
-| Target frameworks | .NET 8 and .NET 10 |
-| License | MIT |
+| Capability | Problem solved | Starting point |
+| --- | --- | --- |
+| Application directories | Create and validate one predictable writable layout below the executable | `builder.AddDefaultDirectoryLayout()` |
+| SwitchableJson | Reject missing, invalid, or unprepared JSON candidates while retaining last-known-good values | `builder.AddSwitchableJsonFile(...)` |
+| Configuration Sets | Switch several related sources under one application-defined value | `builder.AddConfigurationSet(...)` |
+| Value preparation and protection | Decode, normalize, migrate, validate, or protect selected persisted values before publication | `SwitchableJsonRegistrationOptions` and `ConfigurationValueCodecs` |
+| Certificates and machine binding | Create or recover managed certificates and bind selected data to a deployment machine | `ManagedCertificateFile` and `PhysicalMachineBinding` |
+| Startup diagnostics | Explain configuration precedence and log before the host is built | `LogConfigurationResolution(...)` and `BootstrapLogger<T>` |
+
+The package targets .NET 8 and .NET 10 and is licensed under MIT.
 
 ## 📦 Installation
 
@@ -39,6 +39,8 @@ Install-Package Eigenverft.NetLib.Infrastructure
 ```
 
 ## 🚀 Quick start
+
+### Create the host foundation
 
 ```csharp
 using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
@@ -64,6 +66,39 @@ For the shortest setup, the factory is a shorthand for the same two calls:
 HostApplicationBuilder builder =
     HostApplicationBuilderFactory.CreateWithDefaultDirectory(args);
 ```
+
+### Add last-known-good JSON reloads
+
+Register an existing operational JSON file through SwitchableJson when an invalid edit must not
+replace the configuration currently used by the application:
+
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson;
+using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
+using Microsoft.Extensions.Hosting;
+
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+builder.AddDefaultDirectoryLayout();
+
+IAppDirectoryLayout directories = builder.GetDirectoryLayout();
+string operationalSettings = Path.Combine(
+    directories[DefaultDirectory.ApplicationSettings],
+    "OperationalSettings.json");
+
+builder.AddSwitchableJsonFile(
+    name: "OperationalSettings",
+    initialPath: operationalSettings,
+    optional: false,
+    reloadOnChange: true);
+
+using IHost host = builder.Build();
+await host.RunAsync();
+```
+
+The required initial file must exist. Later valid edits are published through ordinary
+`IConfiguration`; a missing or invalid edit is rejected and the previous snapshot remains active.
+
+## 📁 Application directory layout
 
 The standard layout is created directly below the executable directory:
 
@@ -138,59 +173,271 @@ AppDirectoryLayout directories = AppDirectoryLayoutFactory.CreateDefault();
 
 An explicit root can also be supplied to the factory for tools, tests, or custom bootstrap scenarios.
 
-## 🔄 Switch complete configuration profiles
+## 🔄 Safe operational configuration
 
-A Configuration Set turns a technical collection of JSON files into one application-level choice:
+Use SwitchableJson when a changed or alternative JSON file must be loaded and prepared before it is
+allowed to replace live configuration. A rejected file leaves the last-known-good snapshot active.
+A Configuration Set adds the next level: several related files become one coordinated
+application-level choice, so related logging, resilience, diagnostics, reverse-proxy routing, or
+feature settings cannot silently end up on different profile values.
 
-| Set | Example values | Sources changed together |
+Typical problem domains include the following. Set values, file names, and combinations remain
+entirely application-defined:
+
+| Use case | Example values | Sources changed together |
 | --- | --- | --- |
-| Routing profile | `Primary`, `Canary`, `Failover` | Routes and clusters |
-| Operational profile | `Normal`, `Degraded`, `Incident` | Features, resilience, and diagnostics |
-| Feature or release bundle | `Stable`, `Beta` | A complete feature configuration, optionally on restart |
-| Environment or tenant profile | Application-defined values | One or more profile-specific settings files |
+| Reverse-proxy topology | `Primary`, `Canary`, `Failover` | Routes, clusters, and health policy |
+| Operational observability | `Normal`, `Verbose`, `Incident` | Logging, diagnostics, and tracing |
+| Traffic and download limits | `Restricted`, `Normal`, `Burst` | Rate limits, download concurrency, bandwidth, and size limits |
+| Resilience policy | `Normal`, `Degraded`, `Emergency` | Timeouts, retries, circuit breakers, and fallback behavior |
+| Feature or release set | `Stable`, `Preview`, `Rollback` | Features, endpoint exposure, and UI capabilities |
+| Application availability | `Open`, `ReadOnly`, `Maintenance` | Endpoint access, write policy, jobs, and maintenance responses |
+| Asset or content set | `Current`, `Campaign`, `Legacy` | Asset manifests, templates, branding, and content paths |
+| Backend integration topology | `Primary`, `Secondary`, `Offline` | Service endpoints, queue targets, and credential references |
+| Retention and data lifecycle | `Short`, `Standard`, `Archive` | Retention periods, cleanup windows, and archive policy |
+| Capacity and performance | `Economy`, `Balanced`, `Peak` | Concurrency, batching, caching, and background-work limits |
 
-The directory overload follows `{rootPath}/{setValue}/{fileName}`. This example switches three operational files as one coordinated group:
+These are policy examples, not built-in meanings. NetLib publishes the selected values through
+`IConfiguration`; runtime changes require reload-aware consumers such as `IOptionsMonitor<T>`,
+application middleware, a reload-aware proxy, or a hosted service. Listener ports, the DI graph, and
+middleware composition remain startup concerns; represent those through the desired-state store with
+`StartupOnly` instead of requesting a direct runtime switch.
+
+Consider an application that normally logs concise operational information, but needs more detail
+and safer downstream behavior during an incident:
+
+| Profile | `LoggerSettings.json` | `Resilience.json` | `Diagnostics.json` |
+| --- | --- | --- | --- |
+| `Normal` | Information | Normal retry and timeout policy | Expensive diagnostics off |
+| `Degraded` | Warning | Reduced retries and shorter timeouts | Dependency diagnostics on |
+| `Incident` | Debug | Incident-safe downstream policy | Detailed diagnostics on |
+
+The directory overload follows `{rootPath}/{setValue}/{fileName}`. Store one complete, reviewed
+combination below each profile directory:
+
+```text
+AppSettings/Operations/
+├── Normal/LoggerSettings.json
+├── Normal/Resilience.json
+├── Normal/Diagnostics.json
+├── Degraded/...
+└── Incident/...
+```
+
+Register the three files as one coordinated application choice:
 
 ```csharp
+// Resolve the package-managed settings directory and choose one root for all profile variants.
 string settings = directories[DefaultDirectory.ApplicationSettings];
 string operationsRoot = Path.Combine(settings, "Operations");
 
 builder
     .AddConfigurationSet(
-        "OperationalProfile",
-        "Normal",
-        "Degraded",
-        "Incident")
+        // Logical identity used by runtime-manager and state-store operations.
+        name: "OperationalProfile",
+        // Value loaded initially when no persisted desired state overrides it.
+        initialValue: "Normal",
+        // Further values the application permits operators to select.
+        additionalAllowedValues: ["Degraded", "Incident"])
     .AddSwitchableJson(
-        operationsRoot,
-        "Features.json",
-        "Resilience.json",
-        "Diagnostics.json");
+        // Resolve every participant as Operations/<value>/<fileName>.
+        rootPath: operationsRoot,
+        // Switch these three concerns together as one reviewed profile.
+        fileNames: ["LoggerSettings.json", "Resilience.json", "Diagnostics.json"]);
 ```
 
-The example reads files such as `AppSettings/Operations/Normal/Features.json` and `AppSettings/Operations/Incident/Diagnostics.json`.
+`Normal` is the initial active value. NetLib does not decide that an incident has started. The
+application or its control plane makes that policy decision and asks NetLib to apply it. For a
+transient switch, an admin endpoint, health controller, or automation component can call:
+
+```csharp
+// Resolve the process-wide configuration-set control surface from DI.
+IConfigurationSetManager profiles =
+    host.Services.GetRequiredService<IConfigurationSetManager>();
+
+// Request an ephemeral switch and retain its detailed completion result.
+bool incidentActive = profiles.TrySwitchRuntime(
+    // Select the logical set registered above.
+    setName: "OperationalProfile",
+    // Select one of that set's allowed values.
+    value: "Incident",
+    // Inspect this result when the switch is rejected.
+    result: out ConfigurationSetSwitchResult? result);
+```
+
+The call returns only after every participant has prepared and the coordinated switch has completed.
+If, for example, `Incident/LoggerSettings.json` is invalid, the request is rejected and the previous
+complete profile remains active. Reload-aware logging and `IOptionsMonitor<T>` consumers then observe
+the newly published values through the ordinary `IConfiguration` surface.
+
+Use a desired-state file when the choice must survive process restarts or be controlled by an
+operator rather than application code:
+
+```csharp
+// Store desired state separately from the profile files themselves.
+string stateFile = Path.Combine(
+    directories[DefaultDirectory.ApplicationState], "ConfigurationSets.json");
+
+// Register, materialize, and watch the persistent control file.
+IConfigurationSetStateStore profileState = builder.AddConfigurationSetStateFile(
+    path: stateFile);
+```
+
+The first run creates a self-describing file with `Normal` as `DesiredValue`. Changing it to
+`Incident`, or calling
+`profileState.TrySetDesiredValue(setName: "OperationalProfile", value: "Incident")`, becomes the
+persistent selector. The watcher applies runtime sets automatically. Mark a set with
+`.ApplyMode(ConfigurationSetApplyMode.StartupOnly)` when a changed value should wait for restart.
+
+### Switch one logical file using either layout
+
+A set may contain only one participant. The profile values are entirely application-defined; the
+following `Production`, `ProductionVerbose`, and `Development` values merely illustrate switching
+one logical `LoggerSettings.json`.
+
+#### Default directory convention
+
+`LoggingProfile` is the logical set name used by runtime-manager and state-store operations; it is
+intentionally not part of the file path. `Production` is the initial active value. With the default
+`{root}/{value}/{fileName}` convention, the initial file is therefore
+`AppSettings/Logging/Production/LoggerSettings.json`:
+
+```text
+AppSettings/Logging/
+├── Production/LoggerSettings.json
+├── ProductionVerbose/LoggerSettings.json
+└── Development/LoggerSettings.json
+```
+
+```csharp
+// The directory that contains one subdirectory per logging-profile value.
+string loggingRoot = Path.Combine(settings, "Logging");
+
+// Keep the startup-only fluent handle while binding this set's source file.
+ConfigurationSetRegistration loggingProfile = builder.AddConfigurationSet(
+    // Runtime and state-store identity; this is not a directory name.
+    name: "LoggingProfile",
+    // Load Logging/Production/LoggerSettings.json initially.
+    initialValue: "Production",
+    // Other application-defined values that may be selected later.
+    additionalAllowedValues: ["ProductionVerbose", "Development"]);
+
+// Use the default <root>/<value>/<fileName> path convention.
+loggingProfile.AddSwitchableJson(
+    rootPath: loggingRoot,
+    fileName: "LoggerSettings.json");
+```
+
+#### Alternative suffix convention
+
+To keep the variants in one directory instead, provide the path mapping explicitly:
+
+```text
+AppSettings/Logging/
+├── LoggerSettings.Production.json
+├── LoggerSettings.ProductionVerbose.json
+└── LoggerSettings.Development.json
+```
+
+```csharp
+// All logging variants live directly in this directory.
+string loggingRoot = Path.Combine(settings, "Logging");
+
+// Keep the startup-only fluent handle while binding the custom path resolver.
+ConfigurationSetRegistration loggingProfile = builder.AddConfigurationSet(
+    // Runtime and state-store identity; this is not part of the file name.
+    name: "LoggingProfile",
+    // Load LoggerSettings.Production.json initially.
+    initialValue: "Production",
+    // Values inserted into the file-name pattern by the resolver below.
+    additionalAllowedValues: ["ProductionVerbose", "Development"]);
+
+// Map each allowed value to Logging/LoggerSettings.<value>.json.
+loggingProfile.AddSwitchableJson(
+    sourcePathResolver: value =>
+        Path.Combine(loggingRoot, $"LoggerSettings.{value}.json"));
+```
+
+#### Switch from application code
+
+`IConfigurationSetManager` is available from DI and can be injected into a service, hosted service,
+controller, or admin endpoint. The desired-state file registered above also exposes
+`IConfigurationSetDesiredStateStore` through DI, so the application can deliberately offer both
+temporary and persistent operations:
+
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets;
+using Microsoft.Extensions.DependencyInjection;
+
+// Register the application-owned control service used by an admin API, UI backend, or automation.
+builder.Services.AddSingleton<LoggingProfileService>();
+
+public sealed class LoggingProfileService(
+    IConfigurationSetManager configurationSets,
+    IConfigurationSetDesiredStateStore desiredState)
+{
+    // Change only the current process; the next restart may select another desired value.
+    public bool TrySwitchCurrentProcess(
+        string value,
+        out ConfigurationSetSwitchResult? result) =>
+        configurationSets.TrySwitchRuntime(
+            setName: "LoggingProfile", value: value, result: out result);
+
+    // Persist the operator's selection and honor this set's Runtime or StartupOnly apply mode.
+    public ConfigurationSetStateApplyResult SetDesiredProfile(string value) =>
+        desiredState.TrySetDesiredValue(
+            setName: "LoggingProfile", value: value);
+}
+```
+
+An authenticated admin controller can inject this service and obtain `ActiveValue`, `DesiredValue`,
+`AllowedValues`, consistency, and pending-restart state from
+`desiredState.GetDesiredStateStatus()`. It can then translate a reviewed action such as “verbose
+logging” into one of the calls above. The same pattern fits traffic limits, resilience, maintenance,
+feature, or routing profiles. NetLib coordinates and reports the transition; authentication,
+authorization, audit logging, and the policy deciding who may switch remain application
+responsibilities.
+
+#### Missing variants
+
+With required sources, which is the default, a missing initial `LoggerSettings.Production.json`
+fails registration. Inactive variants are not loaded during registration and may therefore be absent
+without preventing startup. If `LoggerSettings.ProductionVerbose.json` is still missing when that
+value is requested, the switch is rejected with
+`ConfigurationSetSwitchFailureKind.ParticipantPreparationRejected`; the currently active value and
+configuration remain unchanged. There is no implicit fallback to `Production`—it remains active only
+when it was already active.
+
+With one file, the set still provides an application-level name, allowed values, coordinated switch
+results, lifecycle events, and optional persistent desired state. If none of those control-plane
+semantics are needed, a standalone `AddSwitchableJsonFile(...)` is enough.
 
 Routing often uses differently named files. Map each participant independently when the directory convention does not fit:
 
 ```csharp
+// Keep one startup registration handle while binding both routing participants.
 ConfigurationSetRegistration routing = builder.AddConfigurationSet(
-    "RoutingProfile",
-    "Primary",
-    "Canary",
-    "Failover");
+    // Logical identity of this independent routing axis.
+    name: "RoutingProfile",
+    // Start with the primary routing files.
+    initialValue: "Primary",
+    // Permit controlled transitions to the other routing variants.
+    additionalAllowedValues: ["Canary", "Failover"]);
 
 routing
-    .AddSwitchableJson(value => Path.Combine(
-        settings,
-        "Routing",
-        $"routes-{value.ToLowerInvariant()}.json"))
-    .AddSwitchableJson(value => Path.Combine(
-        settings,
-        "Routing",
-        $"clusters-{value.ToLowerInvariant()}.json"));
+    .AddSwitchableJson(
+        // Resolve the routes file for the requested value.
+        sourcePathResolver: value => Path.Combine(
+            settings, "Routing", $"routes-{value.ToLowerInvariant()}.json"))
+    .AddSwitchableJson(
+        // Resolve the matching clusters file for the same value.
+        sourcePathResolver: value => Path.Combine(
+            settings, "Routing", $"clusters-{value.ToLowerInvariant()}.json"));
 
 // Alternative when every profile uses the same file names:
-// routing.AddSwitchableJson(routingRoot, "Routes.json", "Clusters.json");
+// routing.AddSwitchableJson(
+//     rootPath: routingRoot,
+//     fileNames: ["Routes.json", "Clusters.json"]);
 ```
 
 Every mapped source is loaded before the coordinated value changes. A rejected candidate keeps the last fully coordinated profile active.
@@ -225,12 +472,17 @@ Preparations can decode protected values, migrate legacy keys, normalize endpoin
 A switchable source can simply replace an ordinary JSON source. No switch call or Configuration Set is required to gain safe reload with last-known-good data:
 
 ```csharp
+// Resolve the managed settings directory and the one JSON file to load.
 string settings = directories[DefaultDirectory.ApplicationSettings];
 string partnerConfiguration = Path.Combine(settings, "PartnerApi.json");
 
+// Register a keyed source that safely reloads this file when it changes.
 builder.AddSwitchableJsonFile(
-    "PartnerApi",
-    partnerConfiguration,
+    // Stable identity used only when the runtime handle is requested from DI.
+    name: "PartnerApi",
+    // File active when the provider is created.
+    initialPath: partnerConfiguration,
+    // Watch accepted changes while preserving last-known-good data on failure.
     reloadOnChange: true);
 ```
 
@@ -243,18 +495,30 @@ Configuration-value codecs do not depend on SwitchableJson or Configuration Sets
 ```csharp
 // Additional application/domain factor. Recoverable from the binary,
 // so it complements but never replaces the deployment secret.
-const string embeddedApplicationFactor = "partner-api-v1";
+byte[] applicationFactor =
+{
+    0x23, 0x52, 0x66, 0x37, 0x5A, 0x39, 0x27, 0x27,
+    0x5E, 0x52, 0x6C, 0x2E, 0x36, 0x49, 0x45, 0x4E,
+    0x79, 0x4A, 0x52, 0x43, 0x4E, 0x4D, 0x3F, 0x5E,
+    0x50, 0x5A, 0x6A, 0x5F, 0x4E, 0x32, 0x28, 0x4E,
+};
 
 // Actual secrecy depends on securely supplying and protecting this value.
-string deploymentPassword =
-    Environment.GetEnvironmentVariable("APP_CONFIGURATION_PASSWORD")
+string configurationProtectionSecret =
+    Environment.GetEnvironmentVariable("APP_CONFIGURATION_PROTECTION_SECRET")
     ?? throw new InvalidOperationException(
-        "APP_CONFIGURATION_PASSWORD is required.");
+        "APP_CONFIGURATION_PROTECTION_SECRET is required.");
 
 ConfigurationValueCodec protectedValues = ConfigurationValueCodecs.Compose(
-    ConfigurationValueCodecs.AesPassword(embeddedApplicationFactor),
-    ConfigurationValueCodecs.AesPassword(deploymentPassword),
-    ConfigurationValueCodecs.PhysicalMachineBoundAes());
+    codecs:
+    [
+        // Separate this application's values from another application using the same secret.
+        ConfigurationValueCodecs.AesPassword(passwordAsciiBytes: applicationFactor),
+        // Add the externally supplied secrecy factor.
+        ConfigurationValueCodecs.AesPassword(password: configurationProtectionSecret),
+        // Make the final envelope usable only with this machine fingerprint.
+        ConfigurationValueCodecs.PhysicalMachineBoundAes(),
+    ]);
 
 static string CreatePartnerConfigurationJson(
     string endpoint,
@@ -265,7 +529,9 @@ static string CreatePartnerConfigurationJson(
     {
         PartnerApi = new
         {
+            // Keep operational routing information readable.
             Endpoint = endpoint,
+            // Persist only the composed envelope for the secret-bearing value.
             ApiToken = protectedValues.Encode(apiToken),
         },
     });
@@ -287,60 +553,115 @@ The resulting file mixes ordinary and protected values:
 
 ### Combine both for transparent profile loading
 
-Add `ValueProtection` when existing clear-text values should be protected automatically at startup and decoded before a profile becomes visible:
+Add `ValueProtection` when existing clear-text values should be protected automatically at startup
+and decoded before a profile becomes visible. The following is startup registration code, typically
+placed in `Program.cs`:
 
 ```csharp
+// Resolve the package-managed settings directory and choose one root for all variants.
+string settings = directories[DefaultDirectory.ApplicationSettings];
 string operationsRoot = Path.Combine(settings, "Operations");
 
 // Recoverable from the binary: useful as an application/domain factor,
 // but not a secret boundary by itself.
-const string applicationFactor = "worker-operational-profile-v1";
+byte[] applicationFactor =
+{
+    0x23, 0x52, 0x66, 0x37, 0x5A, 0x39, 0x27, 0x27,
+    0x5E, 0x52, 0x6C, 0x2E, 0x36, 0x49, 0x45, 0x4E,
+    0x79, 0x4A, 0x52, 0x43, 0x4E, 0x4D, 0x3F, 0x5E,
+    0x50, 0x5A, 0x6A, 0x5F, 0x4E, 0x32, 0x28, 0x4E,
+};
 
 // Actual secrecy depends on securely supplying and protecting this value.
-string deploymentPassword =
-    Environment.GetEnvironmentVariable("APP_CONFIGURATION_PASSWORD")
+string configurationProtectionSecret =
+    Environment.GetEnvironmentVariable("APP_CONFIGURATION_PROTECTION_SECRET")
     ?? throw new InvalidOperationException(
-        "APP_CONFIGURATION_PASSWORD is required.");
+        "APP_CONFIGURATION_PROTECTION_SECRET is required.");
 
 ConfigurationValueCodec protectedValues = ConfigurationValueCodecs.Compose(
-    ConfigurationValueCodecs.AesPassword(applicationFactor),
-    ConfigurationValueCodecs.AesPassword(deploymentPassword),
-    ConfigurationValueCodecs.PhysicalMachineBoundAes());
+    codecs:
+    [
+        // Separate this application's values from another application using the same secret.
+        ConfigurationValueCodecs.AesPassword(passwordAsciiBytes: applicationFactor),
+        // Add the externally supplied secrecy factor.
+        ConfigurationValueCodecs.AesPassword(password: configurationProtectionSecret),
+        // Bind the resulting envelope to this machine fingerprint.
+        ConfigurationValueCodecs.PhysicalMachineBoundAes(),
+    ]);
 
-var sourceOptions = new SwitchableJsonRegistrationOptions
+SwitchableJsonRegistrationOptions protectedSourceOptions = new()
 {
+    // Watch the file belonging to whichever profile is currently active.
     ReloadOnChange = true,
+    // Protect only values whose final JSON key matches one of these patterns.
     ValueProtection = JsonConfigurationValueProtection.ForKeys(
-        protectedValues,
-        "*ApiKey*",
-        "*Token*",
-        "Password"),
+        codec: protectedValues,
+        patterns: ["*ApiKey*", "*Token*", "Password"]),
 
     // ValueProtection decodes first; application validation is optional:
     // CandidatePreparation = JsonConfigurationCandidatePreparations.From(
     //     "OperationalPolicy",
     //     new OperationalPolicyPreparation()),
 };
-
-ConfigurationSetRegistration operationalProfile =
-    builder.AddConfigurationSet(
-        "OperationalProfile",
-        "Normal",
-        "Degraded",
-        "Incident");
-
-operationalProfile
-    .AddSwitchableJson(
-        operationsRoot,
-        sourceOptions,
-        "Features.json")
-    .AddSwitchableJson(
-        operationsRoot,
-        "Resilience.json",
-        "Diagnostics.json");
 ```
 
-This protects matching values in `Features.json` for `Normal`, `Degraded`, and `Incident`; `Resilience.json` and `Diagnostics.json` remain outside that rule because they are registered by a separate call. `ForKeys(...)` matches the final JSON key name regardless of nesting. Use `ForPaths(...)`, for example `PartnerApi:*:ApiKey`, when the complete colon-separated configuration path should decide.
+The registration below expects the same four participants below every allowed value. Only
+`ExternalServices.json` receives `protectedSourceOptions` and therefore protects matching values:
+
+```text
+AppSettings/Operations/
+├── Normal/
+│   ├── ExternalServices.json     ← matching values protected
+│   ├── LoggerSettings.json
+│   ├── Resilience.json
+│   └── Diagnostics.json
+├── Degraded/
+│   ├── ExternalServices.json     ← matching values protected
+│   ├── LoggerSettings.json
+│   ├── Resilience.json
+│   └── Diagnostics.json
+└── Incident/
+    ├── ExternalServices.json     ← matching values protected
+    ├── LoggerSettings.json
+    ├── Resilience.json
+    └── Diagnostics.json
+```
+
+Bind those files to one coordinated operational choice:
+
+```csharp
+builder
+    .AddConfigurationSet(
+        // Logical identity used later by IConfigurationSetManager.
+        name: "OperationalProfile",
+        // Load the Normal directory before optional desired state is applied.
+        initialValue: "Normal",
+        // Accept only these additional operational modes.
+        additionalAllowedValues: ["Degraded", "Incident"])
+    .AddSwitchableJson(
+        // Apply protection only to the secret-bearing participant.
+        rootPath: operationsRoot,
+        options: protectedSourceOptions,
+        fileNames: ["ExternalServices.json"])
+    .AddSwitchableJson(
+        // Resolve the ordinary participants below the same profile directory.
+        rootPath: operationsRoot,
+        // Watch their active files without attaching ValueProtection.
+        options: new SwitchableJsonRegistrationOptions
+        {
+            ReloadOnChange = true,
+        },
+        // Switch all three files together with ExternalServices.json.
+        fileNames: ["LoggerSettings.json", "Resilience.json", "Diagnostics.json"]);
+```
+
+The fluent `ConfigurationSetRegistration` handle does not need to be retained or added to DI.
+`AddConfigurationSet(...)` already registers the runtime infrastructure. Later, inject
+`IConfigurationSetManager` into the service or controller that owns the policy decision and call
+`TrySwitchRuntime(setName: "OperationalProfile", value: "Incident", result: out ...)`.
+
+`ForKeys(...)` matches the final JSON key name regardless of nesting. Use `ForPaths(...)`, for
+example `PartnerApi:*:ApiKey`, when the complete colon-separated configuration path should decide.
 
 During registration, matching values in existing files are encoded once and changed JSON is atomically rewritten in formatted form. The provider and its watcher are created only afterwards, so the write cannot trigger its own reload. On initial load, reload, and profile switch, the matching codec envelopes are decoded before the optional `CandidatePreparation`; application validation therefore receives clear text. Ordinary values pass through unchanged. A later external clear-text edit is only read at runtime and is protected on the next process start. Missing files are not created by protection and retain the normal optional and switch-failure behavior.
 
@@ -349,21 +670,27 @@ During registration, matching values in existing files are encoded once and chan
 Register a self-describing state file when operators or a control plane should persist the desired profile:
 
 ```csharp
+// Keep desired-state control data outside the switchable profile directories.
 string stateFile = Path.Combine(
     directories[DefaultDirectory.ApplicationState],
     "ConfigurationSets.json");
 
+// Materialize and watch the file, and expose the same store through DI.
 IConfigurationSetStateStore stateStore =
-    builder.AddConfigurationSetStateFile(stateFile);
+    builder.AddConfigurationSetStateFile(path: stateFile);
 
+// Build the host only after every set and its state store have been registered.
 using IHost host = builder.Build();
-ConfigurationSetStateApplyResult applied = stateStore.TrySetDesiredValue(
-    "OperationalProfile",
-    "Degraded");
 
-// For transient, non-persistent control instead:
+// Persist Degraded as the desired OperationalProfile value and apply it at runtime.
+ConfigurationSetStateApplyResult applied = stateStore.TrySetDesiredValue(
+    setName: "OperationalProfile",
+    value: "Degraded");
+
+// For a transient, non-persistent change, switch through the runtime manager instead.
 // host.Services.GetRequiredService<IConfigurationSetManager>()
-//     .TrySwitchRuntime("OperationalProfile", "Normal", out _);
+//     .TrySwitchRuntime(
+//         setName: "OperationalProfile", value: "Normal", result: out _);
 ```
 
 The state store can watch for changes, expose active-versus-desired drift, and report values waiting for restart. Mark restart-bound sets with `.ApplyMode(ConfigurationSetApplyMode.StartupOnly)`. `IConfigurationSetEventHub` provides process-wide or per-set completion notifications, while manager and store status snapshots expose consistency and participant state.
