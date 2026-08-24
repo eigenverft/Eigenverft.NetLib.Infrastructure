@@ -129,6 +129,7 @@ The public configuration surface is intentionally centered on developer-facing c
 - `IConfigurationSetCoordinator.BindSwitchableJson(...)` is an advanced binding API for already existing runtimes and is supported only for coordinators created by NetLib configuration-set registration; it is not the runtime switch API.
 - `SwitchableJsonRegistrationOptions.CandidatePreparation` accepts `IJsonConfigurationSourcePreparation`; common preparations come from `JsonConfigurationCandidatePreparations`.
 - `ConfigurationValueCodecs` provides the built-in persisted codecs. External adapters can compose a public `ReversibleStringTransform` with `new ConfigurationValueCodec(...)` and then use `JsonConfigurationCandidatePreparations.Decode(...)`.
+- `ConfigurationValueRecovery.RecoverProtectedValues(...)` is an intentionally experimental local recovery/debug helper that returns the current clear-text runtime values selected by registered NetLib `ValueProtection` rules; using it requires explicit suppression of `EVFRECOVERY001`, and temporary recovery calls should be removed when finished.
 - `ResetToMinimalConfigurationSources(...)` and `LogConfigurationResolution(...)` are Generic Host configuration utilities and work through `IHostApplicationBuilder`.
 
 Concrete coordinator, provider, runtime, pipeline, watcher, and persistence-format implementation types are intentionally internal. They are created and exposed through the public contracts above and are not required for normal consumer code.
