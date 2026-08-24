@@ -5,11 +5,11 @@
   <head>
     <meta charset="utf-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-      <title>Namespace Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout | Eigenverft.NetLib.Infrastructure </title>
+      <title>Class DeferredLoggerFactory | Eigenverft.NetLib.Infrastructure </title>
       <meta name="viewport" content="width=device-width">
-      <meta name="title" content="Namespace Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout | Eigenverft.NetLib.Infrastructure ">
+      <meta name="title" content="Class DeferredLoggerFactory | Eigenverft.NetLib.Infrastructure ">
     
-    
+    <meta name="description" content="Factory for creating deferred loggers from an underlying .">
       <link rel="shortcut icon" href="../favicon.ico">
       <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
       <link rel="stylesheet" href="../styles/docfx.css">
@@ -268,9 +268,9 @@
                           </li>
                         </ul>
                     </li>
-                    <li class="active">
+                    <li class="">
                       <span class="expand-stub"></span>
-                      <a href="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.html" title="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout" class="active">Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout</a>
+                      <a href="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.html" title="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout" class="">Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout</a>
 
                         <ul class="nav level2">
                           <li class="">
@@ -320,8 +320,8 @@
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLogger.html" title="DeferredLogger" class="">DeferredLogger</a>
                           </li>
-                          <li class="">
-                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.html" title="DeferredLoggerFactory" class="">DeferredLoggerFactory</a>
+                          <li class="active">
+                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.html" title="DeferredLoggerFactory" class="active">DeferredLoggerFactory</a>
                           </li>
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLogger-1.html" title="DeferredLogger&lt;TCategoryName&gt;" class="">DeferredLogger&lt;TCategoryName&gt;</a>
@@ -418,46 +418,260 @@
         </div>
         <div class="article row grid-right">
           <div class="col-md-10">
-            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout">
+            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory">
 
-  <h1 id="Eigenverft_NetLib_Infrastructure_Hosting_DirectoryLayout" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout" class="text-break">Namespace Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout</h1>
-  <div class="markdown level0 summary"></div>
+
+
+  <h1 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory" class="text-break">Class DeferredLoggerFactory</h1>
+  <div class="markdown level0 summary"><p>Factory for creating deferred loggers from an underlying <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.iloggerfactory">ILoggerFactory</a>.</p>
+</div>
   <div class="markdown level0 conceptual"></div>
-  <div class="markdown level0 remarks"></div>
-    <h3 id="classes">
-Classes
+  <div class="inheritance">
+    <h5>Inheritance</h5>
+    <div class="level0"><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+    <div class="level1"><span class="xref">DeferredLoggerFactory</span></div>
+  </div>
+  <div class="inheritedMembers">
+    <h5>Inherited Members</h5>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </div>
+  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.html">Hosting</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.html">Logging</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.html">DeferredLogger</a></h6>
+  <h6><strong>Assembly</strong>: Eigenverft.NetLib.Infrastructure.dll</h6>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory_syntax">Syntax</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed class DeferredLoggerFactory</code></pre>
+  </div>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory_remarks"><strong>Remarks</strong></h5>
+  <div class="markdown level0 remarks"><p>
+Use this when you prefer explicit factory creation instead of relying on DI constructor selection.
+</p>
+<p>
+Example registration:
+</p>
+<pre><code class="lang-csharp">services.AddSingleton{DeferredLoggerFactory}();</code></pre>
+<p>
+Example usage:
+</p>
+<pre><code class="lang-csharp">var d = deferredLoggerFactory.Create{MyCategory}();
+var n = deferredLoggerFactory.Create("MyCategoryName");</code></pre>
+</div>
+  <h3 id="constructors">Constructors
 </h3>
-      <h4><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayout.html">AppDirectoryLayout</a></h4>
-      <section><p>Represents a resolved executable-root directory layout with named writable child directories.</p>
-</section>
-      <h4><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.AppDirectoryLayoutFactory.html">AppDirectoryLayoutFactory</a></h4>
-      <section><p>Creates executable-rooted application directory layouts and ensures the configured directories exist.</p>
-</section>
-      <h4><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryExtensions.html">DefaultDirectoryExtensions</a></h4>
-      <section><p>Provides metadata operations for <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.html">DefaultDirectory</a> values.</p>
-</section>
-      <h4><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectoryNameAttribute.html">DefaultDirectoryNameAttribute</a></h4>
-      <section><p>Declares the conventional folder name associated with a <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.html">DefaultDirectory</a> value.</p>
-</section>
-      <h4><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderDirectoryLayoutExtensions.html">HostApplicationBuilderDirectoryLayoutExtensions</a></h4>
-      <section><p>Generic Host extensions for executable-rooted application directory layouts.</p>
-</section>
-      <h4><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.HostApplicationBuilderFactory.html">HostApplicationBuilderFactory</a></h4>
-      <section><p>Creates Generic Host builders with the standard executable-rooted application directory layout.</p>
-</section>
-    <h3 id="interfaces">
-Interfaces
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory__ctor_Microsoft_Extensions_Logging_ILoggerFactory_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.%23ctor(Microsoft.Extensions.Logging.ILoggerFactory)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Logging/DeferredLogger/DeferredLogger.cs/#L872">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory__ctor_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.#ctor*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory__ctor_Microsoft_Extensions_Logging_ILoggerFactory_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.#ctor(Microsoft.Extensions.Logging.ILoggerFactory)">DeferredLoggerFactory(ILoggerFactory)</h4>
+  <div class="markdown level1 summary"><p>Initializes a new instance of the factory.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DeferredLoggerFactory(ILoggerFactory loggerFactory)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.iloggerfactory">ILoggerFactory</a></td>
+        <td><span class="parametername">loggerFactory</span></td>
+        <td><p>The underlying logger factory.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="exceptions">Exceptions</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Condition</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></td>
+        <td><p>Thrown if <code class="paramref">loggerFactory</code> is null.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h3 id="methods">Methods
 </h3>
-      <h4><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.IAppDirectoryLayout.html">IAppDirectoryLayout</a></h4>
-      <section><p>Provides access to a resolved application directory layout.</p>
-</section>
-    <h3 id="enums">
-Enums
-</h3>
-      <h4><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout.DefaultDirectory.html">DefaultDirectory</a></h4>
-      <section><p>Identifies standard directories used by a self-contained .NET application.</p>
-</section>
-
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory_Create.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.Create%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Logging/DeferredLogger/DeferredLogger.cs/#L891">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory_Create_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.Create*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory_Create" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.Create">Create()</h4>
+  <div class="markdown level1 summary"><p>Creates a deferred logger using the default category name of <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLogger.html">DeferredLogger</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IDeferredLogger Create()</code></pre>
+  </div>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger.html">IDeferredLogger</a></td>
+        <td><p>A deferred logger instance.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory_Create_System_String_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.Create(System.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Logging/DeferredLogger/DeferredLogger.cs/#L902">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory_Create_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.Create*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory_Create_System_String_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.Create(System.String)">Create(string)</h4>
+  <div class="markdown level1 summary"><p>Creates a deferred logger for the given category name.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IDeferredLogger Create(string categoryName)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">categoryName</span></td>
+        <td><p>Category name used for the underlying logger.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger.html">IDeferredLogger</a></td>
+        <td><p>A deferred logger instance.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="exceptions">Exceptions</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Condition</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></td>
+        <td><p>Thrown if <code class="paramref">categoryName</code> is null or whitespace.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory_Create__1.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.Create%60%601%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Logging/DeferredLogger/DeferredLogger.cs/#L882">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory_Create_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.Create*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory_Create__1" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.Create``1">Create&lt;TCategoryName&gt;()</h4>
+  <div class="markdown level1 summary"><p>Creates a deferred logger for the given category type.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IDeferredLogger&lt;TCategoryName&gt; Create&lt;TCategoryName&gt;()</code></pre>
+  </div>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger-1.html">IDeferredLogger</a>&lt;TCategoryName&gt;</td>
+        <td><p>A deferred logger instance.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="typeParameters">Type Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="parametername">TCategoryName</span></td>
+        <td><p>The logging category type.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
 
 </article>
           </div>
@@ -466,6 +680,12 @@ Enums
             <div class="sideaffix">
               <div class="contribution">
                 <ul class="nav">
+                  <li>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerFactory.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
+                  </li>
+                  <li>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Logging/DeferredLogger/DeferredLogger.cs/#L863" class="contribution-link">View Source</a>
+                  </li>
                 </ul>
               </div>
               <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix" id="affix">
