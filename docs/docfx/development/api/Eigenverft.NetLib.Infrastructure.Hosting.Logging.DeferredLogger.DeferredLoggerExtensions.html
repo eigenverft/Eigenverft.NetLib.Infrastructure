@@ -5,11 +5,11 @@
   <head>
     <meta charset="utf-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-      <title>Class JsonConfigurationSourcePreparationContext | Eigenverft.NetLib.Infrastructure </title>
+      <title>Class DeferredLoggerExtensions | Eigenverft.NetLib.Infrastructure </title>
       <meta name="viewport" content="width=device-width">
-      <meta name="title" content="Class JsonConfigurationSourcePreparationContext | Eigenverft.NetLib.Infrastructure ">
+      <meta name="title" content="Class DeferredLoggerExtensions | Eigenverft.NetLib.Infrastructure ">
     
-    <meta name="description" content="Provides one preparation step with an isolated candidate JSON snapshot.">
+    <meta name="description" content="Provides adapters from standard Microsoft logging contracts to deferred logging.">
       <link rel="shortcut icon" href="../favicon.ico">
       <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
       <link rel="stylesheet" href="../styles/docfx.css">
@@ -208,8 +208,8 @@
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationCandidatePreparations.html" title="JsonConfigurationCandidatePreparations" class="">JsonConfigurationCandidatePreparations</a>
                           </li>
-                          <li class="active">
-                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationContext.html" title="JsonConfigurationSourcePreparationContext" class="active">JsonConfigurationSourcePreparationContext</a>
+                          <li class="">
+                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationContext.html" title="JsonConfigurationSourcePreparationContext" class="">JsonConfigurationSourcePreparationContext</a>
                           </li>
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationException.html" title="JsonConfigurationSourcePreparationException" class="">JsonConfigurationSourcePreparationException</a>
@@ -323,8 +323,8 @@
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLogger.html" title="DeferredLogger" class="">DeferredLogger</a>
                           </li>
-                          <li class="">
-                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.html" title="DeferredLoggerExtensions" class="">DeferredLoggerExtensions</a>
+                          <li class="active">
+                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.html" title="DeferredLoggerExtensions" class="active">DeferredLoggerExtensions</a>
                           </li>
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.html" title="DeferredLoggerFactory" class="">DeferredLoggerFactory</a>
@@ -424,18 +424,18 @@
         </div>
         <div class="article row grid-right">
           <div class="col-md-10">
-            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationContext">
+            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions">
 
 
 
-  <h1 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_JsonConfigurationSourcePreparationContext" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationContext" class="text-break">Class JsonConfigurationSourcePreparationContext</h1>
-  <div class="markdown level0 summary"><p>Provides one preparation step with an isolated candidate JSON snapshot.</p>
+  <h1 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions" class="text-break">Class DeferredLoggerExtensions</h1>
+  <div class="markdown level0 summary"><p>Provides adapters from standard Microsoft logging contracts to deferred logging.</p>
 </div>
   <div class="markdown level0 conceptual"></div>
   <div class="inheritance">
     <h5>Inheritance</h5>
     <div class="level0"><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
-    <div class="level1"><span class="xref">JsonConfigurationSourcePreparationContext</span></div>
+    <div class="level1"><span class="xref">DeferredLoggerExtensions</span></div>
   </div>
   <div class="inheritedMembers">
     <h5>Inherited Members</h5>
@@ -452,37 +452,58 @@
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
     </div>
     <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
     </div>
     <div>
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
     </div>
   </div>
-  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.html">Hosting</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.html">Configuration</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.html">SwitchableJson</a></h6>
+  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.html">Hosting</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.html">Logging</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.html">DeferredLogger</a></h6>
   <h6><strong>Assembly</strong>: Eigenverft.NetLib.Infrastructure.dll</h6>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_JsonConfigurationSourcePreparationContext_syntax">Syntax</h5>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions_syntax">Syntax</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public sealed class JsonConfigurationSourcePreparationContext</code></pre>
+    <pre><code class="lang-csharp hljs">public static class DeferredLoggerExtensions</code></pre>
   </div>
-  <h3 id="properties">Properties
+  <h3 id="methods">Methods
 </h3>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/configuration-value-recovery/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_JsonConfigurationSourcePreparationContext_SourcePath.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationContext.SourcePath%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/configuration-value-recovery/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions_ToDeferred_Microsoft_Extensions_Logging_ILogger_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred(Microsoft.Extensions.Logging.ILogger)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/configuration-value-recovery/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/SwitchableJson/JsonConfigurationSourcePreparation.cs/#L36">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/configuration-value-recovery/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Logging/DeferredLogger/DeferredLoggerExtensions.cs/#L43">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_JsonConfigurationSourcePreparationContext_SourcePath_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationContext.SourcePath*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_JsonConfigurationSourcePreparationContext_SourcePath" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationContext.SourcePath">SourcePath</h4>
-  <div class="markdown level1 summary"><p>Gets the source identity or path from which the candidate snapshot was loaded.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions_ToDeferred_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions_ToDeferred_Microsoft_Extensions_Logging_ILogger_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred(Microsoft.Extensions.Logging.ILogger)">ToDeferred(ILogger)</h4>
+  <div class="markdown level1 summary"><p>Wraps an existing logger with deferred message and argument evaluation.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public string SourcePath { get; }</code></pre>
+    <pre><code class="lang-csharp hljs">public static IDeferredLogger ToDeferred(this ILogger logger)</code></pre>
   </div>
-  <h5 class="propertyValue">Property Value</h5>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.ilogger">ILogger</a></td>
+        <td><span class="parametername">logger</span></td>
+        <td><p>The logger to wrap.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
   <table class="table table-bordered table-condensed">
     <thead>
       <tr>
@@ -492,29 +513,67 @@
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td></td>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger.html">IDeferredLogger</a></td>
+        <td><p>A deferred logger backed by the supplied logger instance.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions_ToDeferred_Microsoft_Extensions_Logging_ILogger__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>The supplied logger is wrapped directly and is not cached or replaced. Provider-specific loggers can therefore
+be adapted through their Microsoft <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.ilogger">ILogger</a> bridge without introducing provider dependencies here.</p>
+</div>
+  <h5 class="exceptions">Exceptions</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Condition</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></td>
+        <td><p>Thrown if <code class="paramref">logger</code> is null.</p>
+</td>
       </tr>
     </tbody>
   </table>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/configuration-value-recovery/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_JsonConfigurationSourcePreparationContext_Values.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationContext.Values%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/configuration-value-recovery/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions_ToDeferred__1_Microsoft_Extensions_Logging_ILogger___0__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred%60%601(Microsoft.Extensions.Logging.ILogger%7B%60%600%7D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/configuration-value-recovery/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/SwitchableJson/JsonConfigurationSourcePreparation.cs/#L42">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/configuration-value-recovery/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Logging/DeferredLogger/DeferredLoggerExtensions.cs/#L23">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_JsonConfigurationSourcePreparationContext_Values_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationContext.Values*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_JsonConfigurationSourcePreparationContext_Values" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationContext.Values">Values</h4>
-  <div class="markdown level1 summary"><p>Gets the mutable isolated candidate values for the duration of the current preparation call. Owners detach the final
-prepared snapshot before publication; callers must not rely on retaining this dictionary after <code>Prepare</code> returns.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions_ToDeferred_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions_ToDeferred__1_Microsoft_Extensions_Logging_ILogger___0__" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions.ToDeferred``1(Microsoft.Extensions.Logging.ILogger{``0})">ToDeferred&lt;TCategoryName&gt;(ILogger&lt;TCategoryName&gt;)</h4>
+  <div class="markdown level1 summary"><p>Wraps an existing typed logger with deferred message and argument evaluation.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public IDictionary&lt;string, string?&gt; Values { get; }</code></pre>
+    <pre><code class="lang-csharp hljs">public static IDeferredLogger&lt;TCategoryName&gt; ToDeferred&lt;TCategoryName&gt;(this ILogger&lt;TCategoryName&gt; logger)</code></pre>
   </div>
-  <h5 class="propertyValue">Property Value</h5>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.ilogger-1">ILogger</a>&lt;TCategoryName&gt;</td>
+        <td><span class="parametername">logger</span></td>
+        <td><p>The logger to wrap.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
   <table class="table table-bordered table-condensed">
     <thead>
       <tr>
@@ -524,8 +583,45 @@ prepared snapshot before publication; callers must not rely on retaining this di
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.idictionary-2">IDictionary</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</td>
-        <td></td>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger-1.html">IDeferredLogger</a>&lt;TCategoryName&gt;</td>
+        <td><p>A deferred logger backed by the supplied logger instance.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="typeParameters">Type Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="parametername">TCategoryName</span></td>
+        <td><p>The logging category type.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions_ToDeferred__1_Microsoft_Extensions_Logging_ILogger___0___remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>The supplied logger is wrapped directly and is not cached or replaced. This makes the adapter suitable for
+bootstrap loggers as well as normal dependency-injected loggers, regardless of the underlying logging provider.</p>
+</div>
+  <h5 class="exceptions">Exceptions</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Condition</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></td>
+        <td><p>Thrown if <code class="paramref">logger</code> is null.</p>
+</td>
       </tr>
     </tbody>
   </table>
@@ -538,10 +634,10 @@ prepared snapshot before publication; callers must not rely on retaining this di
               <div class="contribution">
                 <ul class="nav">
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/configuration-value-recovery/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_JsonConfigurationSourcePreparationContext.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationSourcePreparationContext%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/configuration-value-recovery/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Logging_DeferredLogger_DeferredLoggerExtensions.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerExtensions%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
                   </li>
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/configuration-value-recovery/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/SwitchableJson/JsonConfigurationSourcePreparation.cs/#L25" class="contribution-link">View Source</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/configuration-value-recovery/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Logging/DeferredLogger/DeferredLoggerExtensions.cs/#L10" class="contribution-link">View Source</a>
                   </li>
                 </ul>
               </div>
