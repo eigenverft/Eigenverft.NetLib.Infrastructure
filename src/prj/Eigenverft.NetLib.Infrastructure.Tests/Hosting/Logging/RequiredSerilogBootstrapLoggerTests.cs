@@ -4,6 +4,8 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 
+using Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger;
+
 using Microsoft.Extensions.Logging;
 
 using Serilog;
@@ -67,6 +69,43 @@ namespace Eigenverft.NetLib.Infrastructure.Tests
 
             string output = File.ReadAllText(logFile);
             StringAssert.Contains(output, "required-default-bootstrap-event");
+        }
+
+        [TestMethod]
+        public void CreateRequiredSerilogLogger_CanBeAdaptedToDeferredLogging()
+        {
+            string baseDirectory = CreateTemporaryDirectory();
+            string settingsDirectory = Path.Combine(baseDirectory, "AppSettings");
+            Directory.CreateDirectory(settingsDirectory);
+            string logFile = Path.Combine(baseDirectory, "bootstrap-deferred.log");
+            File.WriteAllText(
+                Path.Combine(settingsDirectory, "BootstrapLoggerSettings.json"),
+                CreateFileSinkConfiguration("Serilog", logFile, "Information"));
+
+            IDeferredLogger<RequiredSerilogBootstrapLoggerTests> logger =
+                RequiredBootstrapLogger.CreateRequiredSerilogLogger(
+                    baseDirectory: baseDirectory)
+                .ToDeferred();
+            var debugEvaluations = 0;
+            var informationEvaluations = 0;
+
+            logger.LogDebug(() =>
+            {
+                debugEvaluations++;
+                return "disabled-required-deferred-event";
+            });
+            logger.LogInformation(() =>
+            {
+                informationEvaluations++;
+                return "required-deferred-bootstrap-event";
+            });
+            BootstrapLoggerFacade.ResetForTests();
+
+            Assert.AreEqual(0, debugEvaluations);
+            Assert.AreEqual(1, informationEvaluations);
+            string output = File.ReadAllText(logFile);
+            StringAssert.Contains(output, "required-deferred-bootstrap-event");
+            Assert.IsFalse(output.Contains("disabled-required-deferred-event", StringComparison.Ordinal));
         }
 
         [TestMethod]

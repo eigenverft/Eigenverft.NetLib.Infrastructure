@@ -71,6 +71,35 @@ namespace Eigenverft.NetLib.Infrastructure.Tests
             Assert.AreEqual(1, inner.LogCalls);
         }
 
+        [TestMethod]
+        public void ToDeferred_WrapsProvidedGenericLoggerWithoutEagerEvaluation()
+        {
+            var inner = new TestLogger<DeferredLoggerCharacterizationTests>(LogLevel.Warning);
+            IDeferredLogger<DeferredLoggerCharacterizationTests> logger = inner.ToDeferred();
+            var evaluations = 0;
+
+            logger.LogDebug(() =>
+            {
+                evaluations++;
+                return "should not be evaluated";
+            });
+
+            Assert.AreEqual(0, evaluations);
+            Assert.AreEqual(0, inner.LogCalls);
+        }
+
+        [TestMethod]
+        public void ToDeferred_WrapsProvidedNonGenericLogger()
+        {
+            var inner = new TestLogger<DeferredLoggerCharacterizationTests>(LogLevel.Information);
+            ILogger untypedInner = inner;
+            IDeferredLogger logger = untypedInner.ToDeferred();
+
+            logger.LogInformation("adapter-event");
+
+            Assert.AreEqual(1, inner.LogCalls);
+        }
+
         private sealed class TestLogger<TCategoryName> : ILogger<TCategoryName>
         {
             private readonly LogLevel _minimumLevel;
