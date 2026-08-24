@@ -956,6 +956,104 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLogger-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLogger-1.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLogger<TCategoryName>",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLogger-1.yml\" sourcestartlinenumber=\"1\">Default implementation of <xref href=\"Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger%601\" data-throw-if-not-resolved=\"false\"></xref> that wraps an <xref href=\"Microsoft.Extensions.Logging.ILogger%601\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLogger.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLogger.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLogger",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLogger.yml\" sourcestartlinenumber=\"1\">Default implementation of <xref href=\"Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger\" data-throw-if-not-resolved=\"false\"></xref> that wraps an <xref href=\"Microsoft.Extensions.Logging.ILogger\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.DeferredLoggerFactory.yml\" sourcestartlinenumber=\"1\">Factory for creating deferred loggers from an underlying <xref href=\"Microsoft.Extensions.Logging.ILoggerFactory\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger-1.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger<TCategoryName>",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger-1.yml\" sourcestartlinenumber=\"1\">Provides lazy, level-aware logging on top of an underlying logger instance.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.IDeferredLogger.yml\" sourcestartlinenumber=\"1\">Provides lazy, level-aware logging on top of an underlying logger instance,\nwithout requiring a category type parameter.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.ServiceCollectionExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.ServiceCollectionExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.ServiceCollectionExtensions",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.ServiceCollectionExtensions.yml\" sourcestartlinenumber=\"1\">Provides extension methods to register deferred logging services.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateKeyProfile.yml",
       "output": {
         ".html": {
