@@ -3456,6 +3456,25 @@ references:
   commentId: F:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueKind.Rot13
   fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueKind.Rot13
   nameWithType: ConfigurationValueKind.Rot13
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery
+  name: ConfigurationValueRecovery
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery
+  nameWithType: ConfigurationValueRecovery
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.RecoverProtectedValues(Microsoft.Extensions.Configuration.IConfiguration)
+  name: RecoverProtectedValues(IConfiguration)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_Values_ConfigurationValueRecovery_RecoverProtectedValues_Microsoft_Extensions_Configuration_IConfiguration_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.RecoverProtectedValues(Microsoft.Extensions.Configuration.IConfiguration)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.RecoverProtectedValues(Microsoft.Extensions.Configuration.IConfiguration)
+  nameWithType: ConfigurationValueRecovery.RecoverProtectedValues(IConfiguration)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.RecoverProtectedValues*
+  name: RecoverProtectedValues
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_Values_ConfigurationValueRecovery_RecoverProtectedValues_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.RecoverProtectedValues
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.RecoverProtectedValues
+  nameWithType: ConfigurationValueRecovery.RecoverProtectedValues
 - uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder
   name: JsonConfigurationFileEncoder
   href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.html

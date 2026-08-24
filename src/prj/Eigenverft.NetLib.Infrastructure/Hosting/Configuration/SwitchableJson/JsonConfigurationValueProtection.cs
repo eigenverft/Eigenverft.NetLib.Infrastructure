@@ -24,6 +24,12 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
 
         internal JsonConfigurationCandidatePreparation Decoder { get; }
 
+        internal bool IsMatch(string keyPath)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(keyPath);
+            return _matcher.IsMatch(keyPath);
+        }
+
         /// <summary>Protects values by matching only their final JSON key name, regardless of nesting.</summary>
         public static JsonConfigurationValueProtection ForKeys(
             ConfigurationValueCodec codec,

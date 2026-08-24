@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 
+using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values;
+
 using Microsoft.Extensions.Configuration;
 
 namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
@@ -18,13 +20,17 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
     {
         private readonly object _dataGate = new();
         private readonly SwitchableJsonConfigurationRuntime _runtime;
+        private readonly JsonConfigurationValueProtection? _valueProtection;
         private int _disposeStarted;
         private int _disposed;
 
-        public SwitchableJsonConfigurationProvider(SwitchableJsonConfigurationRuntime runtime)
+        public SwitchableJsonConfigurationProvider(
+            SwitchableJsonConfigurationRuntime runtime,
+            JsonConfigurationValueProtection? valueProtection)
         {
             ArgumentNullException.ThrowIfNull(runtime);
             _runtime = runtime;
+            _valueProtection = valueProtection;
         }
 
         public override bool TryGet(string key, out string? value)
@@ -74,6 +80,38 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
             // attachment; the stable DI-owned runtime remains available and can bind a later rebuilt/re-added provider instance.
             _runtime.DetachProvider(this);
             Volatile.Write(ref _disposed, 1);
+        }
+
+        internal void AppendRecoverableValues(IDictionary<string, string?> destination)
+        {
+            ArgumentNullException.ThrowIfNull(destination);
+
+            lock (_dataGate)
+            {
+                ThrowIfDisposed();
+                if (_valueProtection is null)
+                {
+                    return;
+                }
+
+                foreach (KeyValuePair<string, string?> pair in Data)
+                {
+                    if (!_valueProtection.IsMatch(pair.Key))
+                    {
+                        continue;
+                    }
+
+                    if (ConfigurationValueFormat.HasRecognizedWrapper(pair.Value))
+                    {
+                        throw new InvalidOperationException(
+                            $"Protected configuration value '{pair.Key}' from switchable JSON source '{_runtime.Name}' could not be recovered with codec '{_valueProtection.Codec.Name}' in the current runtime context. " +
+                            "The persisted value may depend on the original machine or another protection input such as a password, key material, or codec composition. " +
+                            "If this configuration file was copied from another host, run the recovery code on the original server or recreate the same protection context locally.");
+                    }
+
+                    destination[pair.Key] = pair.Value;
+                }
+            }
         }
 
         internal bool IsDataEqual(IDictionary<string, string?> candidateData)

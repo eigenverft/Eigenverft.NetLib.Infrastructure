@@ -115,7 +115,7 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
                 preparations);
 
             IConfigurationBuilder configurationBuilder = builder.Configuration;
-            var source = new SwitchableJsonConfigurationSource(runtime);
+            var source = new SwitchableJsonConfigurationSource(runtime, options.ValueProtection);
 
             try
             {
