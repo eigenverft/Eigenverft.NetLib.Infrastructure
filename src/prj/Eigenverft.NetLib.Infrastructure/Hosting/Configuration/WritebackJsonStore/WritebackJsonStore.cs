@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonStore
 {
-    /// <summary>File-backed JSON document manager with optional reload-on-change and a non-persisted working copy.</summary>
+    /// <summary>File-backed JSON document manager with a persisted configuration branch and a separate non-persisted runtime branch.</summary>
     /// <typeparam name="T">Document type. Must be a reference type with a public parameterless constructor.</typeparam>
     public sealed class WritebackJsonStore<T> : IDisposable where T : class, new()
     {
@@ -22,15 +22,15 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonSt
 
         private T _current;
         private readonly T _initialSnapshot;
-        private T _workingCopy;
+        private T _runtimeCopy;
 
         /// <summary>Raised after the current document has been reloaded from disk or saved.</summary>
         /// <remarks>The first argument is the previous snapshot, the second is the new snapshot.</remarks>
         public event Action<T, T>? DocumentChanged;
 
-        /// <summary>Raised after the in-memory working copy has been mutated via <see cref="MutateWorkingCopy"/>.</summary>
+        /// <summary>Raised after the transient runtime copy has been mutated via <see cref="MutateRuntimeCopy"/>.</summary>
         /// <remarks>The first argument is the previous snapshot, the second is the new snapshot.</remarks>
-        public event Action<T, T>? WorkingCopyChanged;
+        public event Action<T, T>? RuntimeCopyChanged;
 
         /// <summary>Raised when an internal exception is caught and handled.</summary>
         public event Action<Exception>? ErrorOccurred;
@@ -39,22 +39,22 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonSt
         public string FilePath => _filePath;
 
         /// <summary>
-        /// Gets the current in-memory instance.
-        /// Treat it as read-only; use <see cref="MutateAndSave"/> to change it safely.
+        /// Gets the current persisted/reloaded configuration branch.
+        /// Treat it as read-only; use <see cref="MutateAndSave"/> when a change is intended to be written to the backing JSON document.
         /// </summary>
         public T Current
         { get { lock (_syncRoot) { ThrowIfDisposed(); return _current; } } }
 
-        /// <summary>Gets a deep copy of the initial document as it was loaded or created during construction.</summary>
+        /// <summary>Gets a deep copy of the original document as it was loaded or created during construction, before persisted or runtime-only mutations.</summary>
         public T InitialSnapshot
         { get { lock (_syncRoot) { ThrowIfDisposed(); return Clone(_initialSnapshot); } } }
 
         /// <summary>
-        /// Gets the in-memory working copy initialized from <see cref="InitialSnapshot"/> and never written to disk.
-        /// Prefer <see cref="MutateWorkingCopy"/> for thread-safe updates.
+        /// Gets the transient runtime copy initialized from <see cref="InitialSnapshot"/> and never written to disk.
+        /// Use <see cref="MutateRuntimeCopy"/> for runtime-only changes that must remain separate from the persisted configuration branch.
         /// </summary>
-        public T WorkingCopy
-        { get { lock (_syncRoot) { ThrowIfDisposed(); return _workingCopy; } } }
+        public T RuntimeCopy
+        { get { lock (_syncRoot) { ThrowIfDisposed(); return _runtimeCopy; } } }
 
         /// <summary>
         /// Initializes a new file-backed JSON store.
@@ -73,7 +73,7 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonSt
 
             _current = LoadFromDisk() ?? new T();
             _initialSnapshot = Clone(_current);
-            _workingCopy = Clone(_initialSnapshot);
+            _runtimeCopy = Clone(_initialSnapshot);
 
             SaveToDisk(_current, isInitialization: true);
 
@@ -120,8 +120,8 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonSt
             handler?.Invoke(oldSnapshot!, newSnapshot!);
         }
 
-        /// <summary>Applies changes to the in-memory working copy only. The working copy is never written to disk.</summary>
-        public void MutateWorkingCopy(Action<T> mutate, bool notify = true)
+        /// <summary>Applies changes to the transient runtime copy only. Runtime-copy changes are never written to disk.</summary>
+        public void MutateRuntimeCopy(Action<T> mutate, bool notify = true)
         {
             ArgumentNullException.ThrowIfNull(mutate);
 
@@ -135,13 +135,13 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonSt
 
                 if (notify)
                 {
-                    handler = WorkingCopyChanged;
-                    if (handler != null) oldSnapshot = Clone(_workingCopy);
+                    handler = RuntimeCopyChanged;
+                    if (handler != null) oldSnapshot = Clone(_runtimeCopy);
                 }
 
-                mutate(_workingCopy);
+                mutate(_runtimeCopy);
 
-                if (handler != null) newSnapshot = Clone(_workingCopy);
+                if (handler != null) newSnapshot = Clone(_runtimeCopy);
             }
 
             handler?.Invoke(oldSnapshot!, newSnapshot!);
@@ -173,8 +173,8 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonSt
             handler?.Invoke(oldSnapshot!, newSnapshot!);
         }
 
-        /// <summary>Resets the working copy back to the initial snapshot. No disk I/O occurs.</summary>
-        public void ResetWorkingCopy(bool notify = true)
+        /// <summary>Resets the transient runtime copy back to the initial snapshot. No disk I/O occurs.</summary>
+        public void ResetRuntimeCopy(bool notify = true)
         {
             Action<T, T>? handler = null;
             T? oldSnapshot = null;
@@ -186,13 +186,13 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonSt
 
                 if (notify)
                 {
-                    handler = WorkingCopyChanged;
-                    if (handler != null) oldSnapshot = Clone(_workingCopy);
+                    handler = RuntimeCopyChanged;
+                    if (handler != null) oldSnapshot = Clone(_runtimeCopy);
                 }
 
-                _workingCopy = Clone(_initialSnapshot);
+                _runtimeCopy = Clone(_initialSnapshot);
 
-                if (handler != null) newSnapshot = Clone(_workingCopy);
+                if (handler != null) newSnapshot = Clone(_runtimeCopy);
             }
 
             handler?.Invoke(oldSnapshot!, newSnapshot!);

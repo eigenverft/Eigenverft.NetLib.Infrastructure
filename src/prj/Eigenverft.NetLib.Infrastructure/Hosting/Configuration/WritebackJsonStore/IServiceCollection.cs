@@ -11,8 +11,7 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.WritebackJsonSt
         /// <summary>Creates a <see cref="WritebackJsonStore{T}"/> instance and registers it as a singleton.</summary>
         /// <remarks>
         /// This store supports read–modify–write (writeback) scenarios and can optionally watch the backing file for external changes.
-        /// It also exposes a non-persisted <see cref="WritebackJsonStore{T}.WorkingCopy"/> for staging operations (for example decrypting values)
-        /// without writing them back to disk.
+        /// It also exposes a separate non-persisted <see cref="WritebackJsonStore{T}.RuntimeCopy"/> for runtime-only mutations that must not modify the backing JSON document.
         /// </remarks>
         /// <typeparam name="T">The settings/document type managed by the store.</typeparam>
         /// <param name="services">The service collection to add the registration to.</param>
