@@ -1124,6 +1124,34 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.yml\" sourcestartlinenumber=\"1\">Exposes the process-level host environment before a Generic Host or ASP.NET Core builder exists.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateKeyProfile.yml",
       "output": {
         ".html": {
