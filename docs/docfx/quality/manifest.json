@@ -1134,7 +1134,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment",
-      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.yml\" sourcestartlinenumber=\"1\">Exposes the process-level Generic Host environment before a host builder exists.</p>\n"
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.yml\" sourcestartlinenumber=\"1\">Exposes the process-level host environment before a Generic Host or ASP.NET Core builder exists.</p>\n"
     },
     {
       "type": "ManagedReference",
