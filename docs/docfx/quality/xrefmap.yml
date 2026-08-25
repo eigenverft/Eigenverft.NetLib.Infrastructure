@@ -1,6 +1,12 @@
 ### YamlMime:XRefMap
 sorted: true
 references:
+- uid: Eigenverft.NetLib.Infrastructure.Hosting
+  name: Eigenverft.NetLib.Infrastructure.Hosting
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.html
+  commentId: N:Eigenverft.NetLib.Infrastructure.Hosting
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting
+  nameWithType: Eigenverft.NetLib.Infrastructure.Hosting
 - uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets
   name: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets
   href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.html
@@ -6189,6 +6195,80 @@ references:
   isSpec: "True"
   fullName: Eigenverft.NetLib.Infrastructure.Hosting.Logging.DeferredLogger.ServiceCollectionExtensions.AddDeferredLogging
   nameWithType: ServiceCollectionExtensions.AddDeferredLogging
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment
+  name: StaticHostEnvironment
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment
+  nameWithType: StaticHostEnvironment
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.EnvironmentName
+  name: EnvironmentName
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html#Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_EnvironmentName
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.EnvironmentName
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.EnvironmentName
+  nameWithType: StaticHostEnvironment.EnvironmentName
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.EnvironmentName*
+  name: EnvironmentName
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html#Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_EnvironmentName_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.EnvironmentName
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.EnvironmentName
+  nameWithType: StaticHostEnvironment.EnvironmentName
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsDevelopment
+  name: IsDevelopment
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html#Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsDevelopment
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsDevelopment
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsDevelopment
+  nameWithType: StaticHostEnvironment.IsDevelopment
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsDevelopment*
+  name: IsDevelopment
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html#Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsDevelopment_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsDevelopment
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsDevelopment
+  nameWithType: StaticHostEnvironment.IsDevelopment
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsEnvironment(System.String)
+  name: IsEnvironment(string)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html#Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsEnvironment_System_String_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsEnvironment(System.String)
+  name.vb: IsEnvironment(String)
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsEnvironment(string)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsEnvironment(String)
+  nameWithType: StaticHostEnvironment.IsEnvironment(string)
+  nameWithType.vb: StaticHostEnvironment.IsEnvironment(String)
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsEnvironment*
+  name: IsEnvironment
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html#Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsEnvironment_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsEnvironment
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsEnvironment
+  nameWithType: StaticHostEnvironment.IsEnvironment
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsProduction
+  name: IsProduction
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html#Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsProduction
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsProduction
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsProduction
+  nameWithType: StaticHostEnvironment.IsProduction
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsProduction*
+  name: IsProduction
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html#Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsProduction_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsProduction
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsProduction
+  nameWithType: StaticHostEnvironment.IsProduction
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsStaging
+  name: IsStaging
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html#Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsStaging
+  commentId: P:Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsStaging
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsStaging
+  nameWithType: StaticHostEnvironment.IsStaging
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsStaging*
+  name: IsStaging
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html#Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsStaging_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsStaging
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsStaging
+  nameWithType: StaticHostEnvironment.IsStaging
 - uid: Eigenverft.NetLib.Infrastructure.Security.Certificates
   name: Eigenverft.NetLib.Infrastructure.Security.Certificates
   href: api/Eigenverft.NetLib.Infrastructure.Security.Certificates.html

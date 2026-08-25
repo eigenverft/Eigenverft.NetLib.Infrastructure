@@ -5,11 +5,11 @@
   <head>
     <meta charset="utf-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-      <title>Class ConfigurationSetCoordinatorExtensions | Eigenverft.NetLib.Infrastructure </title>
+      <title>Class StaticHostEnvironment | Eigenverft.NetLib.Infrastructure </title>
       <meta name="viewport" content="width=device-width">
-      <meta name="title" content="Class ConfigurationSetCoordinatorExtensions | Eigenverft.NetLib.Infrastructure ">
+      <meta name="title" content="Class StaticHostEnvironment | Eigenverft.NetLib.Infrastructure ">
     
-    <meta name="description" content="Registers independent named configuration-set coordinators.">
+    <meta name="description" content="Exposes the process-level Generic Host environment before a host builder exists.">
       <link rel="shortcut icon" href="../favicon.ico">
       <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
       <link rel="stylesheet" href="../styles/docfx.css">
@@ -85,8 +85,8 @@
                       <a href="Eigenverft.NetLib.Infrastructure.Hosting.html" title="Eigenverft.NetLib.Infrastructure.Hosting" class="">Eigenverft.NetLib.Infrastructure.Hosting</a>
 
                         <ul class="nav level2">
-                          <li class="">
-                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html" title="StaticHostEnvironment" class="">StaticHostEnvironment</a>
+                          <li class="active">
+                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html" title="StaticHostEnvironment" class="active">StaticHostEnvironment</a>
                           </li>
                         </ul>
                     </li>
@@ -101,8 +101,8 @@
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetBuilderBindingExtensions.html" title="ConfigurationSetBuilderBindingExtensions" class="">ConfigurationSetBuilderBindingExtensions</a>
                           </li>
-                          <li class="active">
-                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.html" title="ConfigurationSetCoordinatorExtensions" class="active">ConfigurationSetCoordinatorExtensions</a>
+                          <li class="">
+                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.html" title="ConfigurationSetCoordinatorExtensions" class="">ConfigurationSetCoordinatorExtensions</a>
                           </li>
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetDefinition.html" title="ConfigurationSetDefinition" class="">ConfigurationSetDefinition</a>
@@ -447,18 +447,18 @@
         </div>
         <div class="article row grid-right">
           <div class="col-md-10">
-            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions">
+            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment">
 
 
 
-  <h1 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions" class="text-break">Class ConfigurationSetCoordinatorExtensions</h1>
-  <div class="markdown level0 summary"><p>Registers independent named configuration-set coordinators.</p>
+  <h1 id="Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment" class="text-break">Class StaticHostEnvironment</h1>
+  <div class="markdown level0 summary"><p>Exposes the process-level Generic Host environment before a host builder exists.</p>
 </div>
   <div class="markdown level0 conceptual"></div>
   <div class="inheritance">
     <h5>Inheritance</h5>
     <div class="level0"><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
-    <div class="level1"><span class="xref">ConfigurationSetCoordinatorExtensions</span></div>
+    <div class="level1"><span class="xref">StaticHostEnvironment</span></div>
   </div>
   <div class="inheritedMembers">
     <h5>Inherited Members</h5>
@@ -484,29 +484,160 @@
       <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
     </div>
   </div>
-  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.html">Hosting</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.html">Configuration</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.html">ConfigurationSets</a></h6>
+  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.html">Hosting</a></h6>
   <h6><strong>Assembly</strong>: Eigenverft.NetLib.Infrastructure.dll</h6>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions_syntax">Syntax</h5>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_syntax">Syntax</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static class ConfigurationSetCoordinatorExtensions</code></pre>
+    <pre><code class="lang-csharp hljs">public static class StaticHostEnvironment</code></pre>
   </div>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_remarks"><strong>Remarks</strong></h5>
+  <div class="markdown level0 remarks"><p>Resolution follows the Generic Host defaults: <code>DOTNET_</code>-prefixed environment variables,
+then process command-line arguments, with <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.hosting.environments.production">Production</a> as the default.
+The resolved value is captured once when this type is first initialized.</p>
+</div>
+  <h3 id="properties">Properties
+</h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_EnvironmentName.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.EnvironmentName%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/StaticHostEnvironment.cs/#L25">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_EnvironmentName_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.EnvironmentName*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_EnvironmentName" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.EnvironmentName">EnvironmentName</h4>
+  <div class="markdown level1 summary"><p>Gets the resolved Generic Host environment name.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static string EnvironmentName { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsDevelopment.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsDevelopment%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/StaticHostEnvironment.cs/#L30">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsDevelopment_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsDevelopment*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsDevelopment" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsDevelopment">IsDevelopment</h4>
+  <div class="markdown level1 summary"><p>Gets whether the resolved environment is <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.hosting.environments.development">Development</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool IsDevelopment { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsProduction.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsProduction%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/StaticHostEnvironment.cs/#L35">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsProduction_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsProduction*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsProduction" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsProduction">IsProduction</h4>
+  <div class="markdown level1 summary"><p>Gets whether the resolved environment is <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.hosting.environments.production">Production</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool IsProduction { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsStaging.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsStaging%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/StaticHostEnvironment.cs/#L40">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsStaging_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsStaging*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsStaging" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsStaging">IsStaging</h4>
+  <div class="markdown level1 summary"><p>Gets whether the resolved environment is <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.hosting.environments.staging">Staging</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool IsStaging { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
   <h3 id="methods">Methods
 </h3>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions_AddConfigurationSet_Microsoft_Extensions_Hosting_IHostApplicationBuilder_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetDefinition_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.AddConfigurationSet(Microsoft.Extensions.Hosting.IHostApplicationBuilder%2CEigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetDefinition)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsEnvironment_System_String_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsEnvironment(System.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetCoordinatorExtensions.cs/#L63">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/StaticHostEnvironment.cs/#L45">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions_AddConfigurationSet_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.AddConfigurationSet*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions_AddConfigurationSet_Microsoft_Extensions_Hosting_IHostApplicationBuilder_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetDefinition_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.AddConfigurationSet(Microsoft.Extensions.Hosting.IHostApplicationBuilder,Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetDefinition)">AddConfigurationSet(IHostApplicationBuilder, ConfigurationSetDefinition)</h4>
-  <div class="markdown level1 summary"><p>Adds one validated configuration-set definition and exposes its coordinator through keyed DI.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsEnvironment_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsEnvironment*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment_IsEnvironment_System_String_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsEnvironment(System.String)">IsEnvironment(string)</h4>
+  <div class="markdown level1 summary"><p>Determines whether the resolved environment matches <code class="paramref">environmentName</code>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static IConfigurationSetCoordinator AddConfigurationSet(this IHostApplicationBuilder builder, ConfigurationSetDefinition definition)</code></pre>
+    <pre><code class="lang-csharp hljs">public static bool IsEnvironment(string environmentName)</code></pre>
   </div>
   <h5 class="parameters">Parameters</h5>
   <table class="table table-bordered table-condensed">
@@ -519,16 +650,9 @@
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.hosting.ihostapplicationbuilder">IHostApplicationBuilder</a></td>
-        <td><span class="parametername">builder</span></td>
-        <td><p>The host application builder receiving the coordinator.</p>
-</td>
-      </tr>
-      <tr>
-        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetDefinition.html">ConfigurationSetDefinition</a></td>
-        <td><span class="parametername">definition</span></td>
-        <td><p>The complete set definition to register.</p>
-</td>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">environmentName</span></td>
+        <td></td>
       </tr>
     </tbody>
   </table>
@@ -542,201 +666,8 @@
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.html">IConfigurationSetCoordinator</a></td>
-        <td><p>The created coordinator runtime.</p>
-</td>
-      </tr>
-    </tbody>
-  </table>
-  <span class="small pull-right mobile-hide">
-    <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions_AddConfigurationSet_Microsoft_Extensions_Hosting_IHostApplicationBuilder_System_String_System_String_System_String___.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.AddConfigurationSet(Microsoft.Extensions.Hosting.IHostApplicationBuilder%2CSystem.String%2CSystem.String%2CSystem.String%5B%5D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
-  </span>
-  <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetCoordinatorExtensions.cs/#L25">View Source</a>
-  </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions_AddConfigurationSet_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.AddConfigurationSet*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions_AddConfigurationSet_Microsoft_Extensions_Hosting_IHostApplicationBuilder_System_String_System_String_System_String___" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.AddConfigurationSet(Microsoft.Extensions.Hosting.IHostApplicationBuilder,System.String,System.String,System.String[])">AddConfigurationSet(IHostApplicationBuilder, string, string, params string[])</h4>
-  <div class="markdown level1 summary"><p>Adds one configuration set and returns a fluent startup handle for binding switchable configuration sources.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-  <h5 class="declaration">Declaration</h5>
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static ConfigurationSetRegistration AddConfigurationSet(this IHostApplicationBuilder builder, string name, string initialValue, params string[] additionalAllowedValues)</code></pre>
-  </div>
-  <h5 class="parameters">Parameters</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Name</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.hosting.ihostapplicationbuilder">IHostApplicationBuilder</a></td>
-        <td><span class="parametername">builder</span></td>
-        <td><p>The host application builder receiving the coordinator.</p>
-</td>
-      </tr>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><span class="parametername">name</span></td>
-        <td><p>Caller-defined set identity and keyed-service key.</p>
-</td>
-      </tr>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><span class="parametername">initialValue</span></td>
-        <td><p>Initial active value; it is automatically included in the allowed values.</p>
-</td>
-      </tr>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>[]</td>
-        <td><span class="parametername">additionalAllowedValues</span></td>
-        <td><p>Additional values that may become active.</p>
-</td>
-      </tr>
-    </tbody>
-  </table>
-  <h5 class="returns">Returns</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetRegistration.html">ConfigurationSetRegistration</a></td>
-        <td><p>A startup registration handle for this set.</p>
-</td>
-      </tr>
-    </tbody>
-  </table>
-  <span class="small pull-right mobile-hide">
-    <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions_AddConfigurationSetCoordinator_Microsoft_Extensions_Hosting_IHostApplicationBuilder_System_String_System_String_System_Collections_Generic_IEnumerable_System_String__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.AddConfigurationSetCoordinator(Microsoft.Extensions.Hosting.IHostApplicationBuilder%2CSystem.String%2CSystem.String%2CSystem.Collections.Generic.IEnumerable%7BSystem.String%7D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
-  </span>
-  <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetCoordinatorExtensions.cs/#L48">View Source</a>
-  </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions_AddConfigurationSetCoordinator_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.AddConfigurationSetCoordinator*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions_AddConfigurationSetCoordinator_Microsoft_Extensions_Hosting_IHostApplicationBuilder_System_String_System_String_System_Collections_Generic_IEnumerable_System_String__" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.AddConfigurationSetCoordinator(Microsoft.Extensions.Hosting.IHostApplicationBuilder,System.String,System.String,System.Collections.Generic.IEnumerable{System.String})">AddConfigurationSetCoordinator(IHostApplicationBuilder, string, string, IEnumerable&lt;string&gt;)</h4>
-  <div class="markdown level1 summary"><p>Adds one independent configuration-set coordinator and exposes the same runtime instance through keyed DI.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-  <h5 class="declaration">Declaration</h5>
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static IConfigurationSetCoordinator AddConfigurationSetCoordinator(this IHostApplicationBuilder builder, string name, string initialValue, IEnumerable&lt;string&gt; allowedValues)</code></pre>
-  </div>
-  <h5 class="parameters">Parameters</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Name</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.hosting.ihostapplicationbuilder">IHostApplicationBuilder</a></td>
-        <td><span class="parametername">builder</span></td>
-        <td><p>The host application builder receiving the keyed runtime service.</p>
-</td>
-      </tr>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><span class="parametername">name</span></td>
-        <td><p>Caller-defined set identity and keyed-service key.</p>
-</td>
-      </tr>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><span class="parametername">initialValue</span></td>
-        <td><p>Value active when the coordinator is created.</p>
-</td>
-      </tr>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1">IEnumerable</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</td>
-        <td><span class="parametername">allowedValues</span></td>
-        <td><p>Complete values accepted by this set.</p>
-</td>
-      </tr>
-    </tbody>
-  </table>
-  <h5 class="returns">Returns</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.html">IConfigurationSetCoordinator</a></td>
-        <td><p>The created coordinator runtime.</p>
-</td>
-      </tr>
-    </tbody>
-  </table>
-  <span class="small pull-right mobile-hide">
-    <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions_AddConfigurationSets_Microsoft_Extensions_Hosting_IHostApplicationBuilder_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetDefinition___.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.AddConfigurationSets(Microsoft.Extensions.Hosting.IHostApplicationBuilder%2CEigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetDefinition%5B%5D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
-  </span>
-  <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetCoordinatorExtensions.cs/#L95">View Source</a>
-  </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions_AddConfigurationSets_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.AddConfigurationSets*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions_AddConfigurationSets_Microsoft_Extensions_Hosting_IHostApplicationBuilder_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetDefinition___" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions.AddConfigurationSets(Microsoft.Extensions.Hosting.IHostApplicationBuilder,Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetDefinition[])">AddConfigurationSets(IHostApplicationBuilder, params ConfigurationSetDefinition[])</h4>
-  <div class="markdown level1 summary"><p>Registers multiple independent configuration-set definitions in declaration order.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-  <h5 class="declaration">Declaration</h5>
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static IHostApplicationBuilder AddConfigurationSets(this IHostApplicationBuilder builder, params ConfigurationSetDefinition[] definitions)</code></pre>
-  </div>
-  <h5 class="parameters">Parameters</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Name</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.hosting.ihostapplicationbuilder">IHostApplicationBuilder</a></td>
-        <td><span class="parametername">builder</span></td>
-        <td><p>The host application builder receiving the coordinators.</p>
-</td>
-      </tr>
-      <tr>
-        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetDefinition.html">ConfigurationSetDefinition</a>[]</td>
-        <td><span class="parametername">definitions</span></td>
-        <td><p>The definitions to register.</p>
-</td>
-      </tr>
-    </tbody>
-  </table>
-  <h5 class="returns">Returns</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.hosting.ihostapplicationbuilder">IHostApplicationBuilder</a></td>
-        <td><p>The same builder for chaining.</p>
-</td>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td></td>
       </tr>
     </tbody>
   </table>
@@ -749,10 +680,10 @@
               <div class="contribution">
                 <ul class="nav">
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_ConfigurationSetCoordinatorExtensions.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetCoordinatorExtensions%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_StaticHostEnvironment.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
                   </li>
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetCoordinatorExtensions.cs/#L11" class="contribution-link">View Source</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/StaticHostEnvironment.cs/#L17" class="contribution-link">View Source</a>
                   </li>
                 </ul>
               </div>
