@@ -13,7 +13,7 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting
     /// Resolution supports both Generic Host and ASP.NET Core startup conventions. Precedence is process
     /// command-line arguments, then <c>DOTNET_ENVIRONMENT</c>, then <c>ASPNETCORE_ENVIRONMENT</c>, with
     /// <see cref="Environments.Production"/> as the default.
-    /// The resolved value is captured once when this type is first initialized.
+    /// The resolved value is captured once when this type is first initialized, so bootstrap consumers see one stable startup environment.
     /// </remarks>
     public static class StaticHostEnvironment
     {
