@@ -20,6 +20,7 @@ bootstrap primitives.
 | Configuration Sets | Coordinated multi-file profiles | `AddConfigurationSet(...)` |
 | Value preparation and protection | Validate, transform, or protect persisted values before publication | `SwitchableJsonRegistrationOptions` |
 | Certificates and diagnostics | Managed certificate recovery, configuration provenance, and bootstrap logging | Public certificate and hosting helpers |
+| Early host environment | Read the Generic Host environment before builder creation | `StaticHostEnvironment.EnvironmentName` |
 
 ## 📦 Installation
 
@@ -53,6 +54,28 @@ Console.WriteLine(settingsDirectory);
 using IHost host = builder.Build();
 await host.RunAsync();
 ```
+
+### Add last-known-good JSON reloads
+using IHost host = builder.Build();
+await host.RunAsync();
+```
+
+### Read the host environment before creating the builder
+
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting;
+
+string bootstrapSettings =
+    $"BootstrapLogger.{StaticHostEnvironment.EnvironmentName}.json";
+
+bool development = StaticHostEnvironment.IsDevelopment;
+bool customQa = StaticHostEnvironment.IsEnvironment("QA");
+```
+
+`StaticHostEnvironment` follows the Generic Host defaults: `DOTNET_`-prefixed environment variables,
+then process command-line arguments, with `Production` as the default. Command-line values win and
+custom environment names are preserved. The value is captured once at first type initialization.
+ASP.NET Core-specific `ASPNETCORE_` variables are intentionally outside this Generic Host primitive.
 
 ### Add last-known-good JSON reloads
 

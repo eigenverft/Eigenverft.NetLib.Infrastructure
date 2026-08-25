@@ -1,6 +1,8 @@
 using System;
 using System.Reflection;
 
+using Eigenverft.NetLib.Infrastructure.Hosting;
+
 using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets;
 using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Diagnostics;
 using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Sources;
@@ -23,6 +25,7 @@ namespace Eigenverft.NetLib.Infrastructure.Tests
             {
                 typeof(HostApplicationBuilderFactory),
                 typeof(HostApplicationBuilderDirectoryLayoutExtensions),
+                typeof(StaticHostEnvironment),
                 typeof(SelfSignedCertificateFactory),
                 typeof(ManagedCertificateFile),
                 typeof(ReversibleStringTransform),

@@ -23,6 +23,7 @@ diagnostics must be available before the normal host lifecycle is ready.
 | Value preparation and protection | Decode, normalize, migrate, validate, or protect selected persisted values before publication | `SwitchableJsonRegistrationOptions` and `ConfigurationValueCodecs` |
 | Certificates and machine binding | Create or recover managed certificates and bind selected data to a deployment machine | `ManagedCertificateFile` and `PhysicalMachineBinding` |
 | Startup diagnostics | Explain configuration precedence and log before the host is built | `LogConfigurationResolution(...)` and `BootstrapLogger<T>` |
+| Early host environment | Read the Generic Host environment before a host builder exists | `StaticHostEnvironment.EnvironmentName` |
 
 The package targets .NET 8 and .NET 10 and is licensed under MIT.
 
@@ -66,6 +67,33 @@ For the shortest setup, the factory is a shorthand for the same two calls:
 HostApplicationBuilder builder =
     HostApplicationBuilderFactory.CreateWithDefaultDirectory(args);
 ```
+
+### Read the host environment before creating the builder
+
+`StaticHostEnvironment` exposes the process-level Generic Host environment early enough for bootstrap
+work that must happen before `HostApplicationBuilder` or DI exists:
+
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting;
+
+string bootstrapSettings =
+    $"BootstrapLogger.{StaticHostEnvironment.EnvironmentName}.json";
+
+if (StaticHostEnvironment.IsDevelopment)
+{
+    Console.WriteLine("Development bootstrap profile selected.");
+}
+```
+
+The value follows the Generic Host defaults: `DOTNET_`-prefixed environment variables are loaded
+first, process command-line arguments override them, and an unset environment defaults to
+`Production`. Arbitrary names are preserved, so `StaticHostEnvironment.IsEnvironment("QA")` works
+for custom environments as well. The value is captured once when `StaticHostEnvironment` is first
+initialized, matching the startup-oriented nature of the host environment.
+
+This is deliberately a Generic Host primitive. ASP.NET Core-specific `ASPNETCORE_` environment
+variables are not an additional source; applications that need this early static view should set the
+Generic Host environment through `DOTNET_ENVIRONMENT` or the process command line.
 
 ### Add last-known-good JSON reloads
 
