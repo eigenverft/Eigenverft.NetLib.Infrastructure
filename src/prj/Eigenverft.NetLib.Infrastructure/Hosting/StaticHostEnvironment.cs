@@ -7,11 +7,12 @@ using Microsoft.Extensions.Hosting;
 namespace Eigenverft.NetLib.Infrastructure.Hosting
 {
     /// <summary>
-    /// Exposes the process-level Generic Host environment before a host builder exists.
+    /// Exposes the process-level host environment before a Generic Host or ASP.NET Core builder exists.
     /// </summary>
     /// <remarks>
-    /// Resolution follows the Generic Host defaults: <c>DOTNET_</c>-prefixed environment variables,
-    /// then process command-line arguments, with <see cref="Environments.Production"/> as the default.
+    /// Resolution supports both Generic Host and ASP.NET Core startup conventions. Precedence is process
+    /// command-line arguments, then <c>DOTNET_ENVIRONMENT</c>, then <c>ASPNETCORE_ENVIRONMENT</c>, with
+    /// <see cref="Environments.Production"/> as the default.
     /// The resolved value is captured once when this type is first initialized.
     /// </remarks>
     public static class StaticHostEnvironment
@@ -20,7 +21,7 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting
             System.Environment.GetCommandLineArgs().Skip(1).ToArray());
 
         /// <summary>
-        /// Gets the resolved Generic Host environment name.
+        /// Gets the resolved host environment name.
         /// </summary>
         public static string EnvironmentName => ResolvedEnvironmentName;
 
@@ -53,6 +54,7 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting
         internal static string Resolve(string[]? args)
         {
             var configuration = new ConfigurationManager();
+            configuration.AddEnvironmentVariables(prefix: "ASPNETCORE_");
             configuration.AddEnvironmentVariables(prefix: "DOTNET_");
 
             if (args is { Length: > 0 })

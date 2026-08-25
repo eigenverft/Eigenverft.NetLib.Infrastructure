@@ -20,7 +20,7 @@ bootstrap primitives.
 | Configuration Sets | Coordinated multi-file profiles | `AddConfigurationSet(...)` |
 | Value preparation and protection | Validate, transform, or protect persisted values before publication | `SwitchableJsonRegistrationOptions` |
 | Certificates and diagnostics | Managed certificate recovery, configuration provenance, and bootstrap logging | Public certificate and hosting helpers |
-| Early host environment | Read the Generic Host environment before builder creation | `StaticHostEnvironment.EnvironmentName` |
+| Early host environment | Resolve the host environment before Generic Host or ASP.NET Core builder creation | `StaticHostEnvironment.EnvironmentName` |
 
 ## 📦 Installation
 
@@ -72,10 +72,11 @@ bool development = StaticHostEnvironment.IsDevelopment;
 bool customQa = StaticHostEnvironment.IsEnvironment("QA");
 ```
 
-`StaticHostEnvironment` follows the Generic Host defaults: `DOTNET_`-prefixed environment variables,
-then process command-line arguments, with `Production` as the default. Command-line values win and
-custom environment names are preserved. The value is captured once at first type initialization.
-ASP.NET Core-specific `ASPNETCORE_` variables are intentionally outside this Generic Host primitive.
+`StaticHostEnvironment` supports both Generic Host and ASP.NET Core startup conventions. Precedence is
+process command-line arguments, then `DOTNET_ENVIRONMENT`, then `ASPNETCORE_ENVIRONMENT`, with
+`Production` as the default. A normal Generic Host application simply skips the ASP.NET Core fallback
+when that variable is absent. Custom environment names are preserved, and the value is captured once
+at first type initialization.
 
 ### Add last-known-good JSON reloads
 
