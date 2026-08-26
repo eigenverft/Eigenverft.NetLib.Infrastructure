@@ -5,7 +5,7 @@ using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values;
 namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
 {
     /// <summary>
-    /// Selects existing JSON values that are encoded once during switchable-source registration and decoded during every load.
+    /// Selects JSON values that are kept encoded at rest before switchable-source loads and decoded in every published snapshot.
     /// </summary>
     public sealed class JsonConfigurationValueProtection
     {

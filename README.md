@@ -580,9 +580,10 @@ The resulting file mixes ordinary and protected values:
 
 ### Combine both for transparent profile loading
 
-Add `ValueProtection` when existing clear-text values should be protected automatically at startup
-and decoded before a profile becomes visible. The following is startup registration code, typically
-placed in `Program.cs`:
+Add `ValueProtection` when selected clear-text values should stay protected at rest while still being
+published as clear text to the application. Protection is applied before startup load and re-applied
+idempotently before runtime reloads and source switches. The following is startup registration code,
+typically placed in `Program.cs`:
 
 ```csharp
 // Resolve the package-managed settings directory and choose one root for all variants.

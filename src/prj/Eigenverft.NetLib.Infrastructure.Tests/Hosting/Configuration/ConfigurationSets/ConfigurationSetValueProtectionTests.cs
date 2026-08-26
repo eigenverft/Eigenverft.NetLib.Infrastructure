@@ -75,6 +75,52 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Configura
         }
 
         [TestMethod]
+        public void SwitchReprotectsInactiveProfileChangedToPlainTextAfterStartup()
+        {
+            using var directory = new TemporaryDirectory();
+            directory.Write(
+                Path.Combine("Operations", "Normal", "Features.json"),
+                "{ \"Profile\": \"Normal\", \"ApiKey\": \"normal-secret\" }");
+            string incidentPath = directory.Write(
+                Path.Combine("Operations", "Incident", "Features.json"),
+                "{ \"Profile\": \"Incident\", \"ApiKey\": \"incident-startup-secret\" }");
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+
+            builder
+                .AddConfigurationSet("OperationalProfile", "Normal", "Incident")
+                .AddSwitchableJson(
+                    "Operations",
+                    new SwitchableJsonRegistrationOptions
+                    {
+                        ReloadOnChange = true,
+                        ReloadDelayMilliseconds = 25,
+                        ValueProtection = JsonConfigurationValueProtection.ForKeys(
+                            ConfigurationValueCodecs.Base64,
+                            "ApiKey"),
+                    },
+                    "Features.json");
+            using IHost host = builder.Build();
+            IConfigurationSetCoordinator coordinator =
+                host.Services.GetRequiredKeyedService<IConfigurationSetCoordinator>("OperationalProfile");
+
+            // Configuration-set registration protected both profiles at startup. Simulate a later edit while Incident is
+            // inactive; there is intentionally no watcher on inactive profile files.
+            File.WriteAllText(
+                incidentPath,
+                "{ \"Profile\": \"Incident\", \"ApiKey\": \"incident-runtime-secret\" }");
+            StringAssert.Contains(File.ReadAllText(incidentPath), "incident-runtime-secret");
+
+            ConfigurationSetSwitchResult result = coordinator.TrySwitch("Incident");
+
+            Assert.AreEqual(ConfigurationSetSwitchStatus.Succeeded, result.Status);
+            Assert.AreEqual("Incident", coordinator.ActiveValue);
+            Assert.AreEqual("incident-runtime-secret", builder.Configuration["ApiKey"]);
+            string persisted = File.ReadAllText(incidentPath);
+            Assert.IsTrue(persisted.Contains("enc:q7m2n4:", StringComparison.Ordinal));
+            Assert.IsFalse(persisted.Contains("\"ApiKey\": \"incident-runtime-secret\"", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
         public void MissingInactiveFileRemainsMissingAndUsesExistingSwitchFailureSemantics()
         {
             using var directory = new TemporaryDirectory();

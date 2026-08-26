@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.ExceptionServices;
 using System.Linq;
+using System.Text.Json;
 
 using Microsoft.Extensions.Configuration.Json;
 
@@ -30,6 +31,7 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
         private readonly bool _reloadOnChange;
         private readonly int _reloadDelayMilliseconds;
         private readonly SwitchableJsonRuntimeFailurePolicy _runtimeFailurePolicy;
+        private readonly JsonConfigurationValueProtection? _valueProtection;
         private readonly IReadOnlyList<IJsonConfigurationSourcePreparation> _sourcePreparations;
         private string _currentSourcePath;
 
@@ -56,6 +58,7 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
             bool reloadOnChange,
             int reloadDelayMilliseconds,
             SwitchableJsonRuntimeFailurePolicy runtimeFailurePolicy,
+            JsonConfigurationValueProtection? valueProtection,
             IReadOnlyList<IJsonConfigurationSourcePreparation> sourcePreparations)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -80,6 +83,7 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
             _reloadOnChange = reloadOnChange;
             _reloadDelayMilliseconds = reloadDelayMilliseconds;
             _runtimeFailurePolicy = runtimeFailurePolicy;
+            _valueProtection = valueProtection;
             _sourcePreparations = sourcePreparations.ToArray();
         }
 
@@ -573,6 +577,11 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
 
             try
             {
+                // Protect before the prepared watcher exists so our own initial atomic rewrite cannot invalidate this switch.
+                // LoadPreparedSnapshot protects once more after watcher creation; that second idempotent pass closes the small
+                // race where an external writer may have changed the candidate between these two points.
+                ProtectSourceAtRest(requestedSourcePath);
+
                 if (_reloadOnChange)
                 {
                     watcherRelay = new PreparedSourceWatcherRelay(HandleActiveSourceChanged);
@@ -713,6 +722,8 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
 
             try
             {
+                ProtectSourceAtRest(requestedSourcePath);
+
                 if (_reloadOnChange)
                 {
                     watcherRelay = new PreparedSourceWatcherRelay(HandleActiveSourceChanged);
@@ -1072,9 +1083,39 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
 
         private IDictionary<string, string?> LoadPreparedSnapshot(string sourcePath)
         {
+            ProtectSourceAtRest(sourcePath);
             IDictionary<string, string?> data = JsonConfigurationSnapshotLoader.Load(sourcePath);
             JsonConfigurationSourcePreparationPipeline.Apply(sourcePath, data, _sourcePreparations);
             return new Dictionary<string, string?>(data, ConfigurationKeyComparer);
+        }
+
+        private void ProtectSourceAtRest(string sourcePath)
+        {
+            if (_valueProtection is null)
+            {
+                return;
+            }
+
+            try
+            {
+                _valueProtection.ProtectExistingFile(sourcePath);
+            }
+            catch (JsonException exception)
+            {
+                // Keep malformed protected JSON inside the same candidate-load contract as the normal JSON loader.
+                throw new FormatException($"JSON configuration source '{sourcePath}' is invalid.", exception);
+            }
+            catch (Exception exception) when (exception is not FormatException &&
+                exception is not UnauthorizedAccessException &&
+                exception is not IOException)
+            {
+                // Codec-specific protection failures participate in the existing source-preparation failure contract so
+                // runtime LKG, failure policy and lifecycle reporting remain consistent.
+                throw new JsonConfigurationSourcePreparationException(
+                    sourcePath,
+                    typeof(JsonConfigurationValueProtection),
+                    exception);
+            }
         }
 
         private ActiveSourceWatcher? CreateActiveWatcher(string sourcePath, long generation)
