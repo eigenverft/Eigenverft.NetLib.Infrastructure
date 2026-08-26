@@ -6,7 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Eigenverft.NetLib.Infrastructure.Security.Certificates
 {
-    /// <summary>Loads a managed PFX or returns a policy-controlled self-signed recovery certificate.</summary>
+    /// <summary>Loads a PFX and optionally returns a policy-controlled self-signed recovery certificate.</summary>
     public static class ManagedCertificateFile
     {
         // Locks are retained for the process lifetime. Removing a lock while another caller is
@@ -15,7 +15,7 @@ namespace Eigenverft.NetLib.Infrastructure.Security.Certificates
             OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
 
         /// <summary>
-        /// Loads a valid managed PFX, or creates a self-signed recovery certificate when the file
+        /// Loads a valid PFX. When recovery is enabled, creates a self-signed recovery certificate if the file
         /// is missing, outside its validity period, unreadable, password-mismatched, or otherwise unusable.
         /// </summary>
         /// <param name="options">The managed-file and replacement description.</param>
@@ -28,7 +28,6 @@ namespace Eigenverft.NetLib.Infrastructure.Security.Certificates
         public static ManagedCertificateResult LoadOrCreate(ManagedCertificateFileOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
-            ArgumentNullException.ThrowIfNull(options.Replacement);
 
             if (string.IsNullOrWhiteSpace(options.FilePath))
             {
@@ -40,12 +39,39 @@ namespace Eigenverft.NetLib.Infrastructure.Security.Certificates
 
             lock (pathLock)
             {
+                string password = options.Password ?? string.Empty;
+                if (options.RecoveryMode == CertificateRecoveryMode.None)
+                {
+                    return LoadRequiredLocked(fullPath, password);
+                }
+
+                ArgumentNullException.ThrowIfNull(options.Replacement);
                 return LoadOrCreateLocked(
                     fullPath,
-                    options.Password ?? string.Empty,
+                    password,
                     options.RecoveryMode,
                     options.Replacement);
             }
+        }
+
+        private static ManagedCertificateResult LoadRequiredLocked(string fullPath, string password)
+        {
+            X509Certificate2 certificate = ImportFile(fullPath, password);
+            ManagedCertificateAction action = Classify(certificate);
+            if (action != ManagedCertificateAction.Loaded)
+            {
+                certificate.Dispose();
+                throw new CryptographicException(
+                    $"The PFX certificate at '{fullPath}' is unusable ({action}) and certificate recovery is disabled.");
+            }
+
+            return new ManagedCertificateResult(
+                certificate,
+                ManagedCertificateAction.Loaded,
+                persisted: true,
+                existingFilePreserved: false,
+                loadException: null,
+                persistenceException: null);
         }
 
         private static ManagedCertificateResult LoadOrCreateLocked(
