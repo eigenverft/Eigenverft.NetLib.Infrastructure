@@ -21,9 +21,9 @@ namespace Eigenverft.NetLib.Infrastructure.Security.Certificates
         /// <param name="options">The managed-file and replacement description.</param>
         /// <returns>A usable caller-owned certificate and the performed action.</returns>
         /// <remarks>
-        /// <see cref="CertificateRecoveryMode.PreserveExisting"/> is the safe default: existing PFX
-        /// files are never replaced, while a generated certificate remains available in memory.
-        /// A persistence failure likewise does not discard a successfully generated certificate.
+        /// <see cref="CertificateRecoveryMode.PreserveExisting"/> is the safe default: recovery
+        /// certificates remain in memory and the configured PFX path is never created or replaced.
+        /// A persistence failure in a replacement mode likewise does not discard a successfully generated certificate.
         /// </remarks>
         public static ManagedCertificateResult LoadOrCreate(ManagedCertificateFileOptions options)
         {
@@ -105,13 +105,13 @@ namespace Eigenverft.NetLib.Infrastructure.Security.Certificates
 
             X509Certificate2 generated = SelfSignedCertificateFactory.Create(replacement);
             bool mayPersist = MayPersistRecovery(recoveryMode, recoveryAction);
-            if (existingFile && !mayPersist)
+            if (!mayPersist)
             {
                 return new ManagedCertificateResult(
                     generated,
                     recoveryAction,
                     persisted: false,
-                    existingFilePreserved: true,
+                    existingFilePreserved: existingFile,
                     loadException,
                     persistenceException: null);
             }
@@ -213,12 +213,17 @@ namespace Eigenverft.NetLib.Infrastructure.Security.Certificates
             CertificateRecoveryMode recoveryMode,
             ManagedCertificateAction recoveryAction)
         {
-            // Missing files are safe to create. Every replacement of an existing credential must
-            // be authorized explicitly by the selected policy and the classified failure reason.
-            return recoveryAction == ManagedCertificateAction.GeneratedForMissingFile ||
-                recoveryMode == CertificateRecoveryMode.ReplaceAnyUnusable ||
-                recoveryMode == CertificateRecoveryMode.ReplaceExpired &&
-                recoveryAction == ManagedCertificateAction.GeneratedForExpiredFile;
+            // Persistence is policy-controlled for both missing and existing credentials.
+            // PreserveExisting therefore never writes recovery material to the configured PFX path.
+            return recoveryMode switch
+            {
+                CertificateRecoveryMode.PreserveExisting => false,
+                CertificateRecoveryMode.ReplaceExpired =>
+                    recoveryAction is ManagedCertificateAction.GeneratedForMissingFile or
+                        ManagedCertificateAction.GeneratedForExpiredFile,
+                CertificateRecoveryMode.ReplaceAnyUnusable => true,
+                _ => false
+            };
         }
     }
 }

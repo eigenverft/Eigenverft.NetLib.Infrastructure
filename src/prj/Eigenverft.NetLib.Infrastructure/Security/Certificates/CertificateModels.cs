@@ -94,8 +94,8 @@ namespace Eigenverft.NetLib.Infrastructure.Security.Certificates
         public string? Password { get; init; }
 
         /// <summary>
-        /// Gets or initializes which existing PFX failures may replace the file.
-        /// The default preserves every existing file while still returning an in-memory recovery certificate.
+        /// Gets or initializes whether recovery certificates may be persisted to the configured PFX path.
+        /// The default never creates or replaces that path and returns recovery certificates only in memory.
         /// </summary>
         public CertificateRecoveryMode RecoveryMode { get; init; } = CertificateRecoveryMode.PreserveExisting;
 
@@ -107,8 +107,8 @@ namespace Eigenverft.NetLib.Infrastructure.Security.Certificates
     public enum CertificateRecoveryMode
     {
         /// <summary>
-        /// Creates and persists a missing PFX, but never replaces an existing unusable PFX.
-        /// An in-memory recovery certificate remains available to the caller.
+        /// Never creates or replaces the configured PFX path.
+        /// Missing or unusable files yield an in-memory recovery certificate only.
         /// </summary>
         PreserveExisting,
 

@@ -41,6 +41,7 @@ public sealed class ManagedCertificateFileTests
         {
             FilePath = path,
             Password = "test-password",
+            RecoveryMode = CertificateRecoveryMode.ReplaceAnyUnusable,
             Replacement = CreateReplacement("managed.test")
         };
 
@@ -62,6 +63,40 @@ public sealed class ManagedCertificateFileTests
                 Assert.IsTrue(loaded.Persisted);
                 Assert.AreEqual(createdThumbprint, loaded.Certificate.Thumbprint);
             }
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public void PreserveExistingKeepsMissingPfxRecoveryInMemoryOnly()
+    {
+        string workingDirectory = CreateWorkingDirectory();
+        string path = Path.Combine(workingDirectory, "external.pfx");
+
+        try
+        {
+            ManagedCertificateResult recovery = ManagedCertificateFile.LoadOrCreate(
+                new ManagedCertificateFileOptions
+                {
+                    FilePath = path,
+                    Password = "external-password",
+                    RecoveryMode = CertificateRecoveryMode.PreserveExisting,
+                    Replacement = CreateReplacement("external.test")
+                });
+
+            using (recovery.Certificate)
+            {
+                Assert.AreEqual(ManagedCertificateAction.GeneratedForMissingFile, recovery.Action);
+                Assert.IsFalse(recovery.Persisted);
+                Assert.IsFalse(recovery.ExistingFilePreserved);
+                Assert.IsNull(recovery.PersistenceException);
+                Assert.IsTrue(recovery.Certificate.HasPrivateKey);
+            }
+
+            Assert.IsFalse(File.Exists(path));
         }
         finally
         {
@@ -245,6 +280,7 @@ public sealed class ManagedCertificateFileTests
                 {
                     FilePath = Path.Combine(parentFile, "managed.pfx"),
                     Password = "test-password",
+                    RecoveryMode = CertificateRecoveryMode.ReplaceAnyUnusable,
                     Replacement = CreateReplacement("managed.test")
                 });
 
