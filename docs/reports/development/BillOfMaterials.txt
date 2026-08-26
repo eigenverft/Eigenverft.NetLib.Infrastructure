@@ -1,4 +1,4 @@
-﻿Bill of Materials Report for Projects: Eigenverft.NetLib.Infrastructure - 2026-08-24 UTC
+﻿Bill of Materials Report for Projects: Eigenverft.NetLib.Infrastructure - 2026-08-26 UTC
 
 ProjectName                      Package                      ResolvedVersion
 -----------                      -------                      ---------------

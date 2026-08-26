@@ -9,7 +9,7 @@
       <meta name="viewport" content="width=device-width">
       <meta name="title" content="Class ManagedCertificateFileOptions | Eigenverft.NetLib.Infrastructure ">
     
-    <meta name="description" content="Describes a managed PFX file and its self-signed replacement.">
+    <meta name="description" content="Describes a PFX file and optional self-signed recovery behavior.">
       <link rel="shortcut icon" href="../favicon.ico">
       <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
       <link rel="stylesheet" href="../styles/docfx.css">
@@ -50,7 +50,7 @@
                           <a href="../docs/introduction.html" title="Guides">Guides</a>
                       </li>
                       <li>
-                          <a href="../api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.html" title="API">API</a>
+                          <a href="../api/Eigenverft.NetLib.Infrastructure.Hosting.html" title="API">API</a>
                       </li>
                 </ul>
             </div>
@@ -80,6 +80,16 @@
                 <div class="toc" id="toc">
 
                   <ul class="nav level1">
+                    <li class="">
+                      <span class="expand-stub"></span>
+                      <a href="Eigenverft.NetLib.Infrastructure.Hosting.html" title="Eigenverft.NetLib.Infrastructure.Hosting" class="">Eigenverft.NetLib.Infrastructure.Hosting</a>
+
+                        <ul class="nav level2">
+                          <li class="">
+                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html" title="StaticHostEnvironment" class="">StaticHostEnvironment</a>
+                          </li>
+                        </ul>
+                    </li>
                     <li class="">
                       <span class="expand-stub"></span>
                       <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.html" title="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets" class="">Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets</a>
@@ -264,6 +274,9 @@
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueKind.html" title="ConfigurationValueKind" class="">ConfigurationValueKind</a>
                           </li>
                           <li class="">
+                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.ConfigurationValueRecovery.html" title="ConfigurationValueRecovery" class="">ConfigurationValueRecovery</a>
+                          </li>
+                          <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values.JsonConfigurationFileEncoder.html" title="JsonConfigurationFileEncoder" class="">JsonConfigurationFileEncoder</a>
                           </li>
                         </ul>
@@ -439,7 +452,7 @@
 
 
   <h1 id="Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions" class="text-break">Class ManagedCertificateFileOptions</h1>
-  <div class="markdown level0 summary"><p>Describes a managed PFX file and its self-signed replacement.</p>
+  <div class="markdown level0 summary"><p>Describes a PFX file and optional self-signed recovery behavior.</p>
 </div>
   <div class="markdown level0 conceptual"></div>
   <div class="inheritance">
@@ -478,10 +491,10 @@
 </h3>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_FilePath.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.FilePath%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/runtime-json-value-protection/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_FilePath.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.FilePath%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/CertificateModels.cs/#L91">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/runtime-json-value-protection/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/CertificateModels.cs/#L91">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_FilePath_" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.FilePath*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_FilePath" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.FilePath">FilePath</h4>
@@ -509,10 +522,10 @@
   </table>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_Password.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.Password%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/runtime-json-value-protection/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_Password.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.Password%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/CertificateModels.cs/#L94">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/runtime-json-value-protection/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/CertificateModels.cs/#L94">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_Password_" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.Password*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_Password" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.Password">Password</h4>
@@ -540,15 +553,15 @@
   </table>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_RecoveryMode.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.RecoveryMode%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/runtime-json-value-protection/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_RecoveryMode.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.RecoveryMode%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/CertificateModels.cs/#L100">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/runtime-json-value-protection/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/CertificateModels.cs/#L100">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_RecoveryMode_" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.RecoveryMode*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_RecoveryMode" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.RecoveryMode">RecoveryMode</h4>
-  <div class="markdown level1 summary"><p>Gets or initializes which existing PFX failures may replace the file.
-The default preserves every existing file while still returning an in-memory recovery certificate.</p>
+  <div class="markdown level1 summary"><p>Gets or initializes whether recovery certificates may be persisted to the configured PFX path.
+The default never creates or replaces that path and returns recovery certificates only in memory.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
@@ -572,19 +585,20 @@ The default preserves every existing file while still returning an in-memory rec
   </table>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_Replacement.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.Replacement%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/runtime-json-value-protection/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_Replacement.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.Replacement%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/CertificateModels.cs/#L103">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/runtime-json-value-protection/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/CertificateModels.cs/#L106">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_Replacement_" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.Replacement*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_Replacement" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.Replacement">Replacement</h4>
-  <div class="markdown level1 summary"><p>Gets or initializes the certificate created when the managed PFX is unusable.</p>
+  <div class="markdown level1 summary"><p>Gets or initializes the certificate created when recovery is enabled and the PFX is unusable.
+This value is not required when <a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.html#Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions_RecoveryMode">RecoveryMode</a> is <a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode.html#Eigenverft_NetLib_Infrastructure_Security_Certificates_CertificateRecoveryMode_None">None</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public required SelfSignedCertificateOptions Replacement { get; init; }</code></pre>
+    <pre><code class="lang-csharp hljs">public SelfSignedCertificateOptions? Replacement { get; init; }</code></pre>
   </div>
   <h5 class="propertyValue">Property Value</h5>
   <table class="table table-bordered table-condensed">
@@ -610,10 +624,10 @@ The default preserves every existing file while still returning an in-memory rec
               <div class="contribution">
                 <ul class="nav">
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/writeback-json-store/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/runtime-json-value-protection/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
                   </li>
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/writeback-json-store/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/CertificateModels.cs/#L88" class="contribution-link">View Source</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/runtime-json-value-protection/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/CertificateModels.cs/#L88" class="contribution-link">View Source</a>
                   </li>
                 </ul>
               </div>
