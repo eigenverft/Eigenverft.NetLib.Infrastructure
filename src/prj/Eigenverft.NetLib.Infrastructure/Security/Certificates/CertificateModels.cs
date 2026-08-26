@@ -84,7 +84,7 @@ namespace Eigenverft.NetLib.Infrastructure.Security.Certificates
         public IReadOnlyCollection<IPAddress> IpAddresses { get; init; } = Array.Empty<IPAddress>();
     }
 
-    /// <summary>Describes a managed PFX file and its self-signed replacement.</summary>
+    /// <summary>Describes a PFX file and optional self-signed recovery behavior.</summary>
     public sealed class ManagedCertificateFileOptions
     {
         /// <summary>Gets or initializes the complete PFX path.</summary>
@@ -94,35 +94,45 @@ namespace Eigenverft.NetLib.Infrastructure.Security.Certificates
         public string? Password { get; init; }
 
         /// <summary>
-        /// Gets or initializes which existing PFX failures may replace the file.
-        /// The default preserves every existing file while still returning an in-memory recovery certificate.
+        /// Gets or initializes whether recovery certificates may be persisted to the configured PFX path.
+        /// The default never creates or replaces that path and returns recovery certificates only in memory.
         /// </summary>
         public CertificateRecoveryMode RecoveryMode { get; init; } = CertificateRecoveryMode.PreserveExisting;
 
-        /// <summary>Gets or initializes the certificate created when the managed PFX is unusable.</summary>
-        public required SelfSignedCertificateOptions Replacement { get; init; }
+        /// <summary>
+        /// Gets or initializes the certificate created when recovery is enabled and the PFX is unusable.
+        /// This value is not required when <see cref="RecoveryMode"/> is <see cref="CertificateRecoveryMode.None"/>.
+        /// </summary>
+        public SelfSignedCertificateOptions? Replacement { get; init; }
     }
 
-    /// <summary>Controls when managed-certificate recovery may replace an existing PFX file.</summary>
+    /// <summary>Controls whether and how an unusable PFX is recovered.</summary>
     public enum CertificateRecoveryMode
     {
         /// <summary>
-        /// Creates and persists a missing PFX, but never replaces an existing unusable PFX.
-        /// An in-memory recovery certificate remains available to the caller.
+        /// Never creates or replaces the configured PFX path.
+        /// Missing or unusable files yield an in-memory recovery certificate only.
         /// </summary>
-        PreserveExisting,
+        PreserveExisting = 0,
 
         /// <summary>
         /// Creates a missing PFX and replaces an existing PFX only after it was successfully
         /// imported and found to be expired.
         /// </summary>
-        ReplaceExpired,
+        ReplaceExpired = 1,
 
         /// <summary>
         /// Replaces any existing PFX that cannot be used, including files affected by import,
         /// password, read, or access failures. This mode can overwrite an externally managed PFX.
         /// </summary>
-        ReplaceAnyUnusable
+        ReplaceAnyUnusable = 2,
+
+        /// <summary>
+        /// Disables certificate recovery. The configured PFX must exist, import successfully,
+        /// contain a private key, and be currently valid; otherwise loading fails without creating
+        /// a self-signed certificate or changing the configured path.
+        /// </summary>
+        None = 3
     }
 
     /// <summary>Describes what a managed-certificate operation did.</summary>

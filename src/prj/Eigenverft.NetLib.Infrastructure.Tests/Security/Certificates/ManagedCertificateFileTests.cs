@@ -41,6 +41,7 @@ public sealed class ManagedCertificateFileTests
         {
             FilePath = path,
             Password = "test-password",
+            RecoveryMode = CertificateRecoveryMode.ReplaceAnyUnusable,
             Replacement = CreateReplacement("managed.test")
         };
 
@@ -62,6 +63,126 @@ public sealed class ManagedCertificateFileTests
                 Assert.IsTrue(loaded.Persisted);
                 Assert.AreEqual(createdThumbprint, loaded.Certificate.Thumbprint);
             }
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public void PreserveExistingKeepsMissingPfxRecoveryInMemoryOnly()
+    {
+        string workingDirectory = CreateWorkingDirectory();
+        string path = Path.Combine(workingDirectory, "external.pfx");
+
+        try
+        {
+            ManagedCertificateResult recovery = ManagedCertificateFile.LoadOrCreate(
+                new ManagedCertificateFileOptions
+                {
+                    FilePath = path,
+                    Password = "external-password",
+                    RecoveryMode = CertificateRecoveryMode.PreserveExisting,
+                    Replacement = CreateReplacement("external.test")
+                });
+
+            using (recovery.Certificate)
+            {
+                Assert.AreEqual(ManagedCertificateAction.GeneratedForMissingFile, recovery.Action);
+                Assert.IsFalse(recovery.Persisted);
+                Assert.IsFalse(recovery.ExistingFilePreserved);
+                Assert.IsNull(recovery.PersistenceException);
+                Assert.IsTrue(recovery.Certificate.HasPrivateKey);
+            }
+
+            Assert.IsFalse(File.Exists(path));
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public void NoneLoadsValidPfxWithoutReplacementOptions()
+    {
+        string workingDirectory = CreateWorkingDirectory();
+        string path = Path.Combine(workingDirectory, "external.pfx");
+
+        try
+        {
+            using X509Certificate2 source = SelfSignedCertificateFactory.Create(CreateReplacement("external.test"));
+            File.WriteAllBytes(path, source.Export(X509ContentType.Pfx, "external-password"));
+
+            ManagedCertificateResult loaded = ManagedCertificateFile.LoadOrCreate(
+                new ManagedCertificateFileOptions
+                {
+                    FilePath = path,
+                    Password = "external-password",
+                    RecoveryMode = CertificateRecoveryMode.None
+                });
+
+            using (loaded.Certificate)
+            {
+                Assert.AreEqual(ManagedCertificateAction.Loaded, loaded.Action);
+                Assert.IsTrue(loaded.Persisted);
+                Assert.AreEqual(source.Thumbprint, loaded.Certificate.Thumbprint);
+            }
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public void NonePropagatesMissingPfxWithoutCreatingRecoveryMaterial()
+    {
+        string workingDirectory = CreateWorkingDirectory();
+        string path = Path.Combine(workingDirectory, "external.pfx");
+
+        try
+        {
+            Assert.ThrowsExactly<FileNotFoundException>(() =>
+                ManagedCertificateFile.LoadOrCreate(
+                    new ManagedCertificateFileOptions
+                    {
+                        FilePath = path,
+                        Password = "external-password",
+                        RecoveryMode = CertificateRecoveryMode.None
+                    }));
+
+            Assert.IsFalse(File.Exists(path));
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public void NoneRejectsExpiredPfxWithoutReplacingIt()
+    {
+        string workingDirectory = CreateWorkingDirectory();
+        string path = Path.Combine(workingDirectory, "external.pfx");
+
+        try
+        {
+            WriteExpiredCertificate(path, "external-password");
+            byte[] original = File.ReadAllBytes(path);
+
+            CryptographicException exception = Assert.ThrowsExactly<CryptographicException>(() =>
+                ManagedCertificateFile.LoadOrCreate(
+                    new ManagedCertificateFileOptions
+                    {
+                        FilePath = path,
+                        Password = "external-password",
+                        RecoveryMode = CertificateRecoveryMode.None
+                    }));
+
+            StringAssert.Contains(exception.Message, nameof(ManagedCertificateAction.GeneratedForExpiredFile));
+            CollectionAssert.AreEqual(original, File.ReadAllBytes(path));
         }
         finally
         {
@@ -245,6 +366,7 @@ public sealed class ManagedCertificateFileTests
                 {
                     FilePath = Path.Combine(parentFile, "managed.pfx"),
                     Password = "test-password",
+                    RecoveryMode = CertificateRecoveryMode.ReplaceAnyUnusable,
                     Replacement = CreateReplacement("managed.test")
                 });
 
