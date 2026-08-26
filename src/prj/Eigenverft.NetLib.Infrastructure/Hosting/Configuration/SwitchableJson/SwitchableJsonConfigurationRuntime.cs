@@ -577,9 +577,10 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
 
             try
             {
-                // Protect before the prepared watcher exists so our own initial atomic rewrite cannot invalidate this switch.
-                // LoadPreparedSnapshot protects once more after watcher creation; that second idempotent pass closes the small
-                // race where an external writer may have changed the candidate between these two points.
+                // Protect before the prepared watcher exists so our own first rewrite cannot invalidate this switch. If an
+                // external writer changes the candidate before watcher activation, LoadPreparedSnapshot checks protection again
+                // afterwards. A required second rewrite is deliberately conservative: the prepared watcher may mark the candidate
+                // stale rather than guessing whether an observed change was internal or external.
                 ProtectSourceAtRest(requestedSourcePath);
 
                 if (_reloadOnChange)
@@ -722,8 +723,6 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
 
             try
             {
-                ProtectSourceAtRest(requestedSourcePath);
-
                 if (_reloadOnChange)
                 {
                     watcherRelay = new PreparedSourceWatcherRelay(HandleActiveSourceChanged);
@@ -1100,7 +1099,7 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
             {
                 _valueProtection.ProtectExistingFile(sourcePath);
             }
-            catch (JsonException exception)
+            catch (Exception exception) when (exception is JsonException or InvalidDataException)
             {
                 // Keep malformed protected JSON inside the same candidate-load contract as the normal JSON loader.
                 throw new FormatException($"JSON configuration source '{sourcePath}' is invalid.", exception);

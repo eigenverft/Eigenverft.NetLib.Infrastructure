@@ -31,8 +31,10 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
         /// <summary>Gets or initializes at-rest protection for selected values in switchable JSON files.</summary>
         /// <remarks>
         /// Matching clear-text values are encoded before initial load and are re-protected idempotently before runtime source
-        /// loads, including active-file reloads and source switches. The corresponding decoder always runs before
-        /// <see cref="CandidatePreparation"/> so application-owned preparation observes clear text.
+        /// loads, including active-file reloads and source switches. Protection is therefore load-bound rather than a continuous
+        /// background invariant and may write the source file; runtime use requires write access when matching clear text is present.
+        /// The corresponding decoder always runs before <see cref="CandidatePreparation"/> so application-owned preparation
+        /// observes clear text.
         /// </remarks>
         public JsonConfigurationValueProtection? ValueProtection { get; init; }
 

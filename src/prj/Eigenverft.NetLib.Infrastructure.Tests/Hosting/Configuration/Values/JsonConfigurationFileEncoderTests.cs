@@ -1,7 +1,11 @@
 using System;
 using System.IO;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values;
+using Eigenverft.NetLib.Infrastructure.Transformations;
 
 namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Values
 {
@@ -115,6 +119,202 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Values
             string encoded = document.RootElement.GetProperty("ApiToken").GetString()!;
             Assert.IsTrue(codec.TryDecode(encoded, out string clearText));
             Assert.AreEqual("secret", clearText);
+        }
+
+        [TestMethod]
+        public void AlreadyProtectedReadOnlyFileRemainsAValidNoOp()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return;
+            }
+
+            using var directory = new TemporaryDirectory();
+            string path = directory.Write("settings.json", "{ \"ApiKey\": \"secret\" }");
+            _ = JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(
+                path,
+                "ApiKey",
+                ConfigurationValueCodecs.Base64);
+            string protectedContent = File.ReadAllText(path);
+            File.SetAttributes(path, File.GetAttributes(path) | FileAttributes.ReadOnly);
+
+            try
+            {
+                int updated = JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(
+                    path,
+                    "ApiKey",
+                    ConfigurationValueCodecs.Base64);
+
+                Assert.AreEqual(0, updated);
+                Assert.AreEqual(protectedContent, File.ReadAllText(path));
+            }
+            finally
+            {
+                File.SetAttributes(path, File.GetAttributes(path) & ~FileAttributes.ReadOnly);
+            }
+        }
+
+        [TestMethod]
+        public void ClearTextReadOnlyFileStillRequiresWriteAccess()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return;
+            }
+
+            using var directory = new TemporaryDirectory();
+            string path = directory.Write("settings.json", "{ \"ApiKey\": \"secret\" }");
+            string original = File.ReadAllText(path);
+            File.SetAttributes(path, File.GetAttributes(path) | FileAttributes.ReadOnly);
+
+            try
+            {
+                _ = Assert.ThrowsExactly<UnauthorizedAccessException>(() =>
+                    JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(
+                        path,
+                        "ApiKey",
+                        ConfigurationValueCodecs.Base64));
+                Assert.AreEqual(original, File.ReadAllText(path));
+            }
+            finally
+            {
+                File.SetAttributes(path, File.GetAttributes(path) & ~FileAttributes.ReadOnly);
+            }
+        }
+
+        [TestMethod]
+        public async Task ConcurrentExternalWriterWinsWithoutBeingOverwrittenByOlderProtectionSnapshot()
+        {
+            using var directory = new TemporaryDirectory();
+            string path = directory.Write(
+                "settings.json",
+                "{ \"Revision\": \"A\", \"ApiKey\": \"secret-a\" }");
+            using var entered = new ManualResetEventSlim();
+            using var release = new ManualResetEventSlim();
+            ConfigurationValueCodec codec = CreateBlockingCodec(entered, release);
+
+            Task<int> protection = Task.Run(() =>
+                JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(path, "ApiKey", codec));
+            Assert.IsTrue(entered.Wait(TimeSpan.FromSeconds(5)), "Protection did not reach the blocked transform.");
+
+            Task writer = Task.Run(() =>
+            {
+                while (true)
+                {
+                    try
+                    {
+                        File.WriteAllText(path, "{ \"Revision\": \"B\", \"ApiKey\": \"secret-b\" }");
+                        return;
+                    }
+                    catch (IOException)
+                    {
+                        Thread.Sleep(5);
+                    }
+                }
+            });
+
+            release.Set();
+            _ = await protection.WaitAsync(TimeSpan.FromSeconds(5));
+            await writer.WaitAsync(TimeSpan.FromSeconds(5));
+
+            string persisted = File.ReadAllText(path);
+            using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(persisted);
+            Assert.AreEqual("B", document.RootElement.GetProperty("Revision").GetString());
+            string persistedApiKey = document.RootElement.GetProperty("ApiKey").GetString()!;
+            string effectiveApiKey = codec.TryDecode(persistedApiKey, out string decodedApiKey)
+                ? decodedApiKey
+                : persistedApiKey;
+            Assert.AreEqual("secret-b", effectiveApiKey);
+            Assert.IsFalse(persisted.Contains("secret-a", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public async Task ConcurrentDeleteIsNeverResurrectedFromProtectionSnapshot()
+        {
+            using var directory = new TemporaryDirectory();
+            string path = directory.Write(
+                "settings.json",
+                "{ \"Revision\": \"A\", \"ApiKey\": \"secret-a\" }");
+            using var entered = new ManualResetEventSlim();
+            using var release = new ManualResetEventSlim();
+            ConfigurationValueCodec codec = CreateBlockingCodec(entered, release);
+
+            Task<int> protection = Task.Run(() =>
+                JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(path, "ApiKey", codec));
+            Assert.IsTrue(entered.Wait(TimeSpan.FromSeconds(5)), "Protection did not reach the blocked transform.");
+
+            Task delete = Task.Run(() =>
+            {
+                while (File.Exists(path))
+                {
+                    try
+                    {
+                        File.Delete(path);
+                    }
+                    catch (IOException)
+                    {
+                        Thread.Sleep(5);
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        Thread.Sleep(5);
+                    }
+                }
+            });
+
+            release.Set();
+            try
+            {
+                _ = await protection.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            catch (FileNotFoundException)
+            {
+                // The delete won immediately after the exclusive protection handle was released.
+            }
+            catch (IOException)
+            {
+                // Post-write verification can observe the concurrently completed delete and reject the protection attempt.
+            }
+
+            await delete.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.IsFalse(File.Exists(path));
+        }
+
+        private static ConfigurationValueCodec CreateBlockingCodec(
+            ManualResetEventSlim entered,
+            ManualResetEventSlim release)
+        {
+            int invocation = 0;
+            var transform = new ReversibleStringTransform(
+                "BlockingBase64",
+                value =>
+                {
+                    if (Interlocked.Increment(ref invocation) == 1)
+                    {
+                        entered.Set();
+                        if (!release.Wait(TimeSpan.FromSeconds(5)))
+                        {
+                            throw new TimeoutException("Blocking codec was not released.");
+                        }
+                    }
+
+                    return Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
+                },
+                (string transformed, out string original) =>
+                {
+                    try
+                    {
+                        original = Encoding.UTF8.GetString(Convert.FromBase64String(transformed));
+                        return true;
+                    }
+                    catch (FormatException)
+                    {
+                        original = transformed;
+                        return false;
+                    }
+                });
+
+            return new ConfigurationValueCodec("BlockingBase64", ConfigurationValueKind.Base64, transform);
         }
 
         private sealed class TemporaryDirectory : IDisposable

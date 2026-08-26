@@ -148,6 +148,7 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Switchabl
         {
             using var directory = new TemporaryDirectory();
             string path = directory.Write("settings.json", "{ \"ApiKey\": \"initial-secret\" }");
+            var preparation = new CountingPreparation();
             HostApplicationBuilder builder = CreateBuilder(directory.Path);
             builder.AddSwitchableJsonFile(
                 "settings",
@@ -159,6 +160,7 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Switchabl
                     ValueProtection = JsonConfigurationValueProtection.ForKeys(
                         ConfigurationValueCodecs.Base64,
                         "ApiKey"),
+                    CandidatePreparation = JsonConfigurationCandidatePreparations.From("Count", preparation),
                 });
             using IHost host = builder.Build();
             ISwitchableJsonConfiguration runtime =
@@ -166,6 +168,8 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Switchabl
             var completion = new TaskCompletionSource<SwitchableJsonConfigurationEventArgs>(
                 TaskCreationOptions.RunContinuationsAsynchronously);
             int rejectedCount = 0;
+            int reloadedCount = 0;
+            int changedReloadCount = 0;
             runtime.LifecycleChanged += (_, args) =>
             {
                 if (args.Kind == SwitchableJsonConfigurationEventKind.ActiveSourceReloadRejected)
@@ -173,9 +177,14 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Switchabl
                     Interlocked.Increment(ref rejectedCount);
                 }
 
-                if (args.Kind == SwitchableJsonConfigurationEventKind.ActiveSourceReloaded && args.ConfigurationChanged)
+                if (args.Kind == SwitchableJsonConfigurationEventKind.ActiveSourceReloaded)
                 {
-                    completion.TrySetResult(args);
+                    Interlocked.Increment(ref reloadedCount);
+                    if (args.ConfigurationChanged)
+                    {
+                        Interlocked.Increment(ref changedReloadCount);
+                        completion.TrySetResult(args);
+                    }
                 }
             };
 
@@ -189,10 +198,16 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Switchabl
             Assert.IsTrue(persisted.Contains("enc:q7m2n4:", StringComparison.Ordinal));
             Assert.IsFalse(persisted.Contains("\"ApiKey\": \"runtime-secret\"", StringComparison.Ordinal));
 
-            // The protection write can itself produce one coalesced watcher notification. Because the second pass is
-            // idempotent it must settle without a rejected candidate or a write loop.
+            // The protection write may itself produce one coalesced watcher notification. That optional second pass is an
+            // accepted idempotent no-op: it may prepare again, but it must not reject or publish another configuration change.
             await Task.Delay(300);
+            int observedReloads = Volatile.Read(ref reloadedCount);
             Assert.AreEqual(0, Volatile.Read(ref rejectedCount));
+            Assert.AreEqual(1, Volatile.Read(ref changedReloadCount));
+            Assert.IsTrue(
+                observedReloads is >= 1 and <= 2,
+                $"Expected one external reload and at most one idempotent self-reload, observed {observedReloads}.");
+            Assert.AreEqual(1 + observedReloads, preparation.InvocationCount);
             Assert.AreEqual("runtime-secret", builder.Configuration["ApiKey"]);
         }
 
@@ -224,6 +239,31 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Switchabl
             using var directory = new TemporaryDirectory();
             directory.Write("A.json", "{ \"ApiKey\": \"stable-secret\" }");
             directory.Write("B.json", "{ invalid-json }");
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+            builder.AddSwitchableJsonFile(
+                "settings",
+                "A.json",
+                Options(JsonConfigurationValueProtection.ForKeys(
+                    ConfigurationValueCodecs.Base64,
+                    "ApiKey")));
+            using IHost host = builder.Build();
+            ISwitchableJsonConfiguration runtime =
+                host.Services.GetRequiredKeyedService<ISwitchableJsonConfiguration>("settings");
+
+            SwitchableJsonSwitchResult result = runtime.TrySwitch("B.json");
+
+            Assert.AreEqual(SwitchableJsonSwitchStatus.Rejected, result.Status);
+            Assert.AreEqual(SwitchableJsonFailureKind.InvalidJson, result.FailureKind);
+            Assert.AreEqual("stable-secret", builder.Configuration["ApiKey"]);
+            StringAssert.EndsWith(runtime.CurrentSourcePath, "A.json");
+        }
+
+        [TestMethod]
+        public void NullRootProtectedSwitchCandidateIsRejectedAsInvalidJson()
+        {
+            using var directory = new TemporaryDirectory();
+            directory.Write("A.json", "{ \"ApiKey\": \"stable-secret\" }");
+            directory.Write("B.json", "null");
             HostApplicationBuilder builder = CreateBuilder(directory.Path);
             builder.AddSwitchableJsonFile(
                 "settings",
@@ -478,11 +518,13 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Switchabl
 
         private sealed class CountingPreparation : IJsonConfigurationSourcePreparation
         {
-            public int InvocationCount { get; private set; }
+            private int _invocationCount;
+
+            public int InvocationCount => Volatile.Read(ref _invocationCount);
 
             public void Prepare(JsonConfigurationSourcePreparationContext context)
             {
-                InvocationCount++;
+                Interlocked.Increment(ref _invocationCount);
             }
         }
 
