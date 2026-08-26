@@ -9,7 +9,7 @@
       <meta name="viewport" content="width=device-width">
       <meta name="title" content="Enum CertificateRecoveryMode | Eigenverft.NetLib.Infrastructure ">
     
-    <meta name="description" content="Controls when managed-certificate recovery may replace an existing PFX file.">
+    <meta name="description" content="Controls whether and how an unusable PFX is recovered.">
       <link rel="shortcut icon" href="../favicon.ico">
       <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
       <link rel="stylesheet" href="../styles/docfx.css">
@@ -453,7 +453,7 @@
 
 
   <h1 id="Eigenverft_NetLib_Infrastructure_Security_Certificates_CertificateRecoveryMode" data-uid="Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode" class="text-break">Enum CertificateRecoveryMode</h1>
-  <div class="markdown level0 summary"><p>Controls when managed-certificate recovery may replace an existing PFX file.</p>
+  <div class="markdown level0 summary"><p>Controls whether and how an unusable PFX is recovered.</p>
 </div>
   <div class="markdown level0 conceptual"></div>
   <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.html">Security</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.Certificates.html">Certificates</a></h6>
@@ -472,6 +472,13 @@
       </tr>
     <thead>
     </thead></thead><tbody>
+      <tr>
+        <td id="Eigenverft_NetLib_Infrastructure_Security_Certificates_CertificateRecoveryMode_None">None</td>
+        <td><p>Disables certificate recovery. The configured PFX must exist, import successfully,
+contain a private key, and be currently valid; otherwise loading fails without creating
+a self-signed certificate or changing the configured path.</p>
+</td>
+      </tr>
       <tr>
         <td id="Eigenverft_NetLib_Infrastructure_Security_Certificates_CertificateRecoveryMode_PreserveExisting">PreserveExisting</td>
         <td><p>Never creates or replaces the configured PFX path.
@@ -503,7 +510,7 @@ imported and found to be expired.</p>
                     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Security_Certificates_CertificateRecoveryMode.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
                   </li>
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/CertificateModels.cs/#L107" class="contribution-link">View Source</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Security/Certificates/CertificateModels.cs/#L110" class="contribution-link">View Source</a>
                   </li>
                 </ul>
               </div>

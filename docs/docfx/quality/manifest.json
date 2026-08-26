@@ -1190,7 +1190,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode",
-      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode.yml\" sourcestartlinenumber=\"1\">Controls when managed-certificate recovery may replace an existing PFX file.</p>\n"
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode.yml\" sourcestartlinenumber=\"1\">Controls whether and how an unusable PFX is recovered.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -1232,7 +1232,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFile",
-      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFile.yml\" sourcestartlinenumber=\"1\">Loads a managed PFX or returns a policy-controlled self-signed recovery certificate.</p>\n"
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFile.yml\" sourcestartlinenumber=\"1\">Loads a PFX and optionally returns a policy-controlled self-signed recovery certificate.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -1246,7 +1246,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions",
-      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.yml\" sourcestartlinenumber=\"1\">Describes a managed PFX file and its self-signed replacement.</p>\n"
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.yml\" sourcestartlinenumber=\"1\">Describes a PFX file and optional self-signed recovery behavior.</p>\n"
     },
     {
       "type": "ManagedReference",
