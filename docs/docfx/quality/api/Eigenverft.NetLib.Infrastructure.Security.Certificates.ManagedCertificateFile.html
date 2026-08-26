@@ -544,9 +544,9 @@ is missing, outside its validity period, unreadable, password-mismatched, or oth
     </tbody>
   </table>
   <h5 id="Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFile_LoadOrCreate_Eigenverft_NetLib_Infrastructure_Security_Certificates_ManagedCertificateFileOptions__remarks">Remarks</h5>
-  <div class="markdown level1 remarks"><p><a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode.html#Eigenverft_NetLib_Infrastructure_Security_Certificates_CertificateRecoveryMode_PreserveExisting">PreserveExisting</a> is the safe default: existing PFX
-files are never replaced, while a generated certificate remains available in memory.
-A persistence failure likewise does not discard a successfully generated certificate.</p>
+  <div class="markdown level1 remarks"><p><a class="xref" href="Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode.html#Eigenverft_NetLib_Infrastructure_Security_Certificates_CertificateRecoveryMode_PreserveExisting">PreserveExisting</a> is the safe default: recovery
+certificates remain in memory and the configured PFX path is never created or replaced.
+A persistence failure in a replacement mode likewise does not discard a successfully generated certificate.</p>
 </div>
 
 </article>
