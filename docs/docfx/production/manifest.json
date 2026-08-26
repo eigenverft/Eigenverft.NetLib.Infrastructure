@@ -560,7 +560,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection",
-      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.yml\" sourcestartlinenumber=\"1\">Selects existing JSON values that are encoded once during switchable-source registration and decoded during every load.</p>\n"
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.yml\" sourcestartlinenumber=\"1\">Selects JSON values that are kept encoded at rest before switchable-source loads and decoded in every published snapshot.</p>\n"
     },
     {
       "type": "ManagedReference",

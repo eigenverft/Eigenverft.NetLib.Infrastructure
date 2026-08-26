@@ -652,11 +652,11 @@
     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_SwitchableJsonRegistrationOptions_ValueProtection.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.ValueProtection%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/SwitchableJson/SwitchableJsonRegistrationOptions.cs/#L36">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/SwitchableJson/SwitchableJsonRegistrationOptions.cs/#L39">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_SwitchableJsonRegistrationOptions_ValueProtection_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.ValueProtection*"></a>
   <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_SwitchableJsonRegistrationOptions_ValueProtection" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.ValueProtection">ValueProtection</h4>
-  <div class="markdown level1 summary"><p>Gets or initializes startup protection for selected values in existing JSON files.</p>
+  <div class="markdown level1 summary"><p>Gets or initializes at-rest protection for selected values in switchable JSON files.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
@@ -679,8 +679,11 @@
     </tbody>
   </table>
   <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_SwitchableJsonRegistrationOptions_ValueProtection_remarks">Remarks</h5>
-  <div class="markdown level1 remarks"><p>Matching clear-text values are encoded once before provider registration. The corresponding decoder always runs
-before <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_SwitchableJsonRegistrationOptions_CandidatePreparation">CandidatePreparation</a> so application-owned preparation observes clear text.</p>
+  <div class="markdown level1 remarks"><p>Matching clear-text values are encoded before initial load and are re-protected idempotently before runtime source
+loads, including active-file reloads and source switches. Protection is therefore load-bound rather than a continuous
+background invariant and may write the source file; runtime use requires write access when matching clear text is present.
+The corresponding decoder always runs before <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.SwitchableJsonRegistrationOptions.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_SwitchableJson_SwitchableJsonRegistrationOptions_CandidatePreparation">CandidatePreparation</a> so application-owned preparation
+observes clear text.</p>
 </div>
 
 </article>
