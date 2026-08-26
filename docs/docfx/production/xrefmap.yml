@@ -6347,6 +6347,12 @@ references:
   commentId: T:Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode
   fullName: Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode
   nameWithType: CertificateRecoveryMode
+- uid: Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode.None
+  name: None
+  href: api/Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode.html#Eigenverft_NetLib_Infrastructure_Security_Certificates_CertificateRecoveryMode_None
+  commentId: F:Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode.None
+  fullName: Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode.None
+  nameWithType: CertificateRecoveryMode.None
 - uid: Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode.PreserveExisting
   name: PreserveExisting
   href: api/Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode.html#Eigenverft_NetLib_Infrastructure_Security_Certificates_CertificateRecoveryMode_PreserveExisting
