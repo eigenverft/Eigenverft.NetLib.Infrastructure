@@ -580,9 +580,10 @@ The resulting file mixes ordinary and protected values:
 
 ### Combine both for transparent profile loading
 
-Add `ValueProtection` when existing clear-text values should be protected automatically at startup
-and decoded before a profile becomes visible. The following is startup registration code, typically
-placed in `Program.cs`:
+Add `ValueProtection` when selected clear-text values should stay protected at rest while still being
+published as clear text to the application. Protection is applied before startup load and re-applied
+idempotently before runtime reloads and source switches. The following is startup registration code,
+typically placed in `Program.cs`:
 
 ```csharp
 // Resolve the package-managed settings directory and choose one root for all variants.
@@ -690,7 +691,7 @@ The fluent `ConfigurationSetRegistration` handle does not need to be retained or
 `ForKeys(...)` matches the final JSON key name regardless of nesting. Use `ForPaths(...)`, for
 example `PartnerApi:*:ApiKey`, when the complete colon-separated configuration path should decide.
 
-During registration, matching values in existing files are encoded once and changed JSON is atomically rewritten in formatted form. The provider and its watcher are created only afterwards, so the write cannot trigger its own reload. On initial load, reload, and profile switch, the matching codec envelopes are decoded before the optional `CandidatePreparation`; application validation therefore receives clear text. Ordinary values pass through unchanged. A later external clear-text edit is only read at runtime and is protected on the next process start. Missing files are not created by protection and retain the normal optional and switch-failure behavior.
+During registration, matching values in existing files are encoded before the provider and its watcher are created, so the startup write cannot trigger its own reload. Runtime loads apply the same protection policy again before reading a candidate: an externally edited clear-text value in the active file is re-protected on the next observed reload, and a clear-text value in an inactive variant is re-protected when that source is later loaded or switched to. Protection is load-bound rather than a continuous background invariant, writes changed JSON in formatted form under exclusive file access, and therefore requires write permission whenever matching clear text is present. The matching codec envelopes are then decoded before the optional `CandidatePreparation`, so application validation receives clear text while ordinary values pass through unchanged. A protection write is an at-rest side effect rather than part of the ConfigurationSet commit transaction; a later rejected switch does not roll it back. Missing files are not created by protection and retain the normal optional and switch-failure behavior.
 
 ## 🎛️ Control and observe desired state
 

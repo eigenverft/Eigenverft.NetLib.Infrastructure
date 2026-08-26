@@ -112,6 +112,7 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
                 options.ReloadOnChange,
                 options.ReloadDelayMilliseconds,
                 options.RuntimeFailurePolicy,
+                options.ValueProtection,
                 preparations);
 
             IConfigurationBuilder configurationBuilder = builder.Configuration;

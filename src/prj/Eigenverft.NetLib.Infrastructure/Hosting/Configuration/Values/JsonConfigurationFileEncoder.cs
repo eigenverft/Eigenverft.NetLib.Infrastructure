@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -11,6 +12,9 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values
     /// <summary>Encodes selected string values directly in JSON configuration files.</summary>
     public static class JsonConfigurationFileEncoder
     {
+        private const int MaxConcurrentRewriteAttempts = 3;
+        private static readonly Encoding PersistedEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
         /// <summary>Encodes values whose complete configuration paths match any supplied glob pattern.</summary>
         /// <param name="jsonFilePath">The JSON file that may be changed.</param>
         /// <param name="keyPathPatterns">Case-insensitive glob patterns for complete colon-separated configuration paths.</param>
@@ -18,9 +22,11 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values
         /// <param name="nullAsEmpty">Whether matching JSON <see langword="null"/> values are encoded as empty strings.</param>
         /// <returns>The number of values changed.</returns>
         /// <remarks>
-        /// The file is rewritten only when at least one value changes. Rewriting uses formatted JSON and therefore removes
-        /// comments, trailing commas and the original whitespace. Recognized encoded wrappers are left untouched, including
-        /// wrappers created by another codec; codec migration requires an explicit decode-and-rewrite operation.
+        /// The file is rewritten only when at least one value changes. The encoder holds exclusive access to the source for the
+        /// read/transform/write cycle so a successful rewrite cannot overwrite a newer normal file write that occurred after its
+        /// snapshot was read. Rewriting uses formatted JSON and therefore removes comments, trailing commas and the original
+        /// whitespace. Recognized encoded wrappers are left untouched, including wrappers created by another codec; codec migration
+        /// requires an explicit decode-and-rewrite operation.
         /// </remarks>
         public static int EncodeMatchingValuesInPlace(
             string jsonFilePath,
@@ -57,13 +63,95 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values
             ArgumentNullException.ThrowIfNull(matcher);
             ArgumentNullException.ThrowIfNull(codec);
 
-            if (!File.Exists(jsonFilePath))
+            for (int attempt = 1; attempt <= MaxConcurrentRewriteAttempts; attempt++)
             {
-                throw new FileNotFoundException("JSON configuration file not found.", jsonFilePath);
+                EncodeAttemptResult result = EncodeUnderExclusiveAccess(
+                    jsonFilePath,
+                    matcher,
+                    codec,
+                    nullAsEmpty);
+                if (result.Updated == 0)
+                {
+                    return 0;
+                }
+
+                // FileShare.None closes the ordinary read/modify/write race on platforms that enforce sharing semantics.
+                // Re-check the path after releasing the handle as well: platforms that allow an atomic rename over an open file
+                // can otherwise leave our protected write on an unlinked file while a newer replacement remains at the path.
+                if (File.Exists(jsonFilePath) &&
+                    File.ReadAllBytes(jsonFilePath).SequenceEqual(result.PersistedBytes!))
+                {
+                    return result.Updated;
+                }
+
+                if (attempt == MaxConcurrentRewriteAttempts)
+                {
+                    throw new IOException(
+                        $"JSON configuration file '{jsonFilePath}' changed repeatedly while value protection was being persisted.");
+                }
             }
 
+            throw new InvalidOperationException("The JSON protection rewrite loop completed unexpectedly.");
+        }
+
+        private static EncodeAttemptResult EncodeUnderExclusiveAccess(
+            string jsonFilePath,
+            ConfigurationKeyPathGlobMatcher matcher,
+            ConfigurationValueCodec codec,
+            bool nullAsEmpty)
+        {
+            FileStream stream;
+            try
+            {
+                stream = new FileStream(
+                    jsonFilePath,
+                    FileMode.Open,
+                    FileAccess.ReadWrite,
+                    FileShare.None);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Preserve the historical no-op behavior for already protected read-only files. Only clear text requires write access.
+                using FileStream readOnlyStream = new(
+                    jsonFilePath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.None);
+                EncodeAttemptResult readOnlyResult = PrepareEncoding(
+                    readOnlyStream,
+                    matcher,
+                    codec,
+                    nullAsEmpty);
+                if (readOnlyResult.Updated == 0)
+                {
+                    return readOnlyResult;
+                }
+
+                throw;
+            }
+
+            using (stream)
+            {
+                EncodeAttemptResult result = PrepareEncoding(stream, matcher, codec, nullAsEmpty);
+                if (result.Updated != 0)
+                {
+                    RewriteLockedStream(stream, result.OriginalBytes, result.PersistedBytes!);
+                }
+
+                return result;
+            }
+        }
+
+        private static EncodeAttemptResult PrepareEncoding(
+            FileStream stream,
+            ConfigurationKeyPathGlobMatcher matcher,
+            ConfigurationValueCodec codec,
+            bool nullAsEmpty)
+        {
+            byte[] originalBytes = ReadAllBytes(stream);
+            string originalText = ReadText(originalBytes);
             JsonNode? root = JsonNode.Parse(
-                File.ReadAllText(jsonFilePath),
+                originalText,
                 nodeOptions: null,
                 documentOptions: new JsonDocumentOptions
                 {
@@ -80,12 +168,60 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values
             WalkAndEncode(root, string.Empty, matcher, codec, nullAsEmpty, ref updated);
             if (updated == 0)
             {
-                return 0;
+                return new EncodeAttemptResult(updated, originalBytes, persistedBytes: null);
             }
 
             string formattedJson = root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
-            WriteAtomically(jsonFilePath, formattedJson);
-            return updated;
+            return new EncodeAttemptResult(updated, originalBytes, PersistedEncoding.GetBytes(formattedJson));
+        }
+
+        private static byte[] ReadAllBytes(FileStream stream)
+        {
+            stream.Position = 0;
+            using var memory = new MemoryStream();
+            stream.CopyTo(memory);
+            return memory.ToArray();
+        }
+
+        private static string ReadText(byte[] bytes)
+        {
+            using var memory = new MemoryStream(bytes, writable: false);
+            using var reader = new StreamReader(
+                memory,
+                Encoding.UTF8,
+                detectEncodingFromByteOrderMarks: true);
+            return reader.ReadToEnd();
+        }
+
+        private static void RewriteLockedStream(FileStream stream, byte[] originalBytes, byte[] persistedBytes)
+        {
+            try
+            {
+                WriteLockedStream(stream, persistedBytes);
+            }
+            catch (Exception writeException)
+            {
+                try
+                {
+                    WriteLockedStream(stream, originalBytes);
+                }
+                catch (Exception restoreException)
+                {
+                    throw new IOException(
+                        "Failed to persist protected JSON and failed to restore the original file content.",
+                        new AggregateException(writeException, restoreException));
+                }
+
+                throw;
+            }
+        }
+
+        private static void WriteLockedStream(FileStream stream, byte[] content)
+        {
+            stream.Position = 0;
+            stream.SetLength(0);
+            stream.Write(content, 0, content.Length);
+            stream.Flush(flushToDisk: true);
         }
 
         private static void WalkAndEncode(
@@ -198,34 +334,20 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values
             }
         }
 
-        private static void WriteAtomically(string path, string content)
+        private readonly struct EncodeAttemptResult
         {
-            string directoryPath = Path.GetDirectoryName(path) ?? ".";
-            string temporaryPath = Path.Combine(directoryPath, $"{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+            public EncodeAttemptResult(int updated, byte[] originalBytes, byte[]? persistedBytes)
+            {
+                Updated = updated;
+                OriginalBytes = originalBytes;
+                PersistedBytes = persistedBytes;
+            }
 
-            try
-            {
-                File.WriteAllText(temporaryPath, content);
-                try
-                {
-                    File.Replace(temporaryPath, path, destinationBackupFileName: null);
-                }
-                catch (PlatformNotSupportedException)
-                {
-                    File.Move(temporaryPath, path, overwrite: true);
-                }
-                catch (IOException)
-                {
-                    File.Move(temporaryPath, path, overwrite: true);
-                }
-            }
-            finally
-            {
-                if (File.Exists(temporaryPath))
-                {
-                    File.Delete(temporaryPath);
-                }
-            }
+            public int Updated { get; }
+
+            public byte[] OriginalBytes { get; }
+
+            public byte[]? PersistedBytes { get; }
         }
     }
 

@@ -1,10 +1,14 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
 using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson;
 using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values;
+using Eigenverft.NetLib.Infrastructure.Transformations;
 
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.SwitchableJson
@@ -104,6 +108,230 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Switchabl
 
             Assert.AreEqual(1, preparation.InvocationCount);
             Assert.AreEqual("secret", builder.Configuration["ApiKey"]);
+        }
+
+        [TestMethod]
+        public void SwitchingToPlainTextCandidateProtectsBeforePreparedWatcherAndPublishesClearText()
+        {
+            using var directory = new TemporaryDirectory();
+            directory.Write("A.json", "{ \"ApiKey\": \"stable-secret\" }");
+            string candidatePath = directory.Write("B.json", "{ \"ApiKey\": \"candidate-secret\" }");
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+
+            builder.AddSwitchableJsonFile(
+                "settings",
+                "A.json",
+                new SwitchableJsonRegistrationOptions
+                {
+                    ReloadOnChange = true,
+                    ReloadDelayMilliseconds = 25,
+                    ValueProtection = JsonConfigurationValueProtection.ForKeys(
+                        ConfigurationValueCodecs.Base64,
+                        "ApiKey"),
+                });
+            using IHost host = builder.Build();
+            ISwitchableJsonConfiguration runtime =
+                host.Services.GetRequiredKeyedService<ISwitchableJsonConfiguration>("settings");
+
+            StringAssert.Contains(File.ReadAllText(candidatePath), "candidate-secret");
+            SwitchableJsonSwitchResult result = runtime.TrySwitch("B.json");
+
+            Assert.AreEqual(SwitchableJsonSwitchStatus.Succeeded, result.Status);
+            Assert.AreEqual("candidate-secret", builder.Configuration["ApiKey"]);
+            string persisted = File.ReadAllText(candidatePath);
+            Assert.IsTrue(persisted.Contains("enc:q7m2n4:", StringComparison.Ordinal));
+            Assert.IsFalse(persisted.Contains("\"ApiKey\": \"candidate-secret\"", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public async Task ActiveReloadReprotectsExternalPlainTextWithoutRejectingLastKnownGood()
+        {
+            using var directory = new TemporaryDirectory();
+            string path = directory.Write("settings.json", "{ \"ApiKey\": \"initial-secret\" }");
+            var preparation = new CountingPreparation();
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+            builder.AddSwitchableJsonFile(
+                "settings",
+                "settings.json",
+                new SwitchableJsonRegistrationOptions
+                {
+                    ReloadOnChange = true,
+                    ReloadDelayMilliseconds = 0,
+                    ValueProtection = JsonConfigurationValueProtection.ForKeys(
+                        ConfigurationValueCodecs.Base64,
+                        "ApiKey"),
+                    CandidatePreparation = JsonConfigurationCandidatePreparations.From("Count", preparation),
+                });
+            using IHost host = builder.Build();
+            ISwitchableJsonConfiguration runtime =
+                host.Services.GetRequiredKeyedService<ISwitchableJsonConfiguration>("settings");
+            var completion = new TaskCompletionSource<SwitchableJsonConfigurationEventArgs>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            int rejectedCount = 0;
+            int reloadedCount = 0;
+            int changedReloadCount = 0;
+            runtime.LifecycleChanged += (_, args) =>
+            {
+                if (args.Kind == SwitchableJsonConfigurationEventKind.ActiveSourceReloadRejected)
+                {
+                    Interlocked.Increment(ref rejectedCount);
+                }
+
+                if (args.Kind == SwitchableJsonConfigurationEventKind.ActiveSourceReloaded)
+                {
+                    Interlocked.Increment(ref reloadedCount);
+                    if (args.ConfigurationChanged)
+                    {
+                        Interlocked.Increment(ref changedReloadCount);
+                        completion.TrySetResult(args);
+                    }
+                }
+            };
+
+            File.WriteAllText(path, "{ \"ApiKey\": \"runtime-secret\" }");
+            SwitchableJsonConfigurationEventArgs reloaded =
+                await completion.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            Assert.IsTrue(reloaded.ConfigurationChanged);
+            Assert.AreEqual("runtime-secret", builder.Configuration["ApiKey"]);
+
+            // File providers may emit several notifications for the protection write, especially with zero debounce. The contract
+            // is intentionally weaker than an exact callback count: idempotent follow-up reloads must settle, must not reject LKG,
+            // and must not publish another effective configuration change.
+            await Task.Delay(300);
+            int settledReloads = Volatile.Read(ref reloadedCount);
+            int settledPreparations = preparation.InvocationCount;
+            await Task.Delay(300);
+
+            Assert.AreEqual(settledReloads, Volatile.Read(ref reloadedCount), "Self-triggered reload notifications did not settle.");
+            Assert.AreEqual(settledPreparations, preparation.InvocationCount, "Self-triggered candidate preparation did not settle.");
+            Assert.AreEqual(0, Volatile.Read(ref rejectedCount));
+            Assert.AreEqual(1, Volatile.Read(ref changedReloadCount));
+            Assert.IsGreaterThanOrEqualTo(1, settledReloads);
+            Assert.AreEqual(1 + settledReloads, settledPreparations);
+            Assert.AreEqual("runtime-secret", builder.Configuration["ApiKey"]);
+
+            string persisted = File.ReadAllText(path);
+            Assert.IsTrue(persisted.Contains("enc:q7m2n4:", StringComparison.Ordinal));
+            Assert.IsFalse(persisted.Contains("\"ApiKey\": \"runtime-secret\"", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public void FrameworkReloadReprotectsPlainTextEvenWithoutFileWatching()
+        {
+            using var directory = new TemporaryDirectory();
+            string path = directory.Write("settings.json", "{ \"ApiKey\": \"initial-secret\" }");
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+            builder.AddSwitchableJsonFile(
+                "settings",
+                "settings.json",
+                Options(JsonConfigurationValueProtection.ForKeys(
+                    ConfigurationValueCodecs.Base64,
+                    "ApiKey")));
+
+            File.WriteAllText(path, "{ \"ApiKey\": \"framework-reload-secret\" }");
+            ((IConfigurationRoot)builder.Configuration).Reload();
+
+            Assert.AreEqual("framework-reload-secret", builder.Configuration["ApiKey"]);
+            string persisted = File.ReadAllText(path);
+            Assert.IsTrue(persisted.Contains("enc:q7m2n4:", StringComparison.Ordinal));
+            Assert.IsFalse(persisted.Contains("\"ApiKey\": \"framework-reload-secret\"", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public void InvalidProtectedSwitchCandidateIsRejectedAndKeepsLastKnownGood()
+        {
+            using var directory = new TemporaryDirectory();
+            directory.Write("A.json", "{ \"ApiKey\": \"stable-secret\" }");
+            directory.Write("B.json", "{ invalid-json }");
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+            builder.AddSwitchableJsonFile(
+                "settings",
+                "A.json",
+                Options(JsonConfigurationValueProtection.ForKeys(
+                    ConfigurationValueCodecs.Base64,
+                    "ApiKey")));
+            using IHost host = builder.Build();
+            ISwitchableJsonConfiguration runtime =
+                host.Services.GetRequiredKeyedService<ISwitchableJsonConfiguration>("settings");
+
+            SwitchableJsonSwitchResult result = runtime.TrySwitch("B.json");
+
+            Assert.AreEqual(SwitchableJsonSwitchStatus.Rejected, result.Status);
+            Assert.AreEqual(SwitchableJsonFailureKind.InvalidJson, result.FailureKind);
+            Assert.AreEqual("stable-secret", builder.Configuration["ApiKey"]);
+            StringAssert.EndsWith(runtime.CurrentSourcePath, "A.json");
+        }
+
+        [TestMethod]
+        public void NullRootProtectedSwitchCandidateIsRejectedAsInvalidJson()
+        {
+            using var directory = new TemporaryDirectory();
+            directory.Write("A.json", "{ \"ApiKey\": \"stable-secret\" }");
+            directory.Write("B.json", "null");
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+            builder.AddSwitchableJsonFile(
+                "settings",
+                "A.json",
+                Options(JsonConfigurationValueProtection.ForKeys(
+                    ConfigurationValueCodecs.Base64,
+                    "ApiKey")));
+            using IHost host = builder.Build();
+            ISwitchableJsonConfiguration runtime =
+                host.Services.GetRequiredKeyedService<ISwitchableJsonConfiguration>("settings");
+
+            SwitchableJsonSwitchResult result = runtime.TrySwitch("B.json");
+
+            Assert.AreEqual(SwitchableJsonSwitchStatus.Rejected, result.Status);
+            Assert.AreEqual(SwitchableJsonFailureKind.InvalidJson, result.FailureKind);
+            Assert.AreEqual("stable-secret", builder.Configuration["ApiKey"]);
+            StringAssert.EndsWith(runtime.CurrentSourcePath, "A.json");
+        }
+
+        [TestMethod]
+        public void RuntimeProtectionCodecFailureUsesPreparationFailureAndKeepsLastKnownGood()
+        {
+            using var directory = new TemporaryDirectory();
+            directory.Write("A.json", "{ \"ApiKey\": \"stable-secret\" }");
+            string candidatePath = directory.Write("B.json", "{ \"ApiKey\": \"candidate-secret\" }");
+            var transform = new ReversibleStringTransform(
+                "SelectiveFailure",
+                value => value == "candidate-secret"
+                    ? throw new InvalidOperationException("candidate protection failed")
+                    : $"protected:{value}",
+                (string transformed, out string original) =>
+                {
+                    const string prefix = "protected:";
+                    if (!transformed.StartsWith(prefix, StringComparison.Ordinal))
+                    {
+                        original = transformed;
+                        return false;
+                    }
+
+                    original = transformed.Substring(prefix.Length);
+                    return true;
+                });
+            var codec = new ConfigurationValueCodec(
+                "SelectiveFailure",
+                ConfigurationValueKind.Rot13,
+                transform);
+            HostApplicationBuilder builder = CreateBuilder(directory.Path);
+            builder.AddSwitchableJsonFile(
+                "settings",
+                "A.json",
+                Options(JsonConfigurationValueProtection.ForKeys(codec, "ApiKey")));
+            using IHost host = builder.Build();
+            ISwitchableJsonConfiguration runtime =
+                host.Services.GetRequiredKeyedService<ISwitchableJsonConfiguration>("settings");
+
+            SwitchableJsonSwitchResult result = runtime.TrySwitch("B.json");
+
+            Assert.AreEqual(SwitchableJsonSwitchStatus.Rejected, result.Status);
+            Assert.AreEqual(SwitchableJsonFailureKind.SourcePreparationFailed, result.FailureKind);
+            Assert.IsInstanceOfType<JsonConfigurationSourcePreparationException>(result.Exception);
+            Assert.AreEqual("stable-secret", builder.Configuration["ApiKey"]);
+            StringAssert.EndsWith(runtime.CurrentSourcePath, "A.json");
+            StringAssert.Contains(File.ReadAllText(candidatePath), "candidate-secret");
         }
 
         [TestMethod]
@@ -295,11 +523,13 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Switchabl
 
         private sealed class CountingPreparation : IJsonConfigurationSourcePreparation
         {
-            public int InvocationCount { get; private set; }
+            private int _invocationCount;
+
+            public int InvocationCount => Volatile.Read(ref _invocationCount);
 
             public void Prepare(JsonConfigurationSourcePreparationContext context)
             {
-                InvocationCount++;
+                Interlocked.Increment(ref _invocationCount);
             }
         }
 

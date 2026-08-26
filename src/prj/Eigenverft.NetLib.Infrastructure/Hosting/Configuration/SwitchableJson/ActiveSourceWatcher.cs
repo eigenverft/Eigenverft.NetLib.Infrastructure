@@ -24,6 +24,8 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
         private readonly long _generation;
         private readonly string _sourcePath;
         private bool _disposed;
+        private bool _reloadRunning;
+        private bool _reloadPending;
 
         private ActiveSourceWatcher(
             PhysicalFileProvider fileProvider,
@@ -153,11 +155,41 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson
                 {
                     return;
                 }
+
+                if (_reloadRunning)
+                {
+                    // A zero/small debounce can let another timer callback arrive while the previous reload is still doing
+                    // candidate I/O. Coalesce all such callbacks into one pending pass instead of running the same source in
+                    // parallel; this also prevents self-generated protection writes from competing with their own reload.
+                    _reloadPending = true;
+                    return;
+                }
+
+                _reloadRunning = true;
             }
 
-            // Never hold the watcher gate while entering the runtime. The runtime can replace/dispose this watcher while a
-            // callback is queued; generation validation makes such stale callbacks harmless.
-            _reloadCallback(_generation, _sourcePath);
+            try
+            {
+                // Never hold the watcher gate while entering the runtime. The runtime can replace/dispose this watcher while a
+                // callback is queued; generation validation makes such stale callbacks harmless.
+                _reloadCallback(_generation, _sourcePath);
+            }
+            finally
+            {
+                lock (_gate)
+                {
+                    _reloadRunning = false;
+                    if (!_disposed && _reloadPending)
+                    {
+                        _reloadPending = false;
+                        _reloadTimer.Change(_reloadDelayMilliseconds, Timeout.Infinite);
+                    }
+                    else
+                    {
+                        _reloadPending = false;
+                    }
+                }
+            }
         }
 
         private static string FindExistingWatchRoot(string sourcePath)
