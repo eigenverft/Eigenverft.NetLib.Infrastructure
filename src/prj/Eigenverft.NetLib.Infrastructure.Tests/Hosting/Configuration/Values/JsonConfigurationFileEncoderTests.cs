@@ -190,6 +190,7 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Values
                 "settings.json",
                 "{ \"Revision\": \"A\", \"ApiKey\": \"secret-a\" }");
             using var entered = new ManualResetEventSlim();
+            using var concurrentAttempted = new ManualResetEventSlim();
             using var release = new ManualResetEventSlim();
             ConfigurationValueCodec codec = CreateBlockingCodec(entered, release);
 
@@ -199,20 +200,35 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Values
 
             Task writer = Task.Run(() =>
             {
+                bool firstAttempt = true;
                 while (true)
                 {
                     try
                     {
                         File.WriteAllText(path, "{ \"Revision\": \"B\", \"ApiKey\": \"secret-b\" }");
+                        if (firstAttempt)
+                        {
+                            concurrentAttempted.Set();
+                        }
+
                         return;
                     }
                     catch (IOException)
                     {
+                        if (firstAttempt)
+                        {
+                            concurrentAttempted.Set();
+                            firstAttempt = false;
+                        }
+
                         Thread.Sleep(5);
                     }
                 }
             });
 
+            Assert.IsTrue(
+                concurrentAttempted.Wait(TimeSpan.FromSeconds(5)),
+                "Concurrent writer did not attempt the source while protection held its snapshot handle.");
             release.Set();
             _ = await protection.WaitAsync(TimeSpan.FromSeconds(5));
             await writer.WaitAsync(TimeSpan.FromSeconds(5));
@@ -236,6 +252,7 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Values
                 "settings.json",
                 "{ \"Revision\": \"A\", \"ApiKey\": \"secret-a\" }");
             using var entered = new ManualResetEventSlim();
+            using var concurrentAttempted = new ManualResetEventSlim();
             using var release = new ManualResetEventSlim();
             ConfigurationValueCodec codec = CreateBlockingCodec(entered, release);
 
@@ -245,23 +262,43 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Values
 
             Task delete = Task.Run(() =>
             {
+                bool firstAttempt = true;
                 while (File.Exists(path))
                 {
                     try
                     {
                         File.Delete(path);
+                        if (firstAttempt)
+                        {
+                            concurrentAttempted.Set();
+                        }
                     }
                     catch (IOException)
                     {
+                        if (firstAttempt)
+                        {
+                            concurrentAttempted.Set();
+                            firstAttempt = false;
+                        }
+
                         Thread.Sleep(5);
                     }
                     catch (UnauthorizedAccessException)
                     {
+                        if (firstAttempt)
+                        {
+                            concurrentAttempted.Set();
+                            firstAttempt = false;
+                        }
+
                         Thread.Sleep(5);
                     }
                 }
             });
 
+            Assert.IsTrue(
+                concurrentAttempted.Wait(TimeSpan.FromSeconds(5)),
+                "Concurrent delete did not attempt the source while protection held its snapshot handle.");
             release.Set();
             try
             {

@@ -156,7 +156,7 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Switchabl
                 new SwitchableJsonRegistrationOptions
                 {
                     ReloadOnChange = true,
-                    ReloadDelayMilliseconds = 25,
+                    ReloadDelayMilliseconds = 0,
                     ValueProtection = JsonConfigurationValueProtection.ForKeys(
                         ConfigurationValueCodecs.Base64,
                         "ApiKey"),
@@ -194,21 +194,26 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration.Switchabl
 
             Assert.IsTrue(reloaded.ConfigurationChanged);
             Assert.AreEqual("runtime-secret", builder.Configuration["ApiKey"]);
+
+            // File providers may emit several notifications for the protection write, especially with zero debounce. The contract
+            // is intentionally weaker than an exact callback count: idempotent follow-up reloads must settle, must not reject LKG,
+            // and must not publish another effective configuration change.
+            await Task.Delay(300);
+            int settledReloads = Volatile.Read(ref reloadedCount);
+            int settledPreparations = preparation.InvocationCount;
+            await Task.Delay(300);
+
+            Assert.AreEqual(settledReloads, Volatile.Read(ref reloadedCount), "Self-triggered reload notifications did not settle.");
+            Assert.AreEqual(settledPreparations, preparation.InvocationCount, "Self-triggered candidate preparation did not settle.");
+            Assert.AreEqual(0, Volatile.Read(ref rejectedCount));
+            Assert.AreEqual(1, Volatile.Read(ref changedReloadCount));
+            Assert.IsGreaterThanOrEqualTo(1, settledReloads);
+            Assert.AreEqual(1 + settledReloads, settledPreparations);
+            Assert.AreEqual("runtime-secret", builder.Configuration["ApiKey"]);
+
             string persisted = File.ReadAllText(path);
             Assert.IsTrue(persisted.Contains("enc:q7m2n4:", StringComparison.Ordinal));
             Assert.IsFalse(persisted.Contains("\"ApiKey\": \"runtime-secret\"", StringComparison.Ordinal));
-
-            // The protection write may itself produce one coalesced watcher notification. That optional second pass is an
-            // accepted idempotent no-op: it may prepare again, but it must not reject or publish another configuration change.
-            await Task.Delay(300);
-            int observedReloads = Volatile.Read(ref reloadedCount);
-            Assert.AreEqual(0, Volatile.Read(ref rejectedCount));
-            Assert.AreEqual(1, Volatile.Read(ref changedReloadCount));
-            Assert.IsTrue(
-                observedReloads is >= 1 and <= 2,
-                $"Expected one external reload and at most one idempotent self-reload, observed {observedReloads}.");
-            Assert.AreEqual(1 + observedReloads, preparation.InvocationCount);
-            Assert.AreEqual("runtime-secret", builder.Configuration["ApiKey"]);
         }
 
         [TestMethod]
