@@ -46,6 +46,7 @@ namespace Eigenverft.NetLib.Infrastructure.Networking
         /// <summary>
         /// Returns a stable canonical textual representation of an IP address.
         /// </summary>
+        /// <remarks>The address is normalized before it is formatted.</remarks>
         /// <param name="address">Address to format.</param>
         /// <returns>The normalized address text.</returns>
         public static string ToCanonicalString(this IPAddress address)
