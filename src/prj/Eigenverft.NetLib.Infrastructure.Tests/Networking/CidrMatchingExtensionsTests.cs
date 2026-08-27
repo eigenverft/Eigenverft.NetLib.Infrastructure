@@ -6,23 +6,22 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Networking
 {
     [TestClass]
     [DoNotParallelize]
-    public sealed class CidrMatcherTests
+    public sealed class CidrMatchingExtensionsTests
     {
         [TestInitialize]
         public void ResetCache()
         {
-            CidrMatcher.ResetCacheForTests();
+            CidrMatchingExtensions.ResetCacheForTests();
         }
 
         [TestMethod]
         public void MatchAllWildcardShortCircuits()
         {
-            bool match = CidrMatcher.IsMatch(
-                IPAddress.Parse("203.0.113.10"),
-                new string?[] { "", "  *  ", "invalid" });
+            bool match = IPAddress.Parse("203.0.113.10")
+                .Matches(new string?[] { "", "  *  ", "invalid" });
 
             Assert.IsTrue(match);
-            CidrMatcherCacheStatistics statistics = CidrMatcher.GetCacheStatistics();
+            CidrMatchingCacheStatistics statistics = CidrMatchingExtensions.GetCacheStatistics();
             Assert.AreEqual(0L, statistics.ParsedNetworkCacheMisses);
             Assert.AreEqual(0L, statistics.ListMatchCacheMisses);
         }
@@ -32,10 +31,10 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Networking
         {
             IPAddress address = IPAddress.Parse("192.168.1.42");
 
-            Assert.IsFalse(CidrMatcher.IsMatch(address, "not-a-cidr"));
-            Assert.IsFalse(CidrMatcher.IsMatch(address, "not-a-cidr"));
+            Assert.IsFalse(address.Matches("not-a-cidr"));
+            Assert.IsFalse(address.Matches("not-a-cidr"));
 
-            CidrMatcherCacheStatistics statistics = CidrMatcher.GetCacheStatistics();
+            CidrMatchingCacheStatistics statistics = CidrMatchingExtensions.GetCacheStatistics();
             Assert.AreEqual(1L, statistics.ParsedNetworkCacheMisses);
             Assert.AreEqual(1L, statistics.ParsedNetworkCacheHits);
         }
@@ -45,10 +44,10 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Networking
         {
             IPAddress address = IPAddress.Parse("192.168.1.42");
 
-            Assert.IsTrue(CidrMatcher.IsMatch(address, "192.168.1.123/24"));
-            Assert.IsTrue(CidrMatcher.IsMatch(address, "192.168.1.123/24"));
+            Assert.IsTrue(address.Matches("192.168.1.123/24"));
+            Assert.IsTrue(address.Matches("192.168.1.123/24"));
 
-            CidrMatcherCacheStatistics statistics = CidrMatcher.GetCacheStatistics();
+            CidrMatchingCacheStatistics statistics = CidrMatchingExtensions.GetCacheStatistics();
             Assert.AreEqual(1L, statistics.ParsedNetworkCacheMisses);
             Assert.AreEqual(1L, statistics.ParsedNetworkCacheHits);
         }
@@ -58,10 +57,10 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Networking
         {
             IPAddress address = IPAddress.Parse("10.20.30.40");
 
-            Assert.IsTrue(CidrMatcher.IsMatch(address, new string?[] { "192.168.0.0/16", "10.0.0.0/8" }));
-            Assert.IsTrue(CidrMatcher.IsMatch(address, new string?[] { "10.0.0.0/8", "192.168.0.0/16" }));
+            Assert.IsTrue(address.Matches(new string?[] { "192.168.0.0/16", "10.0.0.0/8" }));
+            Assert.IsTrue(address.Matches(new string?[] { "10.0.0.0/8", "192.168.0.0/16" }));
 
-            CidrMatcherCacheStatistics statistics = CidrMatcher.GetCacheStatistics();
+            CidrMatchingCacheStatistics statistics = CidrMatchingExtensions.GetCacheStatistics();
             Assert.AreEqual(1L, statistics.ListMatchCacheMisses);
             Assert.AreEqual(1L, statistics.ListMatchCacheHits);
         }
@@ -69,9 +68,8 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Networking
         [TestMethod]
         public void IPv4MappedAddressSharesIPv4MatchingSemantics()
         {
-            bool match = CidrMatcher.IsMatch(
-                IPAddress.Parse("::ffff:192.168.1.42"),
-                new string?[] { "192.168.1.123/24" });
+            bool match = IPAddress.Parse("::ffff:192.168.1.42")
+                .Matches(new string?[] { "192.168.1.123/24" });
 
             Assert.IsTrue(match);
         }
@@ -79,9 +77,8 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Networking
         [TestMethod]
         public void IPv6ListMatchingWorks()
         {
-            bool match = CidrMatcher.IsMatch(
-                IPAddress.Parse("2001:db8:abcd:12::42"),
-                new string?[] { "2001:db8:abcd:12::1234/64" });
+            bool match = IPAddress.Parse("2001:db8:abcd:12::42")
+                .Matches(new string?[] { "2001:db8:abcd:12::1234/64" });
 
             Assert.IsTrue(match);
         }

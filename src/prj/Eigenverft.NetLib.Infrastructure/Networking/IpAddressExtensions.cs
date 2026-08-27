@@ -5,21 +5,21 @@ using System.Net.Sockets;
 namespace Eigenverft.NetLib.Infrastructure.Networking
 {
     /// <summary>
-    /// Provides a small, host-agnostic contract for normalizing IP addresses.
+    /// Provides host-agnostic normalization helpers for <see cref="IPAddress"/>.
     /// </summary>
-    public static class IpAddressNormalizer
+    public static class IpAddressExtensions
     {
         /// <summary>
         /// Normalizes an IP address for comparison and stable textual representation.
         /// </summary>
         /// <remarks>
-        /// IPv4-mapped IPv6 addresses are converted to IPv4. Native IPv6 addresses have
-        /// their scope identifier removed because a scope is interface-local metadata and
-        /// must not affect the canonical address identity used by reusable network logic.
+        /// IPv4-mapped IPv6 addresses are converted to IPv4. Native IPv6 addresses have their scope identifier removed
+        /// because a scope is interface-local metadata and must not affect the canonical address identity used by reusable
+        /// network logic.
         /// </remarks>
         /// <param name="address">Address to normalize.</param>
         /// <returns>The normalized address.</returns>
-        public static IPAddress Normalize(IPAddress address)
+        public static IPAddress Normalize(this IPAddress address)
         {
             ArgumentNullException.ThrowIfNull(address);
 
@@ -48,28 +48,9 @@ namespace Eigenverft.NetLib.Infrastructure.Networking
         /// </summary>
         /// <param name="address">Address to format.</param>
         /// <returns>The normalized address text.</returns>
-        public static string ToCanonicalString(IPAddress address)
+        public static string ToCanonicalString(this IPAddress address)
         {
-            return Normalize(address).ToString();
-        }
-
-        /// <summary>
-        /// Parses and normalizes an IP address.
-        /// </summary>
-        /// <param name="value">Text to parse.</param>
-        /// <param name="address">Normalized address when parsing succeeds.</param>
-        /// <returns><see langword="true"/> when parsing succeeds; otherwise <see langword="false"/>.</returns>
-        public static bool TryParse(string? value, out IPAddress? address)
-        {
-            address = null;
-
-            if (string.IsNullOrWhiteSpace(value) || !IPAddress.TryParse(value.Trim(), out IPAddress? parsed))
-            {
-                return false;
-            }
-
-            address = Normalize(parsed);
-            return true;
+            return address.Normalize().ToString();
         }
     }
 }

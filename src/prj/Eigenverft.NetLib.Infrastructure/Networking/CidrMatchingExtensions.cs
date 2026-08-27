@@ -10,9 +10,9 @@ using Microsoft.Extensions.Caching.Memory;
 namespace Eigenverft.NetLib.Infrastructure.Networking
 {
     /// <summary>
-    /// Matches IP addresses against CIDR networks while caching parsed networks and repeated list evaluations.
+    /// Provides CIDR matching extensions for <see cref="IPAddress"/> while caching parsed networks and repeated list evaluations.
     /// </summary>
-    public static class CidrMatcher
+    public static class CidrMatchingExtensions
     {
         private const int CacheSizeLimit = 10_000;
         private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(5);
@@ -34,7 +34,7 @@ namespace Eigenverft.NetLib.Infrastructure.Networking
         /// <param name="address">Address to test.</param>
         /// <param name="cidr">CIDR text or <c>*</c>.</param>
         /// <returns><see langword="true"/> when the address matches; otherwise <see langword="false"/>.</returns>
-        public static bool IsMatch(IPAddress address, string? cidr)
+        public static bool Matches(this IPAddress address, string? cidr)
         {
             ArgumentNullException.ThrowIfNull(address);
 
@@ -64,7 +64,7 @@ namespace Eigenverft.NetLib.Infrastructure.Networking
         /// <param name="address">Address to test.</param>
         /// <param name="cidrs">CIDR texts to test.</param>
         /// <returns><see langword="true"/> when any entry matches; otherwise <see langword="false"/>.</returns>
-        public static bool IsMatch(IPAddress address, IEnumerable<string?>? cidrs)
+        public static bool Matches(this IPAddress address, IEnumerable<string?>? cidrs)
         {
             ArgumentNullException.ThrowIfNull(address);
 
@@ -88,7 +88,7 @@ namespace Eigenverft.NetLib.Infrastructure.Networking
                 return true;
             }
 
-            IPAddress normalizedAddress = IpAddressNormalizer.Normalize(address);
+            IPAddress normalizedAddress = address.Normalize();
             string listKey = BuildListCacheKey(normalizedAddress, entries);
             MemoryCache cache = Volatile.Read(ref _cache);
 
@@ -123,9 +123,9 @@ namespace Eigenverft.NetLib.Infrastructure.Networking
             return result;
         }
 
-        internal static CidrMatcherCacheStatistics GetCacheStatistics()
+        internal static CidrMatchingCacheStatistics GetCacheStatistics()
         {
-            return new CidrMatcherCacheStatistics(
+            return new CidrMatchingCacheStatistics(
                 Interlocked.Read(ref _parsedNetworkCacheHits),
                 Interlocked.Read(ref _parsedNetworkCacheMisses),
                 Interlocked.Read(ref _listMatchCacheHits),
@@ -178,7 +178,7 @@ namespace Eigenverft.NetLib.Infrastructure.Networking
         {
             string[] sorted = entries.OrderBy(static value => value, StringComparer.Ordinal).ToArray();
             var builder = new StringBuilder("Cidr:IsInList:");
-            builder.Append(IpAddressNormalizer.ToCanonicalString(address));
+            builder.Append(address.ToCanonicalString());
             builder.Append('|');
 
             for (int i = 0; i < sorted.Length; i++)
@@ -200,7 +200,7 @@ namespace Eigenverft.NetLib.Infrastructure.Networking
         private readonly record struct ParsedNetworkCacheEntry(bool IsValid, CidrNetwork Network);
     }
 
-    internal readonly record struct CidrMatcherCacheStatistics(
+    internal readonly record struct CidrMatchingCacheStatistics(
         long ParsedNetworkCacheHits,
         long ParsedNetworkCacheMisses,
         long ListMatchCacheHits,

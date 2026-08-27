@@ -822,7 +822,7 @@ services
     .BindConfigurationReplacingCollectionDefaults("FilterOptions");
 ```
 
-Only collection properties whose configuration key is actually present are cleared before the framework binder runs. Missing keys leave code defaults untouched, populated collections replace defaults, and explicitly empty JSON arrays/objects become empty collections. Arrays are handled by the same preparation step. Binding, `BinderOptions`, named options, and reload/change-token behavior remain framework-owned.
+Only existing mutable list and dictionary properties whose configuration key is actually present are cleared before the framework binder runs. Missing keys leave code defaults untouched, populated collections replace defaults, and explicitly empty JSON arrays/objects become empty collections. Binding, `BinderOptions`, named options, and reload/change-token behavior remain framework-owned; other collection shapes keep the native binder semantics.
 
 This is the A5/A6 decision: the legacy `OptionsConfigOverridesDefaultsList<T>` and `OptionsConfigOverridesDefaultsDictionary<TKey,TValue>` wrappers are **not** re-created in NetLib. Their shared intent is expressed once at the binding boundary.
 
@@ -831,19 +831,17 @@ This is the A5/A6 decision: the legacy `OptionsConfigOverridesDefaultsList<T>` a
 `Eigenverft.NetLib.Infrastructure.Networking` is host-agnostic and has no ASP.NET dependency:
 
 ```csharp
-IPAddress canonical = IpAddressNormalizer.Normalize(
-    IPAddress.Parse("::ffff:192.168.1.25"));
+IPAddress canonical = IPAddress.Parse("::ffff:192.168.1.25").Normalize();
 // 192.168.1.25
 
 CidrNetwork network = CidrNetwork.Parse("192.168.1.123/24");
 // normalized to 192.168.1.0/24
 
-bool match = CidrMatcher.IsMatch(
-    canonical,
+bool match = canonical.Matches(
     new[] { "10.0.0.0/8", "192.168.1.123/24" });
 ```
 
-`IpAddressNormalizer` maps IPv4-mapped IPv6 to IPv4 and removes IPv6 scope identifiers from canonical identity. `CidrNetwork` keeps CIDR parsing/matching separate from normalization and accepts host-bit convenience input such as `192.168.1.123/24`. `CidrMatcher` keeps the historical two cache layers: parsed-network results (including invalid parses) and repeated IP/list match results; list cache keys are order-independent and `*` remains match-all.
+`IPAddress.Normalize()` maps IPv4-mapped IPv6 to IPv4 and removes IPv6 scope identifiers from canonical identity. `CidrNetwork` provides `Parse`/`TryParse` and `Contains`, accepts host-bit convenience input such as `192.168.1.123/24`, and normalizes it to the effective network. `IPAddress.Matches(...)` keeps the historical two cache layers internally: parsed-network results (including invalid parses) and repeated IP/list match results; list cache keys are order-independent and `*` remains match-all.
 
 ## 🔎 See which configuration source wins
 

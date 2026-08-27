@@ -14,6 +14,47 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration
     public sealed class CollectionBindingFrameworkCharacterizationTests
     {
         [TestMethod]
+        public void NativeBinderMergesInitializedCollectionDefaults()
+        {
+            IConfigurationRoot configuration = BuildJson("""
+                {
+                  "Options": {
+                    "ListValues": ["configured-list"],
+                    "DictionaryValues": { "configured": "2" }
+                  }
+                }
+                """);
+
+            var options = new CollectionOptions();
+            configuration.GetSection("Options").Bind(options);
+
+            CollectionAssert.AreEqual(new[] { "default-list", "configured-list" }, options.ListValues);
+            Assert.AreEqual(2, options.DictionaryValues.Count);
+            Assert.AreEqual("1", options.DictionaryValues["default"]);
+            Assert.AreEqual("2", options.DictionaryValues["configured"]);
+        }
+
+        [TestMethod]
+        public void NativeBinderKeepsInitializedDefaultsForExplicitlyEmptyCollections()
+        {
+            IConfigurationRoot configuration = BuildJson("""
+                {
+                  "Options": {
+                    "ListValues": [],
+                    "DictionaryValues": {}
+                  }
+                }
+                """);
+
+            var options = new CollectionOptions();
+            configuration.GetSection("Options").Bind(options);
+
+            CollectionAssert.AreEqual(new[] { "default-list" }, options.ListValues);
+            Assert.AreEqual(1, options.DictionaryValues.Count);
+            Assert.AreEqual("1", options.DictionaryValues["default"]);
+        }
+
+        [TestMethod]
         public void MissingCollectionKeysKeepCodeDefaults()
         {
             IConfigurationRoot configuration = BuildJson("""
@@ -28,7 +69,6 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration
             configuration.GetSection("Options").BindReplacingCollectionDefaults(options);
 
             CollectionAssert.AreEqual(new[] { "default-list" }, options.ListValues);
-            CollectionAssert.AreEqual(new[] { "default-array" }, options.ArrayValues);
             Assert.AreEqual(1, options.DictionaryValues.Count);
             Assert.AreEqual("1", options.DictionaryValues["default"]);
         }
@@ -40,7 +80,6 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration
                 {
                   "Options": {
                     "ListValues": ["configured-list"],
-                    "ArrayValues": ["configured-array"],
                     "DictionaryValues": { "configured": "2" }
                   }
                 }
@@ -50,7 +89,6 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration
             configuration.GetSection("Options").BindReplacingCollectionDefaults(options);
 
             CollectionAssert.AreEqual(new[] { "configured-list" }, options.ListValues);
-            CollectionAssert.AreEqual(new[] { "configured-array" }, options.ArrayValues);
             Assert.AreEqual(1, options.DictionaryValues.Count);
             Assert.AreEqual("2", options.DictionaryValues["configured"]);
             Assert.IsFalse(options.DictionaryValues.ContainsKey("default"));
@@ -63,7 +101,6 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration
                 {
                   "Options": {
                     "ListValues": [],
-                    "ArrayValues": [],
                     "DictionaryValues": {}
                   }
                 }
@@ -73,7 +110,6 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration
             configuration.GetSection("Options").BindReplacingCollectionDefaults(options);
 
             Assert.HasCount(0, options.ListValues);
-            Assert.HasCount(0, options.ArrayValues);
             Assert.HasCount(0, options.DictionaryValues);
         }
 
@@ -84,7 +120,6 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration
                 {
                   "Options": {
                     "ListValues": ["configured-list"],
-                    "ArrayValues": [],
                     "DictionaryValues": {}
                   }
                 }
@@ -100,7 +135,6 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration
             CollectionOptions options = provider.GetRequiredService<IOptions<CollectionOptions>>().Value;
 
             CollectionAssert.AreEqual(new[] { "configured-list" }, options.ListValues);
-            Assert.HasCount(0, options.ArrayValues);
             Assert.HasCount(0, options.DictionaryValues);
         }
 
@@ -117,8 +151,6 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration
             public string Other { get; set; } = "default";
 
             public List<string> ListValues { get; set; } = new() { "default-list" };
-
-            public string[] ArrayValues { get; set; } = new[] { "default-array" };
 
             public Dictionary<string, string> DictionaryValues { get; set; } = new()
             {

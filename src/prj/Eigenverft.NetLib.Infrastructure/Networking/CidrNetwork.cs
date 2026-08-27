@@ -76,10 +76,12 @@ namespace Eigenverft.NetLib.Infrastructure.Networking
             string addressText = span[..slashIndex].Trim().ToString();
             string prefixText = span[(slashIndex + 1)..].Trim().ToString();
 
-            if (!IpAddressNormalizer.TryParse(addressText, out IPAddress? address) || address is null)
+            if (!IPAddress.TryParse(addressText, out IPAddress? parsedAddress) || parsedAddress is null)
             {
                 return false;
             }
+
+            IPAddress address = parsedAddress.Normalize();
 
             if (!int.TryParse(prefixText, NumberStyles.None, CultureInfo.InvariantCulture, out int prefixLength))
             {
@@ -113,7 +115,7 @@ namespace Eigenverft.NetLib.Infrastructure.Networking
         {
             ArgumentNullException.ThrowIfNull(address);
 
-            IPAddress normalized = IpAddressNormalizer.Normalize(address);
+            IPAddress normalized = address.Normalize();
             if (normalized.AddressFamily != AddressFamily)
             {
                 return false;
@@ -173,7 +175,7 @@ namespace Eigenverft.NetLib.Infrastructure.Networking
         /// <inheritdoc />
         public override string ToString()
         {
-            return $"{IpAddressNormalizer.ToCanonicalString(NetworkAddress)}/{PrefixLength.ToString(CultureInfo.InvariantCulture)}";
+            return $"{NetworkAddress.ToCanonicalString()}/{PrefixLength.ToString(CultureInfo.InvariantCulture)}";
         }
 
         private static void ApplyMask(byte[] bytes, int prefixLength)
