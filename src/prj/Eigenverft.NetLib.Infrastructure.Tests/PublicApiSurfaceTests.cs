@@ -8,8 +8,10 @@ using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Diagnostics;
 using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Sources;
 using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson;
 using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.Values;
+using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides;
 using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
 using Eigenverft.NetLib.Infrastructure.Hosting.Logging.BootstrapLogger;
+using Eigenverft.NetLib.Infrastructure.Networking;
 using Eigenverft.NetLib.Infrastructure.Security.Certificates;
 using Eigenverft.NetLib.Infrastructure.Transformations;
 
@@ -31,6 +33,10 @@ namespace Eigenverft.NetLib.Infrastructure.Tests
                 typeof(ReversibleStringTransform),
                 typeof(ReversibleStringTransforms),
                 typeof(BootstrapLogger),
+                typeof(IpAddressExtensions),
+                typeof(CidrNetwork),
+                typeof(CidrMatchingExtensions),
+                typeof(ConfigurationCollectionOverrideBindingExtensions),
                 typeof(ConfigurationSetRegistration),
                 typeof(ConfigurationSetDefinition),
                 typeof(IConfigurationSetCoordinator),
