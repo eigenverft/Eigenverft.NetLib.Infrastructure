@@ -307,6 +307,35 @@ Concrete coordinator, provider, runtime, pipeline, watcher, and persistence-form
 
 The certificate APIs have no ASP.NET Core, Kestrel, SNI, configuration, or logging dependency.
 
+## Collection defaults and configuration overrides
+
+The built-in configuration binder mutates initialized lists and dictionaries, so configured values normally append/merge with code defaults. NetLib provides one shared replacement layer instead of separate list/dictionary wrapper types:
+
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides;
+
+configuration.GetSection("FilterOptions")
+    .BindReplacingCollectionDefaults(options);
+
+services
+    .AddOptions<FilterOptions>()
+    .BindReplacingCollectionDefaults("FilterOptions");
+```
+
+Missing list/dictionary keys keep code defaults. Present populated lists/dictionaries replace them. Present empty JSON arrays/objects clear initialized list/dictionary defaults. The native binder still performs the final binding and the native options integration still owns reload/change-token behavior; other collection shapes keep native binder semantics.
+
+**A5/A6 decision:** NetLib does not recreate `OptionsConfigOverridesDefaultsList<T>` and `OptionsConfigOverridesDefaultsDictionary<TKey,TValue>`. Their shared intent is implemented once at the configuration-binding boundary.
+
+## IP normalization and CIDR matching
+
+`Eigenverft.NetLib.Infrastructure.Networking` provides host-independent primitives:
+
+- `IPAddress.Normalize()` maps IPv4-mapped IPv6 to IPv4 and `IPAddress.ToCanonicalString()` produces stable canonical address text without IPv6 scope identifiers.
+- `CidrNetwork.Parse(...)` accepts convenience input such as `192.168.1.123/24`, normalizes it to `192.168.1.0/24`, and `Contains(...)` supports IPv4 and IPv6 matching.
+- `IPAddress.Matches(...)` keeps parsed-network caching and repeated IP/list match caching internally, including order-independent list keys, invalid-parse caching, and `*` match-all semantics.
+
+These APIs have no ASP.NET dependency and are suitable for console apps, workers, desktop applications, and hosted services alike.
+
 ## 🎯 Target frameworks
 
 The package ships dedicated assets for:
