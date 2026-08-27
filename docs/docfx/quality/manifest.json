@@ -4,6 +4,34 @@
   "files": [
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.yml\" sourcestartlinenumber=\"1\">Adds configuration binding semantics in which explicitly configured lists and dictionaries replace code defaults.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetApplyMode.yml",
       "output": {
         ".html": {
@@ -560,7 +588,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection",
-      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.yml\" sourcestartlinenumber=\"1\">Selects existing JSON values that are encoded once during switchable-source registration and decoded during every load.</p>\n"
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.yml\" sourcestartlinenumber=\"1\">Selects JSON values that are kept encoded at rest before switchable-source loads and decoded in every published snapshot.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -1148,6 +1176,62 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Eigenverft.NetLib.Infrastructure.Hosting",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.yml\" sourcestartlinenumber=\"1\">Provides CIDR matching extensions for <xref href=\"System.Net.IPAddress\" data-throw-if-not-resolved=\"false\"></xref> while caching parsed networks and repeated list evaluations.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.yml\" sourcestartlinenumber=\"1\">Represents a normalized IPv4 or IPv6 CIDR network.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.yml\" sourcestartlinenumber=\"1\">Provides host-agnostic normalization helpers for <xref href=\"System.Net.IPAddress\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Networking",
       "Summary": null
     },
     {
