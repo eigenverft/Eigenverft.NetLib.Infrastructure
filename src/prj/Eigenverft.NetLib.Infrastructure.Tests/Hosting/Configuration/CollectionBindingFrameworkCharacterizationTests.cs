@@ -129,7 +129,7 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Hosting.Configuration
             services.AddSingleton<IConfiguration>(configuration);
             services
                 .AddOptions<CollectionOptions>()
-                .BindConfigurationReplacingCollectionDefaults("Options");
+                .BindReplacingCollectionDefaults("Options");
 
             using ServiceProvider provider = services.BuildServiceProvider();
             CollectionOptions options = provider.GetRequiredService<IOptions<CollectionOptions>>().Value;

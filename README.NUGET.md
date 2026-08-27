@@ -319,7 +319,7 @@ configuration.GetSection("FilterOptions")
 
 services
     .AddOptions<FilterOptions>()
-    .BindConfigurationReplacingCollectionDefaults("FilterOptions");
+    .BindReplacingCollectionDefaults("FilterOptions");
 ```
 
 Missing list/dictionary keys keep code defaults. Present populated lists/dictionaries replace them. Present empty JSON arrays/objects clear initialized list/dictionary defaults. The native binder still performs the final binding and the native options integration still owns reload/change-token behavior; other collection shapes keep native binder semantics.

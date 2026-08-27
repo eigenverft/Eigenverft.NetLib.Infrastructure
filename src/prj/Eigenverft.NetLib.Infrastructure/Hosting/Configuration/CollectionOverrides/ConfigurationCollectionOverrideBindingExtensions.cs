@@ -62,7 +62,7 @@ namespace Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverr
         /// <returns>The same options builder for chaining.</returns>
         [RequiresDynamicCode("Configuration binding and collection preparation may require runtime code generation.")]
         [RequiresUnreferencedCode("Configuration binding and reflection over collection properties require preserved members.")]
-        public static OptionsBuilder<TOptions> BindConfigurationReplacingCollectionDefaults<TOptions>(
+        public static OptionsBuilder<TOptions> BindReplacingCollectionDefaults<TOptions>(
             this OptionsBuilder<TOptions> optionsBuilder,
             string configSectionPath,
             Action<BinderOptions>? configureBinder = null)

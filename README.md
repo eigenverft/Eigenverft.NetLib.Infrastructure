@@ -819,7 +819,7 @@ configuration.GetSection("FilterOptions")
 
 services
     .AddOptions<FilterOptions>()
-    .BindConfigurationReplacingCollectionDefaults("FilterOptions");
+    .BindReplacingCollectionDefaults("FilterOptions");
 ```
 
 Only existing mutable list and dictionary properties whose configuration key is actually present are cleared before the framework binder runs. Missing keys leave code defaults untouched, populated collections replace defaults, and explicitly empty JSON arrays/objects become empty collections. Binding, `BinderOptions`, named options, and reload/change-token behavior remain framework-owned; other collection shapes keep the native binder semantics.
