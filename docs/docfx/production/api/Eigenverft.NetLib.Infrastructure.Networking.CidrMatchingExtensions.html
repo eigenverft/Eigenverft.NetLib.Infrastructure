@@ -5,11 +5,11 @@
   <head>
     <meta charset="utf-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-      <title>Interface IConfigurationSetStateStore | Eigenverft.NetLib.Infrastructure </title>
+      <title>Class CidrMatchingExtensions | Eigenverft.NetLib.Infrastructure </title>
       <meta name="viewport" content="width=device-width">
-      <meta name="title" content="Interface IConfigurationSetStateStore | Eigenverft.NetLib.Infrastructure ">
+      <meta name="title" content="Class CidrMatchingExtensions | Eigenverft.NetLib.Infrastructure ">
     
-    <meta name="description" content="Runtime control and observation contract for the built-in self-describing JSON desired-state store.">
+    <meta name="description" content="Provides CIDR matching extensions for  while caching parsed networks and repeated list evaluations.">
       <link rel="shortcut icon" href="../favicon.ico">
       <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
       <link rel="stylesheet" href="../styles/docfx.css">
@@ -186,8 +186,8 @@
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetManager.html" title="IConfigurationSetManager" class="">IConfigurationSetManager</a>
                           </li>
-                          <li class="active">
-                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.html" title="IConfigurationSetStateStore" class="active">IConfigurationSetStateStore</a>
+                          <li class="">
+                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.html" title="IConfigurationSetStateStore" class="">IConfigurationSetStateStore</a>
                           </li>
                         </ul>
                     </li>
@@ -381,8 +381,8 @@
                       <a href="Eigenverft.NetLib.Infrastructure.Networking.html" title="Eigenverft.NetLib.Infrastructure.Networking" class="">Eigenverft.NetLib.Infrastructure.Networking</a>
 
                         <ul class="nav level2">
-                          <li class="">
-                            <a href="Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.html" title="CidrMatchingExtensions" class="">CidrMatchingExtensions</a>
+                          <li class="active">
+                            <a href="Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.html" title="CidrMatchingExtensions" class="active">CidrMatchingExtensions</a>
                           </li>
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html" title="CidrNetwork" class="">CidrNetwork</a>
@@ -473,80 +473,91 @@
         </div>
         <div class="article row grid-right">
           <div class="col-md-10">
-            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore">
+            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions">
 
 
 
-  <h1 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore" class="text-break">Interface IConfigurationSetStateStore</h1>
-  <div class="markdown level0 summary"><p>Runtime control and observation contract for the built-in self-describing JSON desired-state store.</p>
+  <h1 id="Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions" class="text-break">Class CidrMatchingExtensions</h1>
+  <div class="markdown level0 summary"><p>Provides CIDR matching extensions for <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.net.ipaddress">IPAddress</a> while caching parsed networks and repeated list evaluations.</p>
 </div>
   <div class="markdown level0 conceptual"></div>
+  <div class="inheritance">
+    <h5>Inheritance</h5>
+    <div class="level0"><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+    <div class="level1"><span class="xref">CidrMatchingExtensions</span></div>
+  </div>
   <div class="inheritedMembers">
     <h5>Inherited Members</h5>
     <div>
-      <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetDesiredStateStore_GetDesiredStateStatus">IConfigurationSetDesiredStateStore.GetDesiredStateStatus()</a>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
     </div>
     <div>
-      <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetDesiredStateStore_TrySetDesiredValue_System_String_System_String_">IConfigurationSetDesiredStateStore.TrySetDesiredValue(string, string)</a>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
     </div>
   </div>
-  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.html">Hosting</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.html">Configuration</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.html">ConfigurationSets</a></h6>
+  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Networking.html">Networking</a></h6>
   <h6><strong>Assembly</strong>: Eigenverft.NetLib.Infrastructure.dll</h6>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_syntax">Syntax</h5>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions_syntax">Syntax</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public interface IConfigurationSetStateStore : IConfigurationSetDesiredStateStore</code></pre>
+    <pre><code class="lang-csharp hljs">public static class CidrMatchingExtensions</code></pre>
   </div>
-  <h3 id="properties">Properties
-</h3>
-  <span class="small pull-right mobile-hide">
-    <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_FilePath.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.FilePath%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
-  </span>
-  <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetStateStoreContracts.cs/#L212">View Source</a>
-  </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_FilePath_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.FilePath*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_FilePath" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.FilePath">FilePath</h4>
-  <div class="markdown level1 summary"><p>Gets the normalized path of the managed JSON state file.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-  <h5 class="declaration">Declaration</h5>
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">string FilePath { get; }</code></pre>
-  </div>
-  <h5 class="propertyValue">Property Value</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td></td>
-      </tr>
-    </tbody>
-  </table>
   <h3 id="methods">Methods
 </h3>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_GetStatus.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.GetStatus%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions_Matches_System_Net_IPAddress_System_Collections_Generic_IEnumerable_System_String__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches(System.Net.IPAddress%2CSystem.Collections.Generic.IEnumerable%7BSystem.String%7D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetStateStoreContracts.cs/#L220">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrMatchingExtensions.cs/#L67">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_GetStatus_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.GetStatus*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_GetStatus" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.GetStatus">GetStatus()</h4>
-  <div class="markdown level1 summary"><p>Captures the current managed state-file and coordinator runtime status.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions_Matches_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions_Matches_System_Net_IPAddress_System_Collections_Generic_IEnumerable_System_String__" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches(System.Net.IPAddress,System.Collections.Generic.IEnumerable{System.String})">Matches(IPAddress, IEnumerable&lt;string?&gt;?)</h4>
+  <div class="markdown level1 summary"><p>Determines whether an address belongs to any CIDR network in a collection.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">ConfigurationSetStateStoreStatus GetStatus()</code></pre>
+    <pre><code class="lang-csharp hljs">public static bool Matches(this IPAddress address, IEnumerable&lt;string?&gt;? cidrs)</code></pre>
   </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.net.ipaddress">IPAddress</a></td>
+        <td><span class="parametername">address</span></td>
+        <td><p>Address to test.</p>
+</td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1">IEnumerable</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</td>
+        <td><span class="parametername">cidrs</span></td>
+        <td><p>CIDR texts to test.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
   <h5 class="returns">Returns</h5>
   <table class="table table-bordered table-condensed">
     <thead>
@@ -557,43 +568,57 @@
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateStoreStatus.html">ConfigurationSetStateStoreStatus</a></td>
-        <td></td>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when any entry matches; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
+</td>
       </tr>
     </tbody>
   </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions_Matches_System_Net_IPAddress_System_Collections_Generic_IEnumerable_System_String___remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>Empty entries are ignored and <code>*</code> short-circuits as match-all. The repeated
+address/list result is cached using an order-independent list key, preserving the
+historical convenience for recurring filter evaluations.</p>
+</div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_Materialize.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.Materialize%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions_Matches_System_Net_IPAddress_System_String_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches(System.Net.IPAddress%2CSystem.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetStateStoreContracts.cs/#L226">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrMatchingExtensions.cs/#L37">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_Materialize_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.Materialize*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_Materialize" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.Materialize">Materialize()</h4>
-  <div class="markdown level1 summary"><p>Writes current desired values and authoritative state metadata to the state file.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions_Matches_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions_Matches_System_Net_IPAddress_System_String_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches(System.Net.IPAddress,System.String)">Matches(IPAddress, string?)</h4>
+  <div class="markdown level1 summary"><p>Determines whether an address belongs to one CIDR network.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">void Materialize()</code></pre>
+    <pre><code class="lang-csharp hljs">public static bool Matches(this IPAddress address, string? cidr)</code></pre>
   </div>
-  <span class="small pull-right mobile-hide">
-    <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_Reload.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.Reload%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
-  </span>
-  <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetStateStoreContracts.cs/#L223">View Source</a>
-  </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_Reload_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.Reload*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_Reload" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.Reload">Reload()</h4>
-  <div class="markdown level1 summary"><p>Loads the current state file and applies values permitted to change in the running host.</p>
-</div>
-  <div class="markdown level1 conceptual"></div>
-  <h5 class="declaration">Declaration</h5>
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">ConfigurationSetStateApplyResult Reload()</code></pre>
-  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.net.ipaddress">IPAddress</a></td>
+        <td><span class="parametername">address</span></td>
+        <td><p>Address to test.</p>
+</td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">cidr</span></td>
+        <td><p>CIDR text or <code>*</code>.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
   <h5 class="returns">Returns</h5>
   <table class="table table-bordered table-condensed">
     <thead>
@@ -604,43 +629,16 @@
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateApplyResult.html">ConfigurationSetStateApplyResult</a></td>
-        <td></td>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when the address matches; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
+</td>
       </tr>
     </tbody>
   </table>
-  <h3 id="events">Events
-</h3>
-  <span class="small pull-right mobile-hide">
-    <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_LifecycleChanged.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.LifecycleChanged%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
-  </span>
-  <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetStateStoreContracts.cs/#L217">View Source</a>
-  </span>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore_LifecycleChanged" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore.LifecycleChanged">LifecycleChanged</h4>
-  <div class="markdown level1 summary"><p>Occurs after state materialization or a completed apply attempt. Observers are notifications and cannot veto outcomes.</p>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions_Matches_System_Net_IPAddress_System_String__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>A single <code>*</code> value matches every address. Invalid or empty CIDR text does not match.
+Parsed CIDR results, including invalid results, are cached for repeated calls.</p>
 </div>
-  <div class="markdown level1 conceptual"></div>
-  <h5 class="declaration">Declaration</h5>
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">event EventHandler&lt;ConfigurationSetStateStoreEventArgs&gt;? LifecycleChanged</code></pre>
-  </div>
-  <h5 class="eventType">Event Type</h5>
-  <table class="table table-bordered table-condensed">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.eventhandler-1">EventHandler</a>&lt;<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateStoreEventArgs.html">ConfigurationSetStateStoreEventArgs</a>&gt;</td>
-        <td></td>
-      </tr>
-    </tbody>
-  </table>
 
 </article>
           </div>
@@ -650,10 +648,10 @@
               <div class="contribution">
                 <ul class="nav">
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetStateStore.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetStateStore%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/main/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
                   </li>
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetStateStoreContracts.cs/#L209" class="contribution-link">View Source</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrMatchingExtensions.cs/#L15" class="contribution-link">View Source</a>
                   </li>
                 </ul>
               </div>
