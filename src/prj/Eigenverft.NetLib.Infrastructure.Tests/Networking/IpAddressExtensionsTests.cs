@@ -30,14 +30,27 @@ namespace Eigenverft.NetLib.Infrastructure.Tests.Networking
         }
 
         [TestMethod]
-        public void IPv6CanonicalStringDropsScopeIdentifier()
+        public void NativeIPv6WithoutScopeRemainsUnchanged()
+        {
+            IPAddress address = IPAddress.Parse("2001:db8::1234");
+
+            IPAddress normalized = address.Normalize();
+
+            Assert.AreSame(address, normalized);
+            Assert.AreEqual("2001:db8::1234", normalized.ToString());
+            Assert.AreEqual("2001:db8::1234", address.ToCanonicalString());
+        }
+
+        [TestMethod]
+        public void NativeIPv6WithScopePreservesScopeIdentifier()
         {
             IPAddress address = IPAddress.Parse("fe80::1%7");
 
             IPAddress normalized = address.Normalize();
 
-            Assert.AreEqual(0L, normalized.ScopeId);
-            Assert.AreEqual("fe80::1", address.ToCanonicalString());
+            Assert.AreSame(address, normalized);
+            Assert.AreEqual(7L, normalized.ScopeId);
+            Assert.AreEqual("fe80::1%7", address.ToCanonicalString());
         }
     }
 }
