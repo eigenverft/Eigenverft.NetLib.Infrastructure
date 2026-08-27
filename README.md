@@ -798,6 +798,53 @@ Console.WriteLine($"{managed.Action}; persisted: {managed.Persisted}");
 
 `CertificateRecoveryMode.PreserveExisting` is the safe default: it creates a missing PFX but never overwrites an existing unusable credential. The result still provides an in-memory recovery certificate and reports load or persistence failures. Use `SelfSignedCertificateFactory.Create(...)` directly when no managed file lifecycle is needed.
 
+## 🧩 Let configuration replace collection defaults
+
+The native configuration binder intentionally mutates initialized collections: configured list items are appended and dictionary entries are merged with code defaults. That is useful for composition, but it does not implement the common options contract “missing key keeps defaults; present key replaces defaults; present empty collection clears defaults.” .NET 10 improves empty-array representation, but it still does not clear an already initialized mutable list automatically.
+
+NetLib therefore uses one small binding concept for both lists and dictionaries instead of specialized collection wrapper types:
+
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides;
+
+public sealed class FilterOptions
+{
+    public List<string> Allowed { get; set; } = new() { "default" };
+    public Dictionary<string, int> Weights { get; set; } = new() { ["default"] = 1 };
+}
+
+FilterOptions options = new();
+configuration.GetSection("FilterOptions")
+    .BindReplacingCollectionDefaults(options);
+
+services
+    .AddOptions<FilterOptions>()
+    .BindConfigurationReplacingCollectionDefaults("FilterOptions");
+```
+
+Only collection properties whose configuration key is actually present are cleared before the framework binder runs. Missing keys leave code defaults untouched, populated collections replace defaults, and explicitly empty JSON arrays/objects become empty collections. Arrays are handled by the same preparation step. Binding, `BinderOptions`, named options, and reload/change-token behavior remain framework-owned.
+
+This is the A5/A6 decision: the legacy `OptionsConfigOverridesDefaultsList<T>` and `OptionsConfigOverridesDefaultsDictionary<TKey,TValue>` wrappers are **not** re-created in NetLib. Their shared intent is expressed once at the binding boundary.
+
+## 🌐 Normalize and match IP networks
+
+`Eigenverft.NetLib.Infrastructure.Networking` is host-agnostic and has no ASP.NET dependency:
+
+```csharp
+IPAddress canonical = IpAddressNormalizer.Normalize(
+    IPAddress.Parse("::ffff:192.168.1.25"));
+// 192.168.1.25
+
+CidrNetwork network = CidrNetwork.Parse("192.168.1.123/24");
+// normalized to 192.168.1.0/24
+
+bool match = CidrMatcher.IsMatch(
+    canonical,
+    new[] { "10.0.0.0/8", "192.168.1.123/24" });
+```
+
+`IpAddressNormalizer` maps IPv4-mapped IPv6 to IPv4 and removes IPv6 scope identifiers from canonical identity. `CidrNetwork` keeps CIDR parsing/matching separate from normalization and accepts host-bit convenience input such as `192.168.1.123/24`. `CidrMatcher` keeps the historical two cache layers: parsed-network results (including invalid parses) and repeated IP/list match results; list cache keys are order-independent and `*` remains match-all.
+
 ## 🔎 See which configuration source wins
 
 ```csharp
