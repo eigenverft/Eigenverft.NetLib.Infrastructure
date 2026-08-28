@@ -7,6 +7,61 @@ references:
   commentId: N:Eigenverft.NetLib.Infrastructure.Hosting
   fullName: Eigenverft.NetLib.Infrastructure.Hosting
   nameWithType: Eigenverft.NetLib.Infrastructure.Hosting
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides
+  name: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.html
+  commentId: N:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides
+  nameWithType: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions
+  name: ConfigurationCollectionOverrideBindingExtensions
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions
+  nameWithType: ConfigurationCollectionOverrideBindingExtensions
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults(Microsoft.Extensions.Configuration.IConfiguration,System.Object,Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior,System.Action{Microsoft.Extensions.Configuration.BinderOptions})
+  name: BindReplacingCollectionDefaults(IConfiguration, object, EmptyCollectionBehavior, Action<BinderOptions>?)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults_Microsoft_Extensions_Configuration_IConfiguration_System_Object_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_EmptyCollectionBehavior_System_Action_Microsoft_Extensions_Configuration_BinderOptions__
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults(Microsoft.Extensions.Configuration.IConfiguration,System.Object,Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior,System.Action{Microsoft.Extensions.Configuration.BinderOptions})
+  name.vb: BindReplacingCollectionDefaults(IConfiguration, Object, EmptyCollectionBehavior, Action(Of BinderOptions))
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults(Microsoft.Extensions.Configuration.IConfiguration, object, Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior, System.Action<Microsoft.Extensions.Configuration.BinderOptions>?)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults(Microsoft.Extensions.Configuration.IConfiguration, Object, Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior, System.Action(Of Microsoft.Extensions.Configuration.BinderOptions))
+  nameWithType: ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults(IConfiguration, object, EmptyCollectionBehavior, Action<BinderOptions>?)
+  nameWithType.vb: ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults(IConfiguration, Object, EmptyCollectionBehavior, Action(Of BinderOptions))
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults*
+  name: BindReplacingCollectionDefaults
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults
+  nameWithType: ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults``1(Microsoft.Extensions.Options.OptionsBuilder{``0},System.String,Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior,System.Action{Microsoft.Extensions.Configuration.BinderOptions})
+  name: BindReplacingCollectionDefaults<TOptions>(OptionsBuilder<TOptions>, string, EmptyCollectionBehavior, Action<BinderOptions>?)
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults__1_Microsoft_Extensions_Options_OptionsBuilder___0__System_String_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_EmptyCollectionBehavior_System_Action_Microsoft_Extensions_Configuration_BinderOptions__
+  commentId: M:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults``1(Microsoft.Extensions.Options.OptionsBuilder{``0},System.String,Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior,System.Action{Microsoft.Extensions.Configuration.BinderOptions})
+  name.vb: BindReplacingCollectionDefaults(Of TOptions)(OptionsBuilder(Of TOptions), String, EmptyCollectionBehavior, Action(Of BinderOptions))
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults<TOptions>(Microsoft.Extensions.Options.OptionsBuilder<TOptions>, string, Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior, System.Action<Microsoft.Extensions.Configuration.BinderOptions>?)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults(Of TOptions)(Microsoft.Extensions.Options.OptionsBuilder(Of TOptions), String, Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior, System.Action(Of Microsoft.Extensions.Configuration.BinderOptions))
+  nameWithType: ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults<TOptions>(OptionsBuilder<TOptions>, string, EmptyCollectionBehavior, Action<BinderOptions>?)
+  nameWithType.vb: ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults(Of TOptions)(OptionsBuilder(Of TOptions), String, EmptyCollectionBehavior, Action(Of BinderOptions))
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior
+  name: EmptyCollectionBehavior
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior
+  nameWithType: EmptyCollectionBehavior
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.UseCodeDefaults
+  name: UseCodeDefaults
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_EmptyCollectionBehavior_UseCodeDefaults
+  commentId: F:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.UseCodeDefaults
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.UseCodeDefaults
+  nameWithType: EmptyCollectionBehavior.UseCodeDefaults
+- uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.UseEmptyCollection
+  name: UseEmptyCollection
+  href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.html#Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_EmptyCollectionBehavior_UseEmptyCollection
+  commentId: F:Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.UseEmptyCollection
+  fullName: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.UseEmptyCollection
+  nameWithType: EmptyCollectionBehavior.UseEmptyCollection
 - uid: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets
   name: Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets
   href: api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.html
@@ -6269,6 +6324,251 @@ references:
   isSpec: "True"
   fullName: Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.IsStaging
   nameWithType: StaticHostEnvironment.IsStaging
+- uid: Eigenverft.NetLib.Infrastructure.Networking
+  name: Eigenverft.NetLib.Infrastructure.Networking
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.html
+  commentId: N:Eigenverft.NetLib.Infrastructure.Networking
+  fullName: Eigenverft.NetLib.Infrastructure.Networking
+  nameWithType: Eigenverft.NetLib.Infrastructure.Networking
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions
+  name: CidrMatchingExtensions
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions
+  nameWithType: CidrMatchingExtensions
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches(System.Net.IPAddress,System.Collections.Generic.IEnumerable{System.String})
+  name: Matches(IPAddress, IEnumerable<string?>?)
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.html#Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions_Matches_System_Net_IPAddress_System_Collections_Generic_IEnumerable_System_String__
+  commentId: M:Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches(System.Net.IPAddress,System.Collections.Generic.IEnumerable{System.String})
+  name.vb: Matches(IPAddress, IEnumerable(Of String))
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches(System.Net.IPAddress, System.Collections.Generic.IEnumerable<string?>?)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches(System.Net.IPAddress, System.Collections.Generic.IEnumerable(Of String))
+  nameWithType: CidrMatchingExtensions.Matches(IPAddress, IEnumerable<string?>?)
+  nameWithType.vb: CidrMatchingExtensions.Matches(IPAddress, IEnumerable(Of String))
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches(System.Net.IPAddress,System.String)
+  name: Matches(IPAddress, string?)
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.html#Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions_Matches_System_Net_IPAddress_System_String_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches(System.Net.IPAddress,System.String)
+  name.vb: Matches(IPAddress, String)
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches(System.Net.IPAddress, string?)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches(System.Net.IPAddress, String)
+  nameWithType: CidrMatchingExtensions.Matches(IPAddress, string?)
+  nameWithType.vb: CidrMatchingExtensions.Matches(IPAddress, String)
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches*
+  name: Matches
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.html#Eigenverft_NetLib_Infrastructure_Networking_CidrMatchingExtensions_Matches_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.Matches
+  nameWithType: CidrMatchingExtensions.Matches
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork
+  name: CidrNetwork
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork
+  nameWithType: CidrNetwork
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.AddressFamily
+  name: AddressFamily
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_AddressFamily
+  commentId: P:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.AddressFamily
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.AddressFamily
+  nameWithType: CidrNetwork.AddressFamily
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.AddressFamily*
+  name: AddressFamily
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_AddressFamily_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.AddressFamily
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.AddressFamily
+  nameWithType: CidrNetwork.AddressFamily
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Contains(System.Net.IPAddress)
+  name: Contains(IPAddress)
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Contains_System_Net_IPAddress_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Contains(System.Net.IPAddress)
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Contains(System.Net.IPAddress)
+  nameWithType: CidrNetwork.Contains(IPAddress)
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Contains*
+  name: Contains
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Contains_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Contains
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Contains
+  nameWithType: CidrNetwork.Contains
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)
+  name: Equals(CidrNetwork)
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Equals_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)
+  nameWithType: CidrNetwork.Equals(CidrNetwork)
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals(System.Object)
+  name: Equals(object?)
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Equals_System_Object_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals(System.Object)
+  name.vb: Equals(Object)
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals(object?)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals(Object)
+  nameWithType: CidrNetwork.Equals(object?)
+  nameWithType.vb: CidrNetwork.Equals(Object)
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals*
+  name: Equals
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Equals_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals
+  nameWithType: CidrNetwork.Equals
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.GetHashCode
+  name: GetHashCode()
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_GetHashCode
+  commentId: M:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.GetHashCode
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.GetHashCode()
+  nameWithType: CidrNetwork.GetHashCode()
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.GetHashCode*
+  name: GetHashCode
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_GetHashCode_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.GetHashCode
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.GetHashCode
+  nameWithType: CidrNetwork.GetHashCode
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.NetworkAddress
+  name: NetworkAddress
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_NetworkAddress
+  commentId: P:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.NetworkAddress
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.NetworkAddress
+  nameWithType: CidrNetwork.NetworkAddress
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.NetworkAddress*
+  name: NetworkAddress
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_NetworkAddress_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.NetworkAddress
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.NetworkAddress
+  nameWithType: CidrNetwork.NetworkAddress
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Parse(System.String)
+  name: Parse(string)
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Parse_System_String_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Parse(System.String)
+  name.vb: Parse(String)
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Parse(string)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Parse(String)
+  nameWithType: CidrNetwork.Parse(string)
+  nameWithType.vb: CidrNetwork.Parse(String)
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Parse*
+  name: Parse
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Parse_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Parse
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Parse
+  nameWithType: CidrNetwork.Parse
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.PrefixLength
+  name: PrefixLength
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_PrefixLength
+  commentId: P:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.PrefixLength
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.PrefixLength
+  nameWithType: CidrNetwork.PrefixLength
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.PrefixLength*
+  name: PrefixLength
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_PrefixLength_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.PrefixLength
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.PrefixLength
+  nameWithType: CidrNetwork.PrefixLength
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.ToString
+  name: ToString()
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_ToString
+  commentId: M:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.ToString
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.ToString()
+  nameWithType: CidrNetwork.ToString()
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.ToString*
+  name: ToString
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_ToString_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.ToString
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.ToString
+  nameWithType: CidrNetwork.ToString
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.TryParse(System.String,Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork@)
+  name: TryParse(string?, out CidrNetwork)
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_TryParse_System_String_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork__
+  commentId: M:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.TryParse(System.String,Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork@)
+  name.vb: TryParse(String, CidrNetwork)
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.TryParse(string?, out Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.TryParse(String, Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)
+  nameWithType: CidrNetwork.TryParse(string?, out CidrNetwork)
+  nameWithType.vb: CidrNetwork.TryParse(String, CidrNetwork)
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.TryParse*
+  name: TryParse
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_TryParse_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.TryParse
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.TryParse
+  nameWithType: CidrNetwork.TryParse
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Equality(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork,Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)
+  name: operator ==(CidrNetwork, CidrNetwork)
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_op_Equality_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Equality(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork,Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)
+  name.vb: =(CidrNetwork, CidrNetwork)
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.operator ==(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork, Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.=(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork, Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)
+  nameWithType: CidrNetwork.operator ==(CidrNetwork, CidrNetwork)
+  nameWithType.vb: CidrNetwork.=(CidrNetwork, CidrNetwork)
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Equality*
+  name: operator ==
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_op_Equality_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Equality
+  isSpec: "True"
+  name.vb: =
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.operator ==
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.=
+  nameWithType: CidrNetwork.operator ==
+  nameWithType.vb: CidrNetwork.=
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Inequality(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork,Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)
+  name: operator !=(CidrNetwork, CidrNetwork)
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_op_Inequality_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Inequality(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork,Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)
+  name.vb: <>(CidrNetwork, CidrNetwork)
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.operator !=(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork, Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.<>(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork, Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)
+  nameWithType: CidrNetwork.operator !=(CidrNetwork, CidrNetwork)
+  nameWithType.vb: CidrNetwork.<>(CidrNetwork, CidrNetwork)
+- uid: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Inequality*
+  name: operator !=
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html#Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_op_Inequality_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Inequality
+  isSpec: "True"
+  name.vb: <>
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.operator !=
+  fullName.vb: Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.<>
+  nameWithType: CidrNetwork.operator !=
+  nameWithType.vb: CidrNetwork.<>
+- uid: Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions
+  name: IpAddressExtensions
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.html
+  commentId: T:Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions
+  nameWithType: IpAddressExtensions
+- uid: Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.Normalize(System.Net.IPAddress)
+  name: Normalize(IPAddress)
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.html#Eigenverft_NetLib_Infrastructure_Networking_IpAddressExtensions_Normalize_System_Net_IPAddress_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.Normalize(System.Net.IPAddress)
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.Normalize(System.Net.IPAddress)
+  nameWithType: IpAddressExtensions.Normalize(IPAddress)
+- uid: Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.Normalize*
+  name: Normalize
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.html#Eigenverft_NetLib_Infrastructure_Networking_IpAddressExtensions_Normalize_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.Normalize
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.Normalize
+  nameWithType: IpAddressExtensions.Normalize
+- uid: Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.ToCanonicalString(System.Net.IPAddress)
+  name: ToCanonicalString(IPAddress)
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.html#Eigenverft_NetLib_Infrastructure_Networking_IpAddressExtensions_ToCanonicalString_System_Net_IPAddress_
+  commentId: M:Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.ToCanonicalString(System.Net.IPAddress)
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.ToCanonicalString(System.Net.IPAddress)
+  nameWithType: IpAddressExtensions.ToCanonicalString(IPAddress)
+- uid: Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.ToCanonicalString*
+  name: ToCanonicalString
+  href: api/Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.html#Eigenverft_NetLib_Infrastructure_Networking_IpAddressExtensions_ToCanonicalString_
+  commentId: Overload:Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.ToCanonicalString
+  isSpec: "True"
+  fullName: Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.ToCanonicalString
+  nameWithType: IpAddressExtensions.ToCanonicalString
 - uid: Eigenverft.NetLib.Infrastructure.Security.Certificates
   name: Eigenverft.NetLib.Infrastructure.Security.Certificates
   href: api/Eigenverft.NetLib.Infrastructure.Security.Certificates.html

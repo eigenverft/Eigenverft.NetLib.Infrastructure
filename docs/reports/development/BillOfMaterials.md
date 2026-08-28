@@ -1,6 +1,8 @@
-﻿## Bill of Materials Report for Projects: Eigenverft.NetLib.Infrastructure - 2026-08-26 UTC
+﻿## Bill of Materials Report for Projects: Eigenverft.NetLib.Infrastructure - 2026-08-28 UTC
 
 | ProjectName | Package | ResolvedVersion |
 |-------------|---------|-----------------|
-| Eigenverft.NetLib.Infrastructure | Microsoft.Extensions.Hosting | 10.0.0 |
 | Eigenverft.NetLib.Infrastructure | Microsoft.Extensions.Hosting | 8.0.1 |
+| Eigenverft.NetLib.Infrastructure | Microsoft.Extensions.Caching.Memory | 10.0.0 |
+| Eigenverft.NetLib.Infrastructure | Microsoft.Extensions.Hosting | 10.0.0 |
+| Eigenverft.NetLib.Infrastructure | Microsoft.Extensions.Caching.Memory | 8.0.1 |
