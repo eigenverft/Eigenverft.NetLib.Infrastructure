@@ -98,6 +98,9 @@
                           <li class="active">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.html" title="ConfigurationCollectionOverrideBindingExtensions" class="active">ConfigurationCollectionOverrideBindingExtensions</a>
                           </li>
+                          <li class="">
+                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.html" title="EmptyCollectionBehavior" class="">EmptyCollectionBehavior</a>
+                          </li>
                         </ul>
                     </li>
                     <li class="">
@@ -518,21 +521,22 @@
   </div>
   <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_remarks"><strong>Remarks</strong></h5>
   <div class="markdown level0 remarks"><p>The built-in configuration binder mutates initialized lists and dictionaries. These helpers clear only existing
-mutable list and dictionary values whose configuration key is present, then delegate binding and options behavior
-back to the framework. Consumer options can keep normal <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.list-1">List&lt;T&gt;</a> and
-<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.dictionary-2">Dictionary&lt;TKey, TValue&gt;</a> properties.</p>
+mutable list and dictionary values that are considered active configuration overrides, then delegate binding and
+options behavior back to the framework. Consumer options can keep normal <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.list-1">List&lt;T&gt;</a> and
+<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.dictionary-2">Dictionary&lt;TKey, TValue&gt;</a> properties. Callers must explicitly define whether an empty configured
+collection means &quot;use code defaults&quot; or &quot;use an empty collection&quot;.</p>
 </div>
   <h3 id="methods">Methods
 </h3>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults_Microsoft_Extensions_Configuration_IConfiguration_System_Object_System_Action_Microsoft_Extensions_Configuration_BinderOptions__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults(Microsoft.Extensions.Configuration.IConfiguration%2CSystem.Object%2CSystem.Action%7BMicrosoft.Extensions.Configuration.BinderOptions%7D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults_Microsoft_Extensions_Configuration_IConfiguration_System_Object_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_EmptyCollectionBehavior_System_Action_Microsoft_Extensions_Configuration_BinderOptions__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults(Microsoft.Extensions.Configuration.IConfiguration%2CSystem.Object%2CEigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior%2CSystem.Action%7BMicrosoft.Extensions.Configuration.BinderOptions%7D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/CollectionOverrides/ConfigurationCollectionOverrideBindingExtensions.cs/#L30">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/CollectionOverrides/ConfigurationCollectionOverrideBindingExtensions.cs/#L32">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults_Microsoft_Extensions_Configuration_IConfiguration_System_Object_System_Action_Microsoft_Extensions_Configuration_BinderOptions__" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults(Microsoft.Extensions.Configuration.IConfiguration,System.Object,System.Action{Microsoft.Extensions.Configuration.BinderOptions})">BindReplacingCollectionDefaults(IConfiguration, object, Action&lt;BinderOptions&gt;?)</h4>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults_Microsoft_Extensions_Configuration_IConfiguration_System_Object_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_EmptyCollectionBehavior_System_Action_Microsoft_Extensions_Configuration_BinderOptions__" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults(Microsoft.Extensions.Configuration.IConfiguration,System.Object,Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior,System.Action{Microsoft.Extensions.Configuration.BinderOptions})">BindReplacingCollectionDefaults(IConfiguration, object, EmptyCollectionBehavior, Action&lt;BinderOptions&gt;?)</h4>
   <div class="markdown level1 summary"><p>Binds configuration while replacing initialized list and dictionary defaults for explicitly configured keys.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
@@ -540,7 +544,7 @@ back to the framework. Consumer options can keep normal <a class="xref" href="ht
   <div class="codewrapper">
     <pre><code class="lang-csharp hljs">[RequiresDynamicCode(&quot;Configuration binding and collection preparation may require runtime code generation.&quot;)]
 [RequiresUnreferencedCode(&quot;Configuration binding and reflection over collection properties require preserved members.&quot;)]
-public static void BindReplacingCollectionDefaults(this IConfiguration configuration, object instance, Action&lt;BinderOptions&gt;? configureBinder = null)</code></pre>
+public static void BindReplacingCollectionDefaults(this IConfiguration configuration, object instance, EmptyCollectionBehavior emptyCollectionBehavior, Action&lt;BinderOptions&gt;? configureBinder = null)</code></pre>
   </div>
   <h5 class="parameters">Parameters</h5>
   <table class="table table-bordered table-condensed">
@@ -565,6 +569,12 @@ public static void BindReplacingCollectionDefaults(this IConfiguration configura
 </td>
       </tr>
       <tr>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.html">EmptyCollectionBehavior</a></td>
+        <td><span class="parametername">emptyCollectionBehavior</span></td>
+        <td><p>Required policy for explicitly configured empty lists and dictionaries.</p>
+</td>
+      </tr>
+      <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.action-1">Action</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.configuration.binderoptions">BinderOptions</a>&gt;</td>
         <td><span class="parametername">configureBinder</span></td>
         <td><p>Optional native binder configuration.</p>
@@ -574,13 +584,13 @@ public static void BindReplacingCollectionDefaults(this IConfiguration configura
   </table>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults__1_Microsoft_Extensions_Options_OptionsBuilder___0__System_String_System_Action_Microsoft_Extensions_Configuration_BinderOptions__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults%60%601(Microsoft.Extensions.Options.OptionsBuilder%7B%60%600%7D%2CSystem.String%2CSystem.Action%7BMicrosoft.Extensions.Configuration.BinderOptions%7D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults__1_Microsoft_Extensions_Options_OptionsBuilder___0__System_String_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_EmptyCollectionBehavior_System_Action_Microsoft_Extensions_Configuration_BinderOptions__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults%60%601(Microsoft.Extensions.Options.OptionsBuilder%7B%60%600%7D%2CSystem.String%2CEigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior%2CSystem.Action%7BMicrosoft.Extensions.Configuration.BinderOptions%7D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/CollectionOverrides/ConfigurationCollectionOverrideBindingExtensions.cs/#L63">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/CollectionOverrides/ConfigurationCollectionOverrideBindingExtensions.cs/#L70">View Source</a>
   </span>
   <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults__1_Microsoft_Extensions_Options_OptionsBuilder___0__System_String_System_Action_Microsoft_Extensions_Configuration_BinderOptions__" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults``1(Microsoft.Extensions.Options.OptionsBuilder{``0},System.String,System.Action{Microsoft.Extensions.Configuration.BinderOptions})">BindReplacingCollectionDefaults&lt;TOptions&gt;(OptionsBuilder&lt;TOptions&gt;, string, Action&lt;BinderOptions&gt;?)</h4>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults__1_Microsoft_Extensions_Options_OptionsBuilder___0__System_String_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_EmptyCollectionBehavior_System_Action_Microsoft_Extensions_Configuration_BinderOptions__" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.BindReplacingCollectionDefaults``1(Microsoft.Extensions.Options.OptionsBuilder{``0},System.String,Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior,System.Action{Microsoft.Extensions.Configuration.BinderOptions})">BindReplacingCollectionDefaults&lt;TOptions&gt;(OptionsBuilder&lt;TOptions&gt;, string, EmptyCollectionBehavior, Action&lt;BinderOptions&gt;?)</h4>
   <div class="markdown level1 summary"><p>Registers options binding in which explicitly configured lists and dictionaries replace initialized code defaults.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
@@ -588,7 +598,7 @@ public static void BindReplacingCollectionDefaults(this IConfiguration configura
   <div class="codewrapper">
     <pre><code class="lang-csharp hljs">[RequiresDynamicCode(&quot;Configuration binding and collection preparation may require runtime code generation.&quot;)]
 [RequiresUnreferencedCode(&quot;Configuration binding and reflection over collection properties require preserved members.&quot;)]
-public static OptionsBuilder&lt;TOptions&gt; BindReplacingCollectionDefaults&lt;TOptions&gt;(this OptionsBuilder&lt;TOptions&gt; optionsBuilder, string configSectionPath, Action&lt;BinderOptions&gt;? configureBinder = null) where TOptions : class</code></pre>
+public static OptionsBuilder&lt;TOptions&gt; BindReplacingCollectionDefaults&lt;TOptions&gt;(this OptionsBuilder&lt;TOptions&gt; optionsBuilder, string configSectionPath, EmptyCollectionBehavior emptyCollectionBehavior, Action&lt;BinderOptions&gt;? configureBinder = null) where TOptions : class</code></pre>
   </div>
   <h5 class="parameters">Parameters</h5>
   <table class="table table-bordered table-condensed">
@@ -610,6 +620,12 @@ public static OptionsBuilder&lt;TOptions&gt; BindReplacingCollectionDefaults&lt;
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
         <td><span class="parametername">configSectionPath</span></td>
         <td><p>Configuration section path.</p>
+</td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.html">EmptyCollectionBehavior</a></td>
+        <td><span class="parametername">emptyCollectionBehavior</span></td>
+        <td><p>Required policy for explicitly configured empty lists and dictionaries.</p>
 </td>
       </tr>
       <tr>
@@ -652,8 +668,10 @@ public static OptionsBuilder&lt;TOptions&gt; BindReplacingCollectionDefaults&lt;
       </tr>
     </tbody>
   </table>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults__1_Microsoft_Extensions_Options_OptionsBuilder___0__System_String_System_Action_Microsoft_Extensions_Configuration_BinderOptions___remarks">Remarks</h5>
-  <div class="markdown level1 remarks"><p>Change tokens, named options, binder options, and final object binding remain framework-owned.</p>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions_BindReplacingCollectionDefaults__1_Microsoft_Extensions_Options_OptionsBuilder___0__System_String_Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_EmptyCollectionBehavior_System_Action_Microsoft_Extensions_Configuration_BinderOptions___remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>Change tokens, named options, binder options, and final object binding remain framework-owned. The required
+<code class="paramref">emptyCollectionBehavior</code> is reapplied whenever the options infrastructure rebuilds an options
+instance after a configuration change.</p>
 </div>
 
 </article>
@@ -667,7 +685,7 @@ public static OptionsBuilder&lt;TOptions&gt; BindReplacingCollectionDefaults&lt;
                     <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/develop/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_CollectionOverrides_ConfigurationCollectionOverrideBindingExtensions.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
                   </li>
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/CollectionOverrides/ConfigurationCollectionOverrideBindingExtensions.cs/#L22" class="contribution-link">View Source</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/develop/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/CollectionOverrides/ConfigurationCollectionOverrideBindingExtensions.cs/#L23" class="contribution-link">View Source</a>
                   </li>
                 </ul>
               </div>
