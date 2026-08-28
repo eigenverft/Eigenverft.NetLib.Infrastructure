@@ -18,6 +18,20 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.yml\" sourcestartlinenumber=\"1\">Defines how an explicitly configured empty list or dictionary interacts with code-defined collection defaults.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.yml",
       "output": {
         ".html": {
