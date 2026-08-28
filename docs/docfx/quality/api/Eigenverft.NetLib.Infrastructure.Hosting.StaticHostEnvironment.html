@@ -523,7 +523,7 @@
   <div class="markdown level0 remarks"><p>Resolution supports both Generic Host and ASP.NET Core startup conventions. Precedence is process
 command-line arguments, then <code>DOTNET_ENVIRONMENT</code>, then <code>ASPNETCORE_ENVIRONMENT</code>, with
 <a class="xref" href="https://learn.microsoft.com/dotnet/api/microsoft.extensions.hosting.environments.production">Production</a> as the default.
-The resolved value is captured once when this type is first initialized.</p>
+The resolved value is captured once when this type is first initialized, so bootstrap consumers see one stable startup environment.</p>
 </div>
   <h3 id="properties">Properties
 </h3>
