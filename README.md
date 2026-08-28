@@ -1,4 +1,4 @@
-# 🧱 Eigenverft.NetLib.Infrastructure
+﻿# ðŸ§± Eigenverft.NetLib.Infrastructure
 
 <!-- Maintenance note: Keep README.NUGET.md aligned with this README for shared prose, examples, headings, badges, and feature descriptions. Use absolute NuGet/GitHub URLs there where this README can use repository-relative links; otherwise keep shared content in sync. -->
 
@@ -13,7 +13,7 @@ diagnostics must be available before the normal host lifecycle is ready.
 
 ---
 
-## ✨ At a glance
+## âœ¨ At a glance
 
 | Capability | Problem solved | Starting point |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ diagnostics must be available before the normal host lifecycle is ready.
 
 The package targets .NET 8 and .NET 10 and is licensed under MIT.
 
-## 📦 Installation
+## ðŸ“¦ Installation
 
 ```shell
 dotnet add package Eigenverft.NetLib.Infrastructure
@@ -39,7 +39,7 @@ Or with the NuGet Package Manager:
 Install-Package Eigenverft.NetLib.Infrastructure
 ```
 
-## 🚀 Quick start
+## ðŸš€ Quick start
 
 ### Create the host foundation
 
@@ -125,18 +125,18 @@ await host.RunAsync();
 The required initial file must exist. Later valid edits are published through ordinary
 `IConfiguration`; a missing or invalid edit is rejected and the previous snapshot remains active.
 
-## 📁 Application directory layout
+## ðŸ“ Application directory layout
 
 The standard layout is created directly below the executable directory:
 
 ```text
 <application>/
-├─ AppLogs/
-├─ AppData/
-├─ AppState/
-├─ AppProtectionKeys/
-├─ AppCerts/
-└─ AppSettings/
+â”œâ”€ AppLogs/
+â”œâ”€ AppData/
+â”œâ”€ AppState/
+â”œâ”€ AppProtectionKeys/
+â”œâ”€ AppCerts/
+â””â”€ AppSettings/
 ```
 
 Each directory is created during registration and checked for write access, so path or permission problems fail early during startup instead of surfacing later during normal application work.
@@ -159,7 +159,7 @@ public sealed class Worker(
 }
 ```
 
-## 🗂️ Override standard folder names
+## ðŸ—‚ï¸ Override standard folder names
 
 Unspecified standard directories keep their defaults:
 
@@ -172,7 +172,7 @@ builder.AddDefaultDirectoryLayout(
     });
 ```
 
-## 🧩 Custom directory layouts
+## ðŸ§© Custom directory layouts
 
 Use semantic keys when the standard set is not what your application needs:
 
@@ -190,7 +190,7 @@ string imports = directories["Imports"];
 
 Folder mappings are intentionally direct children of the application root. Rooted paths, nested paths, and traversal patterns are rejected.
 
-## 🔧 Without Generic Host
+## ðŸ”§ Without Generic Host
 
 The same layout primitive can be used directly when no host builder is involved:
 
@@ -200,7 +200,7 @@ AppDirectoryLayout directories = AppDirectoryLayoutFactory.CreateDefault();
 
 An explicit root can also be supplied to the factory for tools, tests, or custom bootstrap scenarios.
 
-## 🔄 Safe operational configuration
+## ðŸ”„ Safe operational configuration
 
 Use SwitchableJson when a changed or alternative JSON file must be loaded and prepared before it is
 allowed to replace live configuration. A rejected file leaves the last-known-good snapshot active.
@@ -244,11 +244,11 @@ combination below each profile directory:
 
 ```text
 AppSettings/Operations/
-├── Normal/LoggerSettings.json
-├── Normal/Resilience.json
-├── Normal/Diagnostics.json
-├── Degraded/...
-└── Incident/...
+â”œâ”€â”€ Normal/LoggerSettings.json
+â”œâ”€â”€ Normal/Resilience.json
+â”œâ”€â”€ Normal/Diagnostics.json
+â”œâ”€â”€ Degraded/...
+â””â”€â”€ Incident/...
 ```
 
 Register the three files as one coordinated application choice:
@@ -331,9 +331,9 @@ intentionally not part of the file path. `Production` is the initial active valu
 
 ```text
 AppSettings/Logging/
-├── Production/LoggerSettings.json
-├── ProductionVerbose/LoggerSettings.json
-└── Development/LoggerSettings.json
+â”œâ”€â”€ Production/LoggerSettings.json
+â”œâ”€â”€ ProductionVerbose/LoggerSettings.json
+â””â”€â”€ Development/LoggerSettings.json
 ```
 
 ```csharp
@@ -361,9 +361,9 @@ To keep the variants in one directory instead, provide the path mapping explicit
 
 ```text
 AppSettings/Logging/
-├── LoggerSettings.Production.json
-├── LoggerSettings.ProductionVerbose.json
-└── LoggerSettings.Development.json
+â”œâ”€â”€ LoggerSettings.Production.json
+â”œâ”€â”€ LoggerSettings.ProductionVerbose.json
+â””â”€â”€ LoggerSettings.Development.json
 ```
 
 ```csharp
@@ -419,8 +419,8 @@ public sealed class LoggingProfileService(
 
 An authenticated admin controller can inject this service and obtain `ActiveValue`, `DesiredValue`,
 `AllowedValues`, consistency, and pending-restart state from
-`desiredState.GetDesiredStateStatus()`. It can then translate a reviewed action such as “verbose
-logging” into one of the calls above. The same pattern fits traffic limits, resilience, maintenance,
+`desiredState.GetDesiredStateStatus()`. It can then translate a reviewed action such as â€œverbose
+loggingâ€ into one of the calls above. The same pattern fits traffic limits, resilience, maintenance,
 feature, or routing profiles. NetLib coordinates and reports the transition; authentication,
 authorization, audit logging, and the policy deciding who may switch remain application
 responsibilities.
@@ -432,7 +432,7 @@ fails registration. Inactive variants are not loaded during registration and may
 without preventing startup. If `LoggerSettings.ProductionVerbose.json` is still missing when that
 value is requested, the switch is rejected with
 `ConfigurationSetSwitchFailureKind.ParticipantPreparationRejected`; the currently active value and
-configuration remain unchanged. There is no implicit fallback to `Production`—it remains active only
+configuration remain unchanged. There is no implicit fallback to `Production`â€”it remains active only
 when it was already active.
 
 With one file, the set still provides an application-level name, allowed values, coordinated switch
@@ -469,12 +469,12 @@ routing
 
 Every mapped source is loaded before the coordinated value changes. A rejected candidate keeps the last fully coordinated profile active.
 
-## 🛡️ Prepare configuration before it goes live
+## ðŸ›¡ï¸ Prepare configuration before it goes live
 
 Candidate Preparation is a pre-publication pipeline over an isolated, parsed JSON snapshot:
 
 ```text
-JSON file → parse → decode / normalize / validate → publish
+JSON file â†’ parse â†’ decode / normalize / validate â†’ publish
 ```
 
 ### Why not just `AddJsonFile(...)`?
@@ -638,21 +638,21 @@ The registration below expects the same four participants below every allowed va
 
 ```text
 AppSettings/Operations/
-├── Normal/
-│   ├── ExternalServices.json     ← matching values protected
-│   ├── LoggerSettings.json
-│   ├── Resilience.json
-│   └── Diagnostics.json
-├── Degraded/
-│   ├── ExternalServices.json     ← matching values protected
-│   ├── LoggerSettings.json
-│   ├── Resilience.json
-│   └── Diagnostics.json
-└── Incident/
-    ├── ExternalServices.json     ← matching values protected
-    ├── LoggerSettings.json
-    ├── Resilience.json
-    └── Diagnostics.json
+â”œâ”€â”€ Normal/
+â”‚   â”œâ”€â”€ ExternalServices.json     â† matching values protected
+â”‚   â”œâ”€â”€ LoggerSettings.json
+â”‚   â”œâ”€â”€ Resilience.json
+â”‚   â””â”€â”€ Diagnostics.json
+â”œâ”€â”€ Degraded/
+â”‚   â”œâ”€â”€ ExternalServices.json     â† matching values protected
+â”‚   â”œâ”€â”€ LoggerSettings.json
+â”‚   â”œâ”€â”€ Resilience.json
+â”‚   â””â”€â”€ Diagnostics.json
+â””â”€â”€ Incident/
+    â”œâ”€â”€ ExternalServices.json     â† matching values protected
+    â”œâ”€â”€ LoggerSettings.json
+    â”œâ”€â”€ Resilience.json
+    â””â”€â”€ Diagnostics.json
 ```
 
 Bind those files to one coordinated operational choice:
@@ -693,7 +693,7 @@ example `PartnerApi:*:ApiKey`, when the complete colon-separated configuration p
 
 During registration, matching values in existing files are encoded before the provider and its watcher are created, so the startup write cannot trigger its own reload. Runtime loads apply the same protection policy again before reading a candidate: an externally edited clear-text value in the active file is re-protected on the next observed reload, and a clear-text value in an inactive variant is re-protected when that source is later loaded or switched to. Protection is load-bound rather than a continuous background invariant, writes changed JSON in formatted form under exclusive file access, and therefore requires write permission whenever matching clear text is present. The matching codec envelopes are then decoded before the optional `CandidatePreparation`, so application validation receives clear text while ordinary values pass through unchanged. A protection write is an at-rest side effect rather than part of the ConfigurationSet commit transaction; a later rejected switch does not roll it back. Missing files are not created by protection and retain the normal optional and switch-failure behavior.
 
-## 🎛️ Control and observe desired state
+## ðŸŽ›ï¸ Control and observe desired state
 
 Register a self-describing state file when operators or a control plane should persist the desired profile:
 
@@ -723,7 +723,7 @@ ConfigurationSetStateApplyResult applied = stateStore.TrySetDesiredValue(
 
 The state store can watch for changes, expose active-versus-desired drift, and report values waiting for restart. Mark restart-bound sets with `.ApplyMode(ConfigurationSetApplyMode.StartupOnly)`. `IConfigurationSetEventHub` provides process-wide or per-set completion notifications, while manager and store status snapshots expose consistency and participant state.
 
-## 🔐 Understand composition
+## ðŸ” Understand composition
 
 Composition is available at three deliberate layers:
 
@@ -741,7 +741,7 @@ Use Windows-only `DpapiMachine`, cross-platform `AesPassword(...)`, lightweight 
 
 DPAPI LocalMachine is not a user or administrator boundary, and physical-machine binding is file-copy resistance rather than hardware-backed key storage. `Base64`, `Base92JsonSafe`, `Rot13`, and `Caesar(...)` are representations or analysis friction, not encryption.
 
-## 🧪 Recover protected values
+## ðŸ§ª Recover protected values
 
 For explicit recovery or debugging, the running configuration can expose the clear-text values that NetLib value-protection rules decoded and published:
 
@@ -753,7 +753,7 @@ var recovered = ConfigurationValueRecovery.RecoverProtectedValues(builder.Config
 
 Inspect `recovered` in the debugger to see the affected full configuration paths and their current clear-text runtime values. A copied configuration can be recovered on a developer machine when the configured codec is not host-bound and the same required inputs, such as passwords or key material, are available. If a selected value still carries its persisted protection envelope, recovery throws instead of returning ciphertext; the exception includes the configured codec name and points out that machine-bound protection such as DPAPI LocalMachine or `PhysicalMachineBoundAes()` may require running the same bootstrap and recovery call on the original application server. The helper does not bypass protection or create a second decoding path; it inspects the values produced by the normal SwitchableJson load pipeline. `EVFRECOVERY001` is intentionally an experimental, build-stopping diagnostic until explicitly suppressed so temporary recovery code is hard to add accidentally and should be removed when the recovery session is finished.
 
-## 🖥️ Read the machine fingerprint
+## ðŸ–¥ï¸ Read the machine fingerprint
 
 ```csharp
 if (PhysicalMachineBinding.TryGetFingerprint(out string fingerprint))
@@ -764,7 +764,7 @@ if (PhysicalMachineBinding.TryGetFingerprint(out string fingerprint))
 
 The fingerprint is stable machine information, not a secret. It uses the platform UUID on Windows, Linux, and macOS and can be unavailable on systems that do not expose a valid UUID.
 
-## 🔏 Create or recover certificates
+## ðŸ” Create or recover certificates
 
 Load a valid PFX or create a usable self-signed replacement with an explicit recovery policy:
 
@@ -798,7 +798,56 @@ Console.WriteLine($"{managed.Action}; persisted: {managed.Persisted}");
 
 `CertificateRecoveryMode.PreserveExisting` is the safe default: it creates a missing PFX but never overwrites an existing unusable credential. The result still provides an in-memory recovery certificate and reports load or persistence failures. Use `SelfSignedCertificateFactory.Create(...)` directly when no managed file lifecycle is needed.
 
-## 🔎 See which configuration source wins
+## ðŸ§© Let configuration replace collection defaults
+
+The native configuration binder intentionally mutates initialized collections: configured list items are appended and dictionary entries are merged with code defaults. That is useful for composition, but it does not implement â€œconfiguration values replace code defaultsâ€ semantics for initialized mutable collections. NetLib keeps replacement behavior explicit and also requires each feature to specify what an explicitly empty configured collection means.
+
+NetLib therefore uses one small binding concept for both lists and dictionaries instead of specialized collection wrapper types:
+
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides;
+
+public sealed class FilterOptions
+{
+    public List<string> Allowed { get; set; } = new() { "default" };
+    public Dictionary<string, int> Weights { get; set; } = new() { ["default"] = 1 };
+}
+
+FilterOptions options = new();
+configuration.GetSection("FilterOptions")
+    .BindReplacingCollectionDefaults(
+        options,
+        EmptyCollectionBehavior.UseCodeDefaults);
+
+services
+    .AddOptions<FilterOptions>()
+    .BindReplacingCollectionDefaults(
+        "FilterOptions",
+        EmptyCollectionBehavior.UseCodeDefaults);
+```
+
+Missing list/dictionary keys always leave code defaults untouched and populated configured collections always replace defaults. `EmptyCollectionBehavior.UseCodeDefaults` makes `[]` / `{}` fall back to code defaults; `EmptyCollectionBehavior.UseEmptyCollection` makes them an intentional empty override. The argument is required so the choice remains part of each feature's specification rather than an accidental binder detail. Binding, `BinderOptions`, named options, `IOptionsMonitor` reload/change-token behavior, and final value conversion remain framework-owned; other collection shapes keep the native binder semantics.
+
+This is the A5/A6 decision: the legacy `OptionsConfigOverridesDefaultsList<T>` and `OptionsConfigOverridesDefaultsDictionary<TKey,TValue>` wrappers are **not** re-created in NetLib. Their shared intent is expressed once at the binding boundary.
+
+## ðŸŒ Normalize and match IP networks
+
+`Eigenverft.NetLib.Infrastructure.Networking` is host-agnostic and has no ASP.NET dependency:
+
+```csharp
+IPAddress canonical = IPAddress.Parse("::ffff:192.168.1.25").Normalize();
+// 192.168.1.25
+
+CidrNetwork network = CidrNetwork.Parse("192.168.1.123/24");
+// normalized to 192.168.1.0/24
+
+bool match = canonical.Matches(
+    new[] { "10.0.0.0/8", "192.168.1.123/24" });
+```
+
+`IPAddress.Normalize()` maps IPv4-mapped IPv6 to IPv4 and removes IPv6 scope identifiers from canonical identity. `CidrNetwork` provides `Parse`/`TryParse` and `Contains`, accepts host-bit convenience input such as `192.168.1.123/24`, and normalizes it to the effective network. `IPAddress.Matches(...)` keeps the historical two cache layers internally: parsed-network results (including invalid parses) and repeated IP/list match results; list cache keys are order-independent and `*` remains match-all.
+
+## ðŸ”Ž See which configuration source wins
 
 ```csharp
 private static readonly ILogger StartupLogger = BootstrapLogger<Program>.CreateLogger();
@@ -821,9 +870,9 @@ Configuration key collisions found: 1.
 Config key collision on PartnerApi:ApiKey; winner envars shadows json:appsettings.Production.json shadows json:appsettings.json
 ```
 
-Only configuration key paths and provider origins are logged—never configuration values. This makes environment-variable overrides and accidentally shadowed JSON settings visible without dumping secrets.
+Only configuration key paths and provider origins are loggedâ€”never configuration values. This makes environment-variable overrides and accidentally shadowed JSON settings visible without dumping secrets.
 
-## 🪵 Log startup before the host exists
+## ðŸªµ Log startup before the host exists
 
 ```csharp
 ILogger startupLogger =
@@ -836,7 +885,7 @@ The bootstrap logger works before the host and DI container exist. It uses an al
 
 Concrete providers, runtimes, watchers, and persistence formats remain internal; normal consumers use the registration helpers and public contracts shown above.
 
-## 🎯 Target frameworks
+## ðŸŽ¯ Target frameworks
 
 The package ships dedicated assets for:
 
@@ -845,11 +894,11 @@ The package ships dedicated assets for:
 
 A .NET 9 consumer can use the compatible `net8.0` asset.
 
-## 📚 Documentation
+## ðŸ“š Documentation
 
 - [Guides and API reference](https://eigenverft.github.io/Eigenverft.NetLib.Infrastructure/docfx/production/)
 
-## 🧪 Build and test
+## ðŸ§ª Build and test
 
 From the repository root:
 
@@ -858,24 +907,24 @@ dotnet build src/Eigenverft.NetLib.Infrastructure.slnx --configuration Release
 dotnet test src/Eigenverft.NetLib.Infrastructure.slnx --configuration Release
 ```
 
-## 🚢 Releases
+## ðŸš¢ Releases
 
 `main` is the production channel. Every accepted change is built, tested, documented, packed, and published by the repository CI/CD workflow.
 
 Package versions follow the Eigenverft Drydock timestamp-based versioning scheme. Published versions and download history are available on [NuGet.org](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure).
 
-## 🤝 Contributing and support
+## ðŸ¤ Contributing and support
 
-- 🐛 [Open an issue](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/issues)
-- 🔧 [Submit a pull request](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/pulls)
-- 📦 [View the package on NuGet.org](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure)
+- ðŸ› [Open an issue](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/issues)
+- ðŸ”§ [Submit a pull request](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/pulls)
+- ðŸ“¦ [View the package on NuGet.org](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure)
 
-## 📄 License
+## ðŸ“„ License
 
 Licensed under the [MIT License](LICENSE) by Eigenverft.
 
 ---
 
 <div align="center">
-Made with ❤️ by Eigenverft
+Made with â¤ï¸ by Eigenverft
 </div>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--[if IE]><![endif]-->
 <html>
 
@@ -569,9 +569,8 @@
     </tbody>
   </table>
   <h5 id="Eigenverft_NetLib_Infrastructure_Networking_IpAddressExtensions_Normalize_System_Net_IPAddress__remarks">Remarks</h5>
-  <div class="markdown level1 remarks"><p>IPv4-mapped IPv6 addresses are converted to IPv4. Native IPv6 addresses have their scope identifier removed
-because a scope is interface-local metadata and must not affect the canonical address identity used by reusable
-network logic.</p>
+  <div class="markdown level1 remarks"><p>IPv4-mapped IPv6 addresses are converted to IPv4. IPv4 and native IPv6 addresses are returned unchanged,
+preserving potentially relevant native IPv6 information such as the scope identifier.</p>
 </div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>

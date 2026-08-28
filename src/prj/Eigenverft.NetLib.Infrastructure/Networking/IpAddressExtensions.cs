@@ -13,9 +13,8 @@ namespace Eigenverft.NetLib.Infrastructure.Networking
         /// Normalizes an IP address for comparison and stable textual representation.
         /// </summary>
         /// <remarks>
-        /// IPv4-mapped IPv6 addresses are converted to IPv4. Native IPv6 addresses have their scope identifier removed
-        /// because a scope is interface-local metadata and must not affect the canonical address identity used by reusable
-        /// network logic.
+        /// IPv4-mapped IPv6 addresses are converted to IPv4. IPv4 and native IPv6 addresses are returned unchanged,
+        /// preserving potentially relevant native IPv6 information such as the scope identifier.
         /// </remarks>
         /// <param name="address">Address to normalize.</param>
         /// <returns>The normalized address.</returns>
@@ -35,9 +34,7 @@ namespace Eigenverft.NetLib.Infrastructure.Networking
 
             if (address.AddressFamily == AddressFamily.InterNetworkV6)
             {
-                return address.ScopeId == 0
-                    ? address
-                    : new IPAddress(address.GetAddressBytes());
+                return address;
             }
 
             throw new NotSupportedException($"Address family '{address.AddressFamily}' is not supported.");
