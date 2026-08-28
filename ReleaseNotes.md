@@ -9,3 +9,5 @@
 - `7405062` — `BindReplacingCollectionDefaults(...)` now requires an explicit `EmptyCollectionBehavior` on every call. Populated configured collections still replace code defaults and missing keys still keep them; each feature now declares whether `[]` / `{}` means `UseCodeDefaults` or an intentional `UseEmptyCollection`. `IOptionsMonitor` reload/change-token behavior remains framework-owned and is covered for both policies.
 
 - `52b1b8a` - IP normalization now preserves IPv6 `ScopeId` for native IPv6 addresses while continuing to map IPv4-mapped IPv6 addresses to IPv4; `ToCanonicalString()` reflects the preserved scope identifier when present.
+
+- d622abf - NuGet package metadata now uses the neutral on-all Eigenverft icon (evt-logo_on_all_standard_128x128.png), so the next production package also carries the corrected README.NUGET.md from main.
