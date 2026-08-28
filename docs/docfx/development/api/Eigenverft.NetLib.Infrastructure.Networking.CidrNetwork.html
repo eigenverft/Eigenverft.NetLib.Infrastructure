@@ -5,11 +5,11 @@
   <head>
     <meta charset="utf-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-      <title>Interface IConfigurationSetDesiredStateStore | Eigenverft.NetLib.Infrastructure </title>
+      <title>Struct CidrNetwork | Eigenverft.NetLib.Infrastructure </title>
       <meta name="viewport" content="width=device-width">
-      <meta name="title" content="Interface IConfigurationSetDesiredStateStore | Eigenverft.NetLib.Infrastructure ">
+      <meta name="title" content="Struct CidrNetwork | Eigenverft.NetLib.Infrastructure ">
     
-    <meta name="description" content="Persistence-neutral control contract for optional desired configuration-set state.">
+    <meta name="description" content="Represents a normalized IPv4 or IPv6 CIDR network.">
       <link rel="shortcut icon" href="../favicon.ico">
       <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
       <link rel="stylesheet" href="../styles/docfx.css">
@@ -180,8 +180,8 @@
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetCoordinator.html" title="IConfigurationSetCoordinator" class="">IConfigurationSetCoordinator</a>
                           </li>
-                          <li class="active">
-                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore.html" title="IConfigurationSetDesiredStateStore" class="active">IConfigurationSetDesiredStateStore</a>
+                          <li class="">
+                            <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore.html" title="IConfigurationSetDesiredStateStore" class="">IConfigurationSetDesiredStateStore</a>
                           </li>
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetEventHub.html" title="IConfigurationSetEventHub" class="">IConfigurationSetEventHub</a>
@@ -387,8 +387,8 @@
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.html" title="CidrMatchingExtensions" class="">CidrMatchingExtensions</a>
                           </li>
-                          <li class="">
-                            <a href="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html" title="CidrNetwork" class="">CidrNetwork</a>
+                          <li class="active">
+                            <a href="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html" title="CidrNetwork" class="active">CidrNetwork</a>
                           </li>
                           <li class="">
                             <a href="Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.html" title="IpAddressExtensions" class="">IpAddressExtensions</a>
@@ -476,41 +476,300 @@
         </div>
         <div class="article row grid-right">
           <div class="col-md-10">
-            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore">
+            <article class="content wrap" id="_content" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork">
 
 
 
-  <h1 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetDesiredStateStore" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore" class="text-break">Interface IConfigurationSetDesiredStateStore</h1>
-  <div class="markdown level0 summary"><p>Persistence-neutral control contract for optional desired configuration-set state.</p>
+  <h1 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork" class="text-break">Struct CidrNetwork</h1>
+  <div class="markdown level0 summary"><p>Represents a normalized IPv4 or IPv6 CIDR network.</p>
 </div>
   <div class="markdown level0 conceptual"></div>
-  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.html">Hosting</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.html">Configuration</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.html">ConfigurationSets</a></h6>
-  <h6><strong>Assembly</strong>: Eigenverft.NetLib.Infrastructure.dll</h6>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetDesiredStateStore_syntax">Syntax</h5>
-  <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public interface IConfigurationSetDesiredStateStore</code></pre>
+  <div class="implements">
+    <h5>Implements</h5>
+    <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.iequatable-1">IEquatable</a>&lt;<a class="xref" href="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html">CidrNetwork</a>&gt;</div>
   </div>
-  <h5 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetDesiredStateStore_remarks"><strong>Remarks</strong></h5>
-  <div class="markdown level0 remarks"><p>A control plane can depend on this interface without knowing whether desired state is backed by a local JSON file or another
-implementation. Runtime-only control remains available independently through <a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetManager.html">IConfigurationSetManager</a>.</p>
-</div>
-  <h3 id="methods">Methods
+  <div class="inheritedMembers">
+    <h5>Inherited Members</h5>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </div>
+  <h6><strong>Namespace</strong>: <a class="xref" href="Eigenverft.html">Eigenverft</a>.<a class="xref" href="Eigenverft.NetLib.html">NetLib</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.html">Infrastructure</a>.<a class="xref" href="Eigenverft.NetLib.Infrastructure.Networking.html">Networking</a></h6>
+  <h6><strong>Assembly</strong>: Eigenverft.NetLib.Infrastructure.dll</h6>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_syntax">Syntax</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly struct CidrNetwork : IEquatable&lt;CidrNetwork&gt;</code></pre>
+  </div>
+  <h3 id="properties">Properties
 </h3>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetDesiredStateStore_GetDesiredStateStatus.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore.GetDesiredStateStatus%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_AddressFamily.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.AddressFamily%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetStateStoreContracts.cs/#L202">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrNetwork.cs/#L32">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetDesiredStateStore_GetDesiredStateStatus_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore.GetDesiredStateStatus*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetDesiredStateStore_GetDesiredStateStatus" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore.GetDesiredStateStatus">GetDesiredStateStatus()</h4>
-  <div class="markdown level1 summary"><p>Captures desired/active/apply-mode snapshots for all sets managed by this desired-state store.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_AddressFamily_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.AddressFamily*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_AddressFamily" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.AddressFamily">AddressFamily</h4>
+  <div class="markdown level1 summary"><p>Gets the address family of this network.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">IReadOnlyList&lt;ConfigurationSetStateStatus&gt; GetDesiredStateStatus()</code></pre>
+    <pre><code class="lang-csharp hljs">public AddressFamily AddressFamily { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.net.sockets.addressfamily">AddressFamily</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_NetworkAddress.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.NetworkAddress%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrNetwork.cs/#L22">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_NetworkAddress_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.NetworkAddress*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_NetworkAddress" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.NetworkAddress">NetworkAddress</h4>
+  <div class="markdown level1 summary"><p>Gets the normalized network address with all host bits cleared.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IPAddress NetworkAddress { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.net.ipaddress">IPAddress</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_PrefixLength.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.PrefixLength%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrNetwork.cs/#L27">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_PrefixLength_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.PrefixLength*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_PrefixLength" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.PrefixLength">PrefixLength</h4>
+  <div class="markdown level1 summary"><p>Gets the CIDR prefix length.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int PrefixLength { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h3 id="methods">Methods
+</h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Contains_System_Net_IPAddress_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Contains(System.Net.IPAddress)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrNetwork.cs/#L114">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Contains_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Contains*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Contains_System_Net_IPAddress_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Contains(System.Net.IPAddress)">Contains(IPAddress)</h4>
+  <div class="markdown level1 summary"><p>Determines whether an address belongs to this network.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Contains(IPAddress address)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.net.ipaddress">IPAddress</a></td>
+        <td><span class="parametername">address</span></td>
+        <td><p>Address to test.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when the address belongs to the network; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Equals_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrNetwork.cs/#L148">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Equals_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Equals_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)">Equals(CidrNetwork)</h4>
+  <div class="markdown level1 summary"><p>Indicates whether the current object is equal to another object of the same type.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Equals(CidrNetwork other)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html">CidrNetwork</a></td>
+        <td><span class="parametername">other</span></td>
+        <td><p>An object to compare with this object.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> if the current object is equal to the <code class="paramref">other</code> parameter; otherwise, <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Equals_System_Object_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals(System.Object)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrNetwork.cs/#L154">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Equals_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Equals_System_Object_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Equals(System.Object)">Equals(object?)</h4>
+  <div class="markdown level1 summary"><p>Indicates whether this instance and a specified object are equal.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override bool Equals(object? obj)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></td>
+        <td><span class="parametername">obj</span></td>
+        <td><p>The object to compare with the current instance.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> if <code class="paramref">obj</code> and this instance are the same type and represent the same value; otherwise, <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="overrides">Overrides</h5>
+  <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a></div>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_GetHashCode.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.GetHashCode%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrNetwork.cs/#L160">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_GetHashCode_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.GetHashCode*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_GetHashCode" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.GetHashCode">GetHashCode()</h4>
+  <div class="markdown level1 summary"><p>Returns the hash code for this instance.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override int GetHashCode()</code></pre>
   </div>
   <h5 class="returns">Returns</h5>
   <table class="table table-bordered table-condensed">
@@ -522,26 +781,29 @@ implementation. Runtime-only control remains available independently through <a 
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateStatus.html">ConfigurationSetStateStatus</a>&gt;</td>
-        <td></td>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></td>
+        <td><p>A 32-bit signed integer that is the hash code for this instance.</p>
+</td>
       </tr>
     </tbody>
   </table>
+  <h5 class="overrides">Overrides</h5>
+  <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a></div>
   <span class="small pull-right mobile-hide">
     <span class="divider">|</span>
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetDesiredStateStore_TrySetDesiredValue_System_String_System_String_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore.TrySetDesiredValue(System.String%2CSystem.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Parse_System_String_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Parse(System.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
   </span>
   <span class="small pull-right mobile-hide">
-    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetStateStoreContracts.cs/#L205">View Source</a>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrNetwork.cs/#L44">View Source</a>
   </span>
-  <a id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetDesiredStateStore_TrySetDesiredValue_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore.TrySetDesiredValue*"></a>
-  <h4 id="Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetDesiredStateStore_TrySetDesiredValue_System_String_System_String_" data-uid="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore.TrySetDesiredValue(System.String,System.String)">TrySetDesiredValue(string, string)</h4>
-  <div class="markdown level1 summary"><p>Persists one allowed desired value and honors the set's registered apply mode.</p>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Parse_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Parse*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Parse_System_String_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.Parse(System.String)">Parse(string)</h4>
+  <div class="markdown level1 summary"><p>Parses a CIDR network and normalizes host bits in the supplied base address.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
   <h5 class="declaration">Declaration</h5>
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">ConfigurationSetStateApplyResult TrySetDesiredValue(string setName, string value)</code></pre>
+    <pre><code class="lang-csharp hljs">public static CidrNetwork Parse(string value)</code></pre>
   </div>
   <h5 class="parameters">Parameters</h5>
   <table class="table table-bordered table-condensed">
@@ -555,12 +817,174 @@ implementation. Runtime-only control remains available independently through <a 
     <tbody>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
-        <td><span class="parametername">setName</span></td>
-        <td></td>
+        <td><span class="parametername">value</span></td>
+        <td><p>CIDR text.</p>
+</td>
       </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html">CidrNetwork</a></td>
+        <td><p>The normalized network.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Parse_System_String__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>Convenience input such as <code>192.168.1.123/24</code> is accepted and normalized
+to <code>192.168.1.0/24</code> rather than rejected for containing host bits.</p>
+</div>
+  <h5 class="exceptions">Exceptions</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Condition</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.formatexception">FormatException</a></td>
+        <td><p>The CIDR text is invalid.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_ToString.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.ToString%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrNetwork.cs/#L176">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_ToString_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.ToString*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_ToString" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.ToString">ToString()</h4>
+  <div class="markdown level1 summary"><p>Returns the fully qualified type name of this instance.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override string ToString()</code></pre>
+  </div>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><p>The fully qualified type name.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="overrides">Overrides</h5>
+  <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a></div>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_TryParse_System_String_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork__.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.TryParse(System.String%2CEigenverft.NetLib.Infrastructure.Networking.CidrNetwork%40)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrNetwork.cs/#L60">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_TryParse_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.TryParse*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_TryParse_System_String_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork__" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.TryParse(System.String,Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork@)">TryParse(string?, out CidrNetwork)</h4>
+  <div class="markdown level1 summary"><p>Attempts to parse a CIDR network and normalize host bits in the supplied base address.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool TryParse(string? value, out CidrNetwork network)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
       <tr>
         <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
         <td><span class="parametername">value</span></td>
+        <td><p>CIDR text.</p>
+</td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html">CidrNetwork</a></td>
+        <td><span class="parametername">network</span></td>
+        <td><p>Normalized network when parsing succeeds.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when parsing succeeds; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a>.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h3 id="operators">Operators
+</h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_op_Equality_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Equality(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork%2CEigenverft.NetLib.Infrastructure.Networking.CidrNetwork)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrNetwork.cs/#L168">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_op_Equality_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Equality*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_op_Equality_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Equality(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork,Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)">operator ==(CidrNetwork, CidrNetwork)</h4>
+  <div class="markdown level1 summary"><p>Compares two CIDR networks for equality.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool operator ==(CidrNetwork left, CidrNetwork right)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html">CidrNetwork</a></td>
+        <td><span class="parametername">left</span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html">CidrNetwork</a></td>
+        <td><span class="parametername">right</span></td>
         <td></td>
       </tr>
     </tbody>
@@ -575,11 +999,68 @@ implementation. Runtime-only control remains available independently through <a 
     </thead>
     <tbody>
       <tr>
-        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetStateApplyResult.html">ConfigurationSetStateApplyResult</a></td>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
         <td></td>
       </tr>
     </tbody>
   </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_op_Inequality_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Inequality(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork%2CEigenverft.NetLib.Infrastructure.Networking.CidrNetwork)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrNetwork.cs/#L173">View Source</a>
+  </span>
+  <a id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_op_Inequality_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Inequality*"></a>
+  <h4 id="Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_op_Inequality_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork_" data-uid="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.op_Inequality(Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork,Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork)">operator !=(CidrNetwork, CidrNetwork)</h4>
+  <div class="markdown level1 summary"><p>Compares two CIDR networks for inequality.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool operator !=(CidrNetwork left, CidrNetwork right)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html">CidrNetwork</a></td>
+        <td><span class="parametername">left</span></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td><a class="xref" href="Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html">CidrNetwork</a></td>
+        <td><span class="parametername">right</span></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h3 id="implements">Implements</h3>
+  <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.iequatable-1">IEquatable&lt;T&gt;</a>
+  </div>
 
 </article>
           </div>
@@ -589,10 +1070,10 @@ implementation. Runtime-only control remains available independently through <a 
               <div class="contribution">
                 <ul class="nav">
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Hosting_Configuration_ConfigurationSets_IConfigurationSetDesiredStateStore.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.IConfigurationSetDesiredStateStore%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/new/feature/nuget-on-all-icon/apiSpec/new?filename=Eigenverft_NetLib_Infrastructure_Networking_CidrNetwork.md&amp;value=---%0Auid%3A%20Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
                   </li>
                   <li>
-                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Hosting/Configuration/ConfigurationSets/ConfigurationSetStateStoreContracts.cs/#L199" class="contribution-link">View Source</a>
+                    <a href="https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/feature/nuget-on-all-icon/src/prj/Eigenverft.NetLib.Infrastructure/Networking/CidrNetwork.cs/#L11" class="contribution-link">View Source</a>
                   </li>
                 </ul>
               </div>
