@@ -800,7 +800,7 @@ Console.WriteLine($"{managed.Action}; persisted: {managed.Persisted}");
 
 ## 🧩 Let configuration replace collection defaults
 
-The native configuration binder intentionally mutates initialized collections: configured list items are appended and dictionary entries are merged with code defaults. That is useful for composition, but it does not implement the common options contract “missing key keeps defaults; present key replaces defaults; present empty collection clears defaults.” .NET 10 improves empty-array representation, but it still does not clear an already initialized mutable list automatically.
+The native configuration binder intentionally mutates initialized collections: configured list items are appended and dictionary entries are merged with code defaults. That is useful for composition, but it does not implement “configuration values replace code defaults” semantics for initialized mutable collections. NetLib keeps replacement behavior explicit and also requires each feature to specify what an explicitly empty configured collection means.
 
 NetLib therefore uses one small binding concept for both lists and dictionaries instead of specialized collection wrapper types:
 
@@ -815,14 +815,18 @@ public sealed class FilterOptions
 
 FilterOptions options = new();
 configuration.GetSection("FilterOptions")
-    .BindReplacingCollectionDefaults(options);
+    .BindReplacingCollectionDefaults(
+        options,
+        EmptyCollectionBehavior.UseCodeDefaults);
 
 services
     .AddOptions<FilterOptions>()
-    .BindReplacingCollectionDefaults("FilterOptions");
+    .BindReplacingCollectionDefaults(
+        "FilterOptions",
+        EmptyCollectionBehavior.UseCodeDefaults);
 ```
 
-Only existing mutable list and dictionary properties whose configuration key is actually present are cleared before the framework binder runs. Missing keys leave code defaults untouched, populated collections replace defaults, and explicitly empty JSON arrays/objects become empty collections. Binding, `BinderOptions`, named options, and reload/change-token behavior remain framework-owned; other collection shapes keep the native binder semantics.
+Missing list/dictionary keys always leave code defaults untouched and populated configured collections always replace defaults. `EmptyCollectionBehavior.UseCodeDefaults` makes `[]` / `{}` fall back to code defaults; `EmptyCollectionBehavior.UseEmptyCollection` makes them an intentional empty override. The argument is required so the choice remains part of each feature's specification rather than an accidental binder detail. Binding, `BinderOptions`, named options, `IOptionsMonitor` reload/change-token behavior, and final value conversion remain framework-owned; other collection shapes keep the native binder semantics.
 
 This is the A5/A6 decision: the legacy `OptionsConfigOverridesDefaultsList<T>` and `OptionsConfigOverridesDefaultsDictionary<TKey,TValue>` wrappers are **not** re-created in NetLib. Their shared intent is expressed once at the binding boundary.
 

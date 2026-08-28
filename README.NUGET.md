@@ -315,14 +315,18 @@ The built-in configuration binder mutates initialized lists and dictionaries, so
 using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides;
 
 configuration.GetSection("FilterOptions")
-    .BindReplacingCollectionDefaults(options);
+    .BindReplacingCollectionDefaults(
+        options,
+        EmptyCollectionBehavior.UseCodeDefaults);
 
 services
     .AddOptions<FilterOptions>()
-    .BindReplacingCollectionDefaults("FilterOptions");
+    .BindReplacingCollectionDefaults(
+        "FilterOptions",
+        EmptyCollectionBehavior.UseCodeDefaults);
 ```
 
-Missing list/dictionary keys keep code defaults. Present populated lists/dictionaries replace them. Present empty JSON arrays/objects clear initialized list/dictionary defaults. The native binder still performs the final binding and the native options integration still owns reload/change-token behavior; other collection shapes keep native binder semantics.
+Missing list/dictionary keys keep code defaults and populated configured collections replace them. Every call must explicitly choose the empty-collection contract: `EmptyCollectionBehavior.UseCodeDefaults` makes `[]` / `{}` fall back to code defaults, while `EmptyCollectionBehavior.UseEmptyCollection` makes them intentional empty overrides. The native binder still performs final binding and the native options infrastructure still owns `IOptionsMonitor` reload/change-token behavior; other collection shapes keep native binder semantics.
 
 **A5/A6 decision:** NetLib does not recreate `OptionsConfigOverridesDefaultsList<T>` and `OptionsConfigOverridesDefaultsDictionary<TKey,TValue>`. Their shared intent is implemented once at the configuration-binding boundary.
 
