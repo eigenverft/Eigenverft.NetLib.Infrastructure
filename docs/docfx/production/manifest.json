@@ -4,6 +4,48 @@
   "files": [
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.ConfigurationCollectionOverrideBindingExtensions.yml\" sourcestartlinenumber=\"1\">Adds configuration binding semantics in which explicitly configured lists and dictionaries replace code defaults.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.EmptyCollectionBehavior.yml\" sourcestartlinenumber=\"1\">Defines how an explicitly configured empty list or dictionary interacts with code-defined collection defaults.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Configuration.CollectionOverrides",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.ConfigurationSets.ConfigurationSetApplyMode.yml",
       "output": {
         ".html": {
@@ -560,7 +602,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection",
-      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.yml\" sourcestartlinenumber=\"1\">Selects existing JSON values that are encoded once during switchable-source registration and decoded during every load.</p>\n"
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson.JsonConfigurationValueProtection.yml\" sourcestartlinenumber=\"1\">Selects JSON values that are kept encoded at rest before switchable-source loads and decoded in every published snapshot.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -1124,6 +1166,90 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Hosting.StaticHostEnvironment.yml\" sourcestartlinenumber=\"1\">Exposes the process-level host environment before a Generic Host or ASP.NET Core builder exists.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Hosting.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Hosting",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Networking.CidrMatchingExtensions.yml\" sourcestartlinenumber=\"1\">Provides CIDR matching extensions for <xref href=\"System.Net.IPAddress\" data-throw-if-not-resolved=\"false\"></xref> while caching parsed networks and repeated list evaluations.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Networking.CidrNetwork.yml\" sourcestartlinenumber=\"1\">Represents a normalized IPv4 or IPv6 CIDR network.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions",
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Networking.IpAddressExtensions.yml\" sourcestartlinenumber=\"1\">Provides host-agnostic normalization helpers for <xref href=\"System.Net.IPAddress\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Eigenverft.NetLib.Infrastructure.Networking.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Eigenverft.NetLib.Infrastructure.Networking",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateKeyProfile.yml",
       "output": {
         ".html": {
@@ -1162,7 +1288,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode",
-      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode.yml\" sourcestartlinenumber=\"1\">Controls when managed-certificate recovery may replace an existing PFX file.</p>\n"
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Security.Certificates.CertificateRecoveryMode.yml\" sourcestartlinenumber=\"1\">Controls whether and how an unusable PFX is recovered.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -1204,7 +1330,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFile",
-      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFile.yml\" sourcestartlinenumber=\"1\">Loads a managed PFX or returns a policy-controlled self-signed recovery certificate.</p>\n"
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFile.yml\" sourcestartlinenumber=\"1\">Loads a PFX and optionally returns a policy-controlled self-signed recovery certificate.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -1218,7 +1344,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions",
-      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.yml\" sourcestartlinenumber=\"1\">Describes a managed PFX file and its self-signed replacement.</p>\n"
+      "Summary": "<p sourcefile=\"api/Eigenverft.NetLib.Infrastructure.Security.Certificates.ManagedCertificateFileOptions.yml\" sourcestartlinenumber=\"1\">Describes a PFX file and optional self-signed recovery behavior.</p>\n"
     },
     {
       "type": "ManagedReference",

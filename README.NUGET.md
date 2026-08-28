@@ -56,6 +56,25 @@ await host.RunAsync();
 ```
 
 ### Add last-known-good JSON reloads
+
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson;
+using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
+using Microsoft.Extensions.Hosting;
+
+HostApplicationBuilder builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory();
+IAppDirectoryLayout directories = builder.GetDirectoryLayout();
+
+string operationalSettings = Path.Combine(
+    directories[DefaultDirectory.ApplicationSettings],
+    "OperationalSettings.json");
+
+builder.AddSwitchableJsonFile(
+    name: "OperationalSettings",
+    initialPath: operationalSettings,
+    optional: false,
+    reloadOnChange: true);
+
 using IHost host = builder.Build();
 await host.RunAsync();
 ```
@@ -334,7 +353,7 @@ Missing list/dictionary keys keep code defaults and populated configured collect
 
 `Eigenverft.NetLib.Infrastructure.Networking` provides host-independent primitives:
 
-- `IPAddress.Normalize()` maps IPv4-mapped IPv6 to IPv4 and `IPAddress.ToCanonicalString()` produces stable canonical address text without IPv6 scope identifiers.
+- `IPAddress.Normalize()` maps IPv4-mapped IPv6 to IPv4 while leaving native IPv6 addresses unchanged, including their `ScopeId`; `IPAddress.ToCanonicalString()` formats that normalized address and preserves the native IPv6 scope identifier when present.
 - `CidrNetwork.Parse(...)` accepts convenience input such as `192.168.1.123/24`, normalizes it to `192.168.1.0/24`, and `Contains(...)` supports IPv4 and IPv6 matching.
 - `IPAddress.Matches(...)` keeps parsed-network caching and repeated IP/list match caching internally, including order-independent list keys, invalid-parse caching, and `*` match-all semantics.
 

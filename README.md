@@ -845,7 +845,7 @@ bool match = canonical.Matches(
     new[] { "10.0.0.0/8", "192.168.1.123/24" });
 ```
 
-`IPAddress.Normalize()` maps IPv4-mapped IPv6 to IPv4 and removes IPv6 scope identifiers from canonical identity. `CidrNetwork` provides `Parse`/`TryParse` and `Contains`, accepts host-bit convenience input such as `192.168.1.123/24`, and normalizes it to the effective network. `IPAddress.Matches(...)` keeps the historical two cache layers internally: parsed-network results (including invalid parses) and repeated IP/list match results; list cache keys are order-independent and `*` remains match-all.
+`IPAddress.Normalize()` maps IPv4-mapped IPv6 to IPv4 while leaving native IPv6 addresses unchanged, including their `ScopeId`. `IPAddress.ToCanonicalString()` formats the normalized address and therefore preserves a native IPv6 scope identifier when one is present. `CidrNetwork` provides `Parse`/`TryParse` and `Contains`, accepts host-bit convenience input such as `192.168.1.123/24`, and normalizes it to the effective network. `IPAddress.Matches(...)` keeps the historical two cache layers internally: parsed-network results (including invalid parses) and repeated IP/list match results; list cache keys are order-independent and `*` remains match-all.
 
 ## 🔎 See which configuration source wins
 
