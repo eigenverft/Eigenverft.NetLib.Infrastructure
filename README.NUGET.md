@@ -1,4 +1,4 @@
-﻿# ðŸ§± Eigenverft.NetLib.Infrastructure
+# 🧱 Eigenverft.NetLib.Infrastructure
 
 [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Infrastructure?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Infrastructure?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![Build Status](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=build)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-.NET%208%20%7C%2010-512BD4?logo=dotnet&logoColor=white)](#-target-frameworks) [![License](https://img.shields.io/github/license/eigenverft/Eigenverft.NetLib.Infrastructure?logo=mit)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE)
 
@@ -11,7 +11,7 @@ bootstrap primitives.
 
 ---
 
-## âœ¨ At a glance
+## ✨ At a glance
 
 | Capability | Problem solved | Starting point |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ bootstrap primitives.
 | Certificates and diagnostics | Managed certificate recovery, configuration provenance, and bootstrap logging | Public certificate and hosting helpers |
 | Early host environment | Resolve the host environment before Generic Host or ASP.NET Core builder creation | `StaticHostEnvironment.EnvironmentName` |
 
-## ðŸ“¦ Installation
+## 📦 Installation
 
 ```shell
 dotnet add package Eigenverft.NetLib.Infrastructure
@@ -34,7 +34,7 @@ Or with the NuGet Package Manager:
 Install-Package Eigenverft.NetLib.Infrastructure
 ```
 
-## ðŸš€ Quick start
+## 🚀 Quick start
 
 ### Create the host foundation
 
@@ -56,6 +56,25 @@ await host.RunAsync();
 ```
 
 ### Add last-known-good JSON reloads
+
+```csharp
+using Eigenverft.NetLib.Infrastructure.Hosting.Configuration.SwitchableJson;
+using Eigenverft.NetLib.Infrastructure.Hosting.DirectoryLayout;
+using Microsoft.Extensions.Hosting;
+
+HostApplicationBuilder builder = HostApplicationBuilderFactory.CreateWithDefaultDirectory();
+IAppDirectoryLayout directories = builder.GetDirectoryLayout();
+
+string operationalSettings = Path.Combine(
+    directories[DefaultDirectory.ApplicationSettings],
+    "OperationalSettings.json");
+
+builder.AddSwitchableJsonFile(
+    name: "OperationalSettings",
+    initialPath: operationalSettings,
+    optional: false,
+    reloadOnChange: true);
+
 using IHost host = builder.Build();
 await host.RunAsync();
 ```
@@ -111,12 +130,12 @@ The standard layout is created directly below the executable directory:
 
 ```text
 <application>/
-â”œâ”€ AppLogs/
-â”œâ”€ AppData/
-â”œâ”€ AppState/
-â”œâ”€ AppProtectionKeys/
-â”œâ”€ AppCerts/
-â””â”€ AppSettings/
+├─ AppLogs/
+├─ AppData/
+├─ AppState/
+├─ AppProtectionKeys/
+├─ AppCerts/
+└─ AppSettings/
 ```
 
 Each directory is created during registration and checked for write access, so path or permission problems fail early during startup.
@@ -139,7 +158,7 @@ public sealed class Worker(
 }
 ```
 
-## ðŸ—‚ï¸ Override standard folder names
+## 🗂️ Override standard folder names
 
 ```csharp
 builder.AddDefaultDirectoryLayout(
@@ -152,7 +171,7 @@ builder.AddDefaultDirectoryLayout(
 
 Unspecified standard directories retain their defaults.
 
-## ðŸ§© Custom directory layouts
+## 🧩 Custom directory layouts
 
 ```csharp
 builder.AddDirectoryLayout(
@@ -167,7 +186,7 @@ string imports = builder.GetDirectoryLayout()["Imports"];
 
 Folder mappings are intentionally direct children of the application root. Rooted paths, nested paths, and traversal patterns are rejected.
 
-## ðŸ”§ Without Generic Host
+## 🔧 Without Generic Host
 
 ```csharp
 AppDirectoryLayout directories = AppDirectoryLayoutFactory.CreateDefault();
@@ -206,10 +225,10 @@ For example, a reverse proxy can keep complete primary and failover generations 
 
 ```text
 AppSettings/Routing/
-â”œâ”€â”€ Primary/Routes.json
-â”œâ”€â”€ Primary/Clusters.json
-â”œâ”€â”€ Failover/Routes.json
-â””â”€â”€ Failover/Clusters.json
+├── Primary/Routes.json
+├── Primary/Clusters.json
+├── Failover/Routes.json
+└── Failover/Clusters.json
 ```
 
 Register both files as one choice so a bad route or cluster candidate cannot publish half a
@@ -334,13 +353,13 @@ Missing list/dictionary keys keep code defaults and populated configured collect
 
 `Eigenverft.NetLib.Infrastructure.Networking` provides host-independent primitives:
 
-- `IPAddress.Normalize()` maps IPv4-mapped IPv6 to IPv4 and `IPAddress.ToCanonicalString()` produces stable canonical address text without IPv6 scope identifiers.
+- `IPAddress.Normalize()` maps IPv4-mapped IPv6 to IPv4 while leaving native IPv6 addresses unchanged, including their `ScopeId`; `IPAddress.ToCanonicalString()` formats that normalized address and preserves the native IPv6 scope identifier when present.
 - `CidrNetwork.Parse(...)` accepts convenience input such as `192.168.1.123/24`, normalizes it to `192.168.1.0/24`, and `Contains(...)` supports IPv4 and IPv6 matching.
 - `IPAddress.Matches(...)` keeps parsed-network caching and repeated IP/list match caching internally, including order-independent list keys, invalid-parse caching, and `*` match-all semantics.
 
 These APIs have no ASP.NET dependency and are suitable for console apps, workers, desktop applications, and hosted services alike.
 
-## ðŸŽ¯ Target frameworks
+## 🎯 Target frameworks
 
 The package ships dedicated assets for:
 
@@ -349,17 +368,17 @@ The package ships dedicated assets for:
 
 A .NET 9 consumer can use the compatible `net8.0` asset.
 
-## ðŸ”— Project links
+## 🔗 Project links
 
 - [GitHub repository](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure)
 - [Documentation](https://eigenverft.github.io/Eigenverft.NetLib.Infrastructure/)
 - [Issues](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/issues)
 - [NuGet package](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure)
 
-## ðŸ“„ License
+## 📄 License
 
 Licensed under the [MIT License](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE) by Eigenverft.
 
 ---
 
-Made with â¤ï¸ by Eigenverft
+Made with ❤️ by Eigenverft

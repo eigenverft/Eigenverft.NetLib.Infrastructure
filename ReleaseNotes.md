@@ -8,4 +8,4 @@
 - `da0e4e0` — Uses the same `BindReplacingCollectionDefaults(...)` name for direct configuration binding and `OptionsBuilder`, keeping A5/A6 as one public concept.
 - `7405062` — `BindReplacingCollectionDefaults(...)` now requires an explicit `EmptyCollectionBehavior` on every call. Populated configured collections still replace code defaults and missing keys still keep them; each feature now declares whether `[]` / `{}` means `UseCodeDefaults` or an intentional `UseEmptyCollection`. `IOptionsMonitor` reload/change-token behavior remains framework-owned and is covered for both policies.
 
-- 52b1b8a - IP normalization now preserves IPv6 ScopeId for normalized IPv6 addresses while continuing to map IPv4-mapped IPv6 addresses to IPv4; canonical string formatting remains scope-independent.
+- `52b1b8a` - IP normalization now preserves IPv6 `ScopeId` for native IPv6 addresses while continuing to map IPv4-mapped IPv6 addresses to IPv4; `ToCanonicalString()` reflects the preserved scope identifier when present.
