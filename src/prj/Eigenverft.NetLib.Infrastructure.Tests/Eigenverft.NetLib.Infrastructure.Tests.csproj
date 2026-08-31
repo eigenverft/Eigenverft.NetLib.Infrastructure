@@ -1,15 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- General build settings: defines the target frameworks -->
   <PropertyGroup>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <!-- C# language features -->
+  <PropertyGroup>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <!-- Test project configuration -->
+  <PropertyGroup>
     <IsPackable>false</IsPackable>
     <IsPublishable>false</IsPublishable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
+  <!-- Test package dependencies -->
   <ItemGroup>
     <PackageReference Include="MSTest" Version="4.3.2" />
     <PackageReference Include="Serilog" Version="4.3.0" />
@@ -18,10 +28,12 @@
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
+  <!-- Project under test -->
   <ItemGroup>
     <ProjectReference Include="..\Eigenverft.NetLib.Infrastructure\Eigenverft.NetLib.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!-- Global test usings -->
   <ItemGroup>
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
   </ItemGroup>
