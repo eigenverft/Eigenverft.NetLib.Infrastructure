@@ -1,0 +1,13 @@
+<Solution>
+  <!-- Paths are relative to this file's final location.
+       PlaceSolutionInSolutionFolder true  → src/sln/Eigenverft.NetLib.Configuration.Sets/Eigenverft.NetLib.Configuration.Sets.slnx
+         (Readme.md beside this file; projects are ../../prj/).
+       PlaceSolutionInSolutionFolder false → repo root, so src/prj/ and src/sln/. -->
+  <Folder Name="/sln/Eigenverft.NetLib.Configuration.Sets/">
+    <File Path="Readme.md" />
+  </Folder>
+  <Folder Name="/prj/">
+    <Project Path="../../prj/Eigenverft.NetLib.Configuration.Sets.Tests/Eigenverft.NetLib.Configuration.Sets.Tests.csproj" />
+    <Project Path="../../prj/Eigenverft.NetLib.Configuration.Sets/Eigenverft.NetLib.Configuration.Sets.csproj" />
+  </Folder>
+</Solution>

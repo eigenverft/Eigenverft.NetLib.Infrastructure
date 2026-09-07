@@ -1,0 +1,13 @@
+<Solution>
+  <!-- Paths are relative to this file's final location.
+       PlaceSolutionInSolutionFolder true  → src/sln/Eigenverft.NetLib.Security.Certificates/Eigenverft.NetLib.Security.Certificates.slnx
+         (Readme.md beside this file; projects are ../../prj/).
+       PlaceSolutionInSolutionFolder false → repo root, so src/prj/ and src/sln/. -->
+  <Folder Name="/sln/Eigenverft.NetLib.Security.Certificates/">
+    <File Path="Readme.md" />
+  </Folder>
+  <Folder Name="/prj/">
+    <Project Path="../../prj/Eigenverft.NetLib.Security.Certificates.Tests/Eigenverft.NetLib.Security.Certificates.Tests.csproj" />
+    <Project Path="../../prj/Eigenverft.NetLib.Security.Certificates/Eigenverft.NetLib.Security.Certificates.csproj" />
+  </Folder>
+</Solution>

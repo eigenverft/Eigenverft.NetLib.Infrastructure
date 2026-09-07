@@ -1,0 +1,13 @@
+<Solution>
+  <!-- Paths are relative to this file's final location.
+       PlaceSolutionInSolutionFolder true  → src/sln/Eigenverft.NetLib.Logging.Bootstrap/Eigenverft.NetLib.Logging.Bootstrap.slnx
+         (Readme.md beside this file; projects are ../../prj/).
+       PlaceSolutionInSolutionFolder false → repo root, so src/prj/ and src/sln/. -->
+  <Folder Name="/sln/Eigenverft.NetLib.Logging.Bootstrap/">
+    <File Path="Readme.md" />
+  </Folder>
+  <Folder Name="/prj/">
+    <Project Path="../../prj/Eigenverft.NetLib.Logging.Bootstrap.Tests/Eigenverft.NetLib.Logging.Bootstrap.Tests.csproj" />
+    <Project Path="../../prj/Eigenverft.NetLib.Logging.Bootstrap/Eigenverft.NetLib.Logging.Bootstrap.csproj" />
+  </Folder>
+</Solution>
