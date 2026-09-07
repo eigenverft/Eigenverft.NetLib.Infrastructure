@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Eigenverft.NetLib.Transformations.Tests")]
+[assembly: InternalsVisibleTo("Eigenverft.NetLib.Transformations.Transformations.Tests")]

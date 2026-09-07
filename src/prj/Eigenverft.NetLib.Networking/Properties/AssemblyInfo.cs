@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Eigenverft.NetLib.Networking.Tests")]
+[assembly: InternalsVisibleTo("Eigenverft.NetLib.Networking.Tests.Networking")]

@@ -1,9 +1,0 @@
-<Solution>
-  <Folder Name="/sln/Eigenverft.NetLib.Infra/">
-    <File Path="Readme.md" />
-  </Folder>
-  <Folder Name="/prj/">
-    <Project Path="../../prj/Eigenverft.NetLib.Infra.Tests/Eigenverft.NetLib.Infra.Tests.csproj" />
-    <Project Path="../../prj/Eigenverft.NetLib.Infra/Eigenverft.NetLib.Infra.csproj" />
-  </Folder>
-</Solution>

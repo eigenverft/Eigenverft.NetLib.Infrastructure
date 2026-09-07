@@ -2,9 +2,9 @@ using System;
 using System.Linq;
 using System.Text;
 
-using Eigenverft.NetLib.Infrastructure.Text;
+using Eigenverft.NetLib.Transformations.Text;
 
-namespace Eigenverft.NetLib.Infrastructure.Tests;
+namespace Eigenverft.NetLib.Transformations.Tests.Text;
 
 [TestClass]
 public sealed class Base92JsonSafeEncoderTests

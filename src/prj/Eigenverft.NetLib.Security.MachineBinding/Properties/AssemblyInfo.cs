@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Eigenverft.NetLib.Security.MachineBinding.Tests")]
+[assembly: InternalsVisibleTo("Eigenverft.NetLib.Security.MachineBinding.Tests.Security.MachineBinding")]

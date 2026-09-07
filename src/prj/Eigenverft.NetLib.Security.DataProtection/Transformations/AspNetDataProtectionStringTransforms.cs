@@ -2,11 +2,11 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 
-using Eigenverft.NetLib.Infrastructure.Transformations;
+using Eigenverft.NetLib.Transformations;
 
 using Microsoft.AspNetCore.DataProtection;
 
-namespace Eigenverft.WebLib.Infrastructure.Transformations
+namespace Eigenverft.NetLib.Security.DataProtection.Transformations
 {
     /// <summary>Creates reversible string transforms backed by ASP.NET Core Data Protection.</summary>
     /// <remarks>

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
 
-namespace Eigenverft.NetLib.Infrastructure.Text
+namespace Eigenverft.NetLib.Transformations.Text
 {
     /// <summary>
     /// Encodes arbitrary bytes with a canonical base-92 representation that can appear inside a JSON string without

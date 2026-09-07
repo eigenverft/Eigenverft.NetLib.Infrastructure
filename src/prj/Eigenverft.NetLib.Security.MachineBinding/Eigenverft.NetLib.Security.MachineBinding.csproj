@@ -1,5 +1,12 @@
-<Project>
-  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Keep global analyzer scoped to the project directory config file on disk without showing it as a project item. -->
+  <!-- EnforceCodeStyleInBuild is required or IDE1006 stays IDE-only and `dotnet build` ignores the file. -->
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <GlobalAnalyzerConfigFiles Include="$(MSBuildProjectDirectory)\.project.editor.globalconfig" Visible="false" />
+  </ItemGroup>
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
@@ -8,7 +15,7 @@
     <LangVersion>latest</LangVersion>
     <DebugType>embedded</DebugType>
     <IsPackable>true</IsPackable>
-    <IsPublishable>true</IsPublishable>
+    <IsPublishable>false</IsPublishable>
     <PublishRelease>true</PublishRelease>
     <IsTestProject>false</IsTestProject>
     <PackAsTool>false</PackAsTool>
@@ -64,5 +71,4 @@
     <Copy SourceFiles="$(PackageOutputPath)/$(PackageId).$(PackageVersion).nupkg" DestinationFolder="$(LocalPackagesDir)" />
   </Target>
   <Import Project="Build/SourceControlState.targets" />
-  <Import Project="Build/ImportSdkTargets.targets" />
 </Project>
