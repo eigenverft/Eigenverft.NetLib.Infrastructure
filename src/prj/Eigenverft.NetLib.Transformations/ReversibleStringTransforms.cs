@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 
 using Eigenverft.NetLib.Security.MachineBinding;
-using Eigenverft.NetLib.Transformations.Security.Protection;
+using Eigenverft.NetLib.Transformations.Protection;
 using Eigenverft.NetLib.Transformations.Text;
 
 namespace Eigenverft.NetLib.Transformations
