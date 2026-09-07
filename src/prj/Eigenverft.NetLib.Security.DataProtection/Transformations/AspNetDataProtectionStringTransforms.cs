@@ -10,7 +10,7 @@ namespace Eigenverft.NetLib.Security.DataProtection.Transformations
 {
     /// <summary>Creates reversible string transforms backed by ASP.NET Core Data Protection.</summary>
     /// <remarks>
-    /// Use <see cref="Hosting.Configuration.Values.AspNetDataProtectionConfigurationValueCodecs"/> when a persisted
+    /// Use <see cref="Values.AspNetDataProtectionConfigurationValueCodecs"/> when a persisted
     /// <c>ConfigurationValueCodec</c> is required.
     /// </remarks>
     public static class AspNetDataProtectionStringTransforms
