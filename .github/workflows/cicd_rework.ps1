@@ -382,7 +382,7 @@ foreach ($SolutionProjectPath in $SolutionProjectPaths) {
         {
             $ReportsDirectory = New-Directory -Paths @($ReportsRootPath,$SolutionProjectPath.Sln.BaseName,$ProjectFileInfo.BaseName,$ProjectChannelVersionRelativePath)
 
-            #Dependency-Health-and-Inventory.Report 
+            #Dependency-Health-and-Inventory.Report
             $VulnerabilitiesJson = Invoke-ProcessTyped -Executable "dotnet" -Arguments @("list", "$($ProjectFileInfo.FullName)", "package", "--vulnerable", "--format", "json")
             New-DotnetVulnerabilitiesReport -jsonInput $VulnerabilitiesJson -OutputFile "$ReportsDirectory\Vulnerabilities.md" -OutputFormat markdown -ExitOnVulnerability $false
 
