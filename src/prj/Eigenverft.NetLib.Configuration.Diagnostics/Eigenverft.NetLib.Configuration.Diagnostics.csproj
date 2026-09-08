@@ -56,7 +56,6 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageOutputPath Condition=" '$(PackageOutputPath)' == '' ">$(MSBuildProjectDirectory)\bin\Pack</PackageOutputPath>
-    <LocalPackagesDir></LocalPackagesDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(_IsPublishing)' == 'true'">
     <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildProjectDirectory)\bin\Publish\</PublishDir>
@@ -70,10 +69,6 @@
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
-  <Target Name="CopyToLocalPackages" AfterTargets="Pack" Condition="'$(LocalPackagesDir)'!=''">
-    <Message Text="Copy $(PackageOutputPath)/$(PackageId).$(PackageVersion).nupkg to $(LocalPackagesDir)" Importance="high" />
-    <Copy SourceFiles="$(PackageOutputPath)/$(PackageId).$(PackageVersion).nupkg" DestinationFolder="$(LocalPackagesDir)" />
-  </Target>
   <Import Project="Build/SourceControlState.targets" />
   <Import Project="Build/ImportSdkTargets.targets" />
 </Project>
