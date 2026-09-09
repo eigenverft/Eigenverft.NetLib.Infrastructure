@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Documentation</title>
+  <link rel="stylesheet" href="./css/documentation.css">
+  <script src="./js/documentation.loader.js" defer></script>
+</head>
+<body>
+  <script id="documentation-markdown" type="text/markdown">
+# Eigenverft.NetLib.Configuration.Binding
+
+Define complete option defaults in code and keep JSON configuration focused on the values that actually differ. When a `List` or `Dictionary` key is absent from the configuration, its initialized code default remains in effect. When the key is present, this package replaces that default with the configured collection instead of combining both sets of values.
+
+This makes code defaults the fallback for omitted configuration and allows configuration files to stay small without changing the effective settings.
+
+This documentation is included with the package and describes the API delivered by this package version. It does not require an online repository.
+
+## 🚀 Quick start
+
+The standard Microsoft configuration binder mutates initialized lists and dictionaries. A configured collection is therefore added to an initialized collection, which mixes code defaults with an intended configuration override. `BindReplacingCollectionDefaults` clears the matching mutable collection first and then delegates the actual binding to the Microsoft binder. Collections whose keys are omitted remain untouched and continue to provide their code defaults.
+
+```csharp
+using System.Collections.Generic;
+using Eigenverft.NetLib.Configuration.Binding;
+using Microsoft.Extensions.Configuration;
+
+public sealed class WorkerOptions
+{
+    public List<string> Endpoints { get; set; } = new() { "https://fallback.invalid" };
+
+    public Dictionary<string, string> Headers { get; set; } = new()
+    {
+        ["X-Source"] = "code-default",
+    };
+}
+
+WorkerOptions options = new();
+configuration
+    .GetSection("Worker")
+    .BindReplacingCollectionDefaults(
+        options,
+        EmptyCollectionBehavior.UseCodeDefaults);
+```
+
+With this configuration, both initialized defaults are removed before the framework binds the configured values:
+
+```json
+{
+  "Worker": {
+    "Endpoints": ["https://service.example"],
+    "Headers": {
+      "X-Source": "configuration"
+    }
+  }
+}
+```
+
+The resulting `Endpoints` list contains only `https://service.example`; `Headers` contains only the configured `X-Source` value.
+
+## 📥 Install
+
+Install `Eigenverft.NetLib.Configuration.Binding` with Visual Studio's NuGet Package Manager, or reference the package in the consuming project:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="Eigenverft.NetLib.Configuration.Binding" Version="<package-version>" />
+</ItemGroup>
+```
+
+The package targets `net8.0` and `net10.0`. Import its namespace where the extension methods are used:
+
+```csharp
+using Eigenverft.NetLib.Configuration.Binding;
+```
+
+## 🔧 Choose the empty-collection policy
+
+Both public binding methods require an `EmptyCollectionBehavior`. This makes the meaning of an explicitly configured empty list or dictionary visible at each call site.
+
+| Configuration state | `UseCodeDefaults` | `UseEmptyCollection` |
+| --- | --- | --- |
+| Key missing | Keep initialized code defaults | Keep initialized code defaults |
+| Non-empty list or dictionary | Replace initialized defaults | Replace initialized defaults |
+| Explicit empty list `[]` or dictionary `{}` | Keep initialized code defaults | Clear to an empty collection |
+
+Use `EmptyCollectionBehavior.UseCodeDefaults` when an empty configured collection should behave like no override. Use `EmptyCollectionBehavior.UseEmptyCollection` when emptiness is an intentional override.
+
+## 📚 Direct binding API
+
+Use the `IConfiguration` extension when you already have an object instance:
+
+```csharp
+configuration
+    .GetSection("Worker")
+    .BindReplacingCollectionDefaults(
+        options,
+        EmptyCollectionBehavior.UseEmptyCollection);
+```
+
+The complete public signature is:
+
+```csharp
+public static void BindReplacingCollectionDefaults(
+    this IConfiguration configuration,
+    object instance,
+    EmptyCollectionBehavior emptyCollectionBehavior,
+    Action<BinderOptions>? configureBinder = null)
+```
+
+The optional callback is forwarded to the native configuration binder:
+
+```csharp
+configuration
+    .GetSection("Worker")
+    .BindReplacingCollectionDefaults(
+        options,
+        EmptyCollectionBehavior.UseCodeDefaults,
+        binderOptions =>
+        {
+            binderOptions.ErrorOnUnknownConfiguration = true;
+        });
+```
+
+## ⚙️ OptionsBuilder API
+
+Use the `OptionsBuilder<TOptions>` extension when options are created through dependency injection:
+
+```csharp
+using Eigenverft.NetLib.Configuration.Binding;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+IServiceCollection services = new ServiceCollection();
+services.AddSingleton<IConfiguration>(configuration);
+services
+    .AddOptions<WorkerOptions>()
+    .BindReplacingCollectionDefaults(
+        "Worker",
+        EmptyCollectionBehavior.UseEmptyCollection);
+```
+
+The complete public signature is:
+
+```csharp
+public static OptionsBuilder<TOptions> BindReplacingCollectionDefaults<TOptions>(
+    this OptionsBuilder<TOptions> optionsBuilder,
+    string configSectionPath,
+    EmptyCollectionBehavior emptyCollectionBehavior,
+    Action<BinderOptions>? configureBinder = null)
+    where TOptions : class
+```
+
+The method returns the same builder for normal chaining. Microsoft options infrastructure remains responsible for named options, change tokens, binder options, and creating the final object. When configuration reload causes the options instance to be rebuilt, the selected empty-collection policy is applied again.
+
+## 📄 Exact behavior and limits
+
+Before delegating to the Microsoft binder, the package examines public instance properties on the supplied object:
+
+- A matching direct child key must exist in the selected configuration section. Key matching is case-insensitive, and `ConfigurationKeyNameAttribute` is honored.
+- The existing property value must implement non-read-only, non-fixed-size `IList` or `IDictionary`.
+- Only the existing collection instance is cleared. A setter is not required for that preparation.
+- Missing configuration keys always preserve initialized defaults.
+- `UseCodeDefaults` also preserves defaults when the matching configuration section has no children.
+- `UseEmptyCollection` clears a matching mutable collection even when its configuration section has no children.
+- Null values, arrays, fixed-size or read-only collections, sets, and other collection shapes are not cleared by this package. The Microsoft binder then applies its normal behavior.
+- Preparation is limited to collection-valued properties directly on the object being bound. It does not recursively clear collections inside nested objects.
+
+Passing a null configuration, object instance, options builder, or configuration path throws `ArgumentNullException`. Passing an enum value other than `UseCodeDefaults` or `UseEmptyCollection` throws `ArgumentOutOfRangeException`.
+
+## 🔄 Reload behavior
+
+The `OptionsBuilder<TOptions>` overload registers collection preparation in the same options pipeline that performs binding. Each newly created options instance starts with its code defaults, then applies the selected replacement behavior. Tests cover both empty-collection policies across configuration reloads and verify that a later missing key restores the newly created instance's code defaults.
+
+## ⚠️ Trimming and Native AOT
+
+Both public binding methods carry `RequiresDynamicCode` and `RequiresUnreferencedCode` annotations. They use configuration binding plus reflection over public collection properties. Applications that enable trimming analysis or Native AOT analysis will therefore receive the corresponding warnings at the call site.
+
+The package does not suppress those warnings or promise that reflected members will be preserved. A consuming application that trims assemblies must preserve the required option members and validate its published artifact. Native AOT consumers must also account for the dynamic-code requirement before using these methods.
+
+## 🛠️ Troubleshooting
+
+### Configured values are still appended
+
+Confirm that the property value is a mutable `IList` or `IDictionary`, that its configuration key is a direct child of the section passed to the method, and that the replacement extension method is called instead of the native `Bind` method.
+
+### An empty JSON array keeps the default
+
+Use `EmptyCollectionBehavior.UseEmptyCollection` when `[]` or `{}` should intentionally clear a default collection. `UseCodeDefaults` deliberately keeps the initialized value for an empty section.
+
+### A nested collection is not cleared
+
+Bind the nested configuration section directly to the nested object if that collection needs these replacement semantics. The preparatory scan does not recurse through nested objects.
+
+### The call produces trimming or AOT warnings
+
+Those warnings correspond to annotations on both public APIs. Do not silence them without verifying that configuration-bound properties are retained and that the target deployment supports the required behavior.
+  
+  </script>
+  <noscript>This packaged documentation requires JavaScript enabled for local files.</noscript>
+</body>
+</html>
