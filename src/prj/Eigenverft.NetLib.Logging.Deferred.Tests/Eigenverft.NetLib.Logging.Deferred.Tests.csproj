@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <DebugType>embedded</DebugType>
+    <IsPackable>false</IsPackable>
+    <IsPublishable>false</IsPublishable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MSTest" Version="4.3.2" />
+    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Eigenverft.NetLib.Logging.Deferred\Eigenverft.NetLib.Logging.Deferred.csproj">
+      <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
+    </ProjectReference>
+    <ProjectReference Include="..\Eigenverft.NetLib.Logging.Bootstrap\Eigenverft.NetLib.Logging.Bootstrap.csproj">
+      <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

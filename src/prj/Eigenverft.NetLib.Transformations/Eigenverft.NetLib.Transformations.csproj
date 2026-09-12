@@ -1,0 +1,73 @@
+<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <!-- Keep global analyzer scoped to the project directory config file on disk without showing it as a project item. -->
+  <!-- EnforceCodeStyleInBuild is required or IDE1006 stays IDE-only and `dotnet build` ignores the file. -->
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <GlobalAnalyzerConfigFiles Include="$(MSBuildProjectDirectory)\.project.editor.globalconfig" Visible="false" />
+  </ItemGroup>
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <DebugType>embedded</DebugType>
+    <IsPackable>true</IsPackable>
+    <IsPublishable>false</IsPublishable>
+    <PublishRelease>true</PublishRelease>
+    <IsTestProject>false</IsTestProject>
+    <PackAsTool>false</PackAsTool>
+  </PropertyGroup>
+  <PropertyGroup>
+    <GitVersionBaseDirectory>$(MSBuildProjectDirectory)\Properties\</GitVersionBaseDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Nerdbank.GitVersioning" Version="3.10.94">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>Eigenverft.NetLib.Transformations</PackageId>
+    <Authors>Eigenverft</Authors>
+    <Owners>Eigenverft</Owners>
+    <RepositoryUrl>https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>Readme.md</PackageReadmeFile>
+    <PackageIcon>Icon-128x128.png</PackageIcon>
+    <Description>Reversible string transforms, JSON-safe Base92 encoding, and machine-bound DPAPI support.</Description>
+    <PackageTags>dotnet;transformations;encoding;dpapi;machine-binding;eigenverft</PackageTags>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(MSBuildProjectDirectory)\NugetAssets\ReleaseNotes.txt"))</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Eigenverft.NetLib.Security.MachineBinding\Eigenverft.NetLib.Security.MachineBinding.csproj">
+      <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildProjectDirectory)\NugetAssets\**\*" Pack="true" PackagePath="" />
+  </ItemGroup>
+  <PropertyGroup>
+    <PackageOutputPath Condition=" '$(PackageOutputPath)' == '' ">$(MSBuildProjectDirectory)\bin\Pack</PackageOutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_IsPublishing)' == 'true'">
+    <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildProjectDirectory)\bin\Publish\</PublishDir>
+    <PublishAot>false</PublishAot>
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_IsPublishing)' == 'true' and '$(OutputType)' != 'Library'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSelfContained>true</PublishSelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+  <Import Project="Build/SourceControlState.targets" />
+  <Import Project="Build/ImportSdkTargets.targets" />
+</Project>

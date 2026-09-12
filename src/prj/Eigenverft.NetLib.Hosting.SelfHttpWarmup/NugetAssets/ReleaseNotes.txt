@@ -1,0 +1,4 @@
+Initial Eigenverft.NetLib.Hosting.SelfHttpWarmup capability package extracted from the historic WebLib implementation; public namespaces and APIs remain unchanged.
+
+- Microsoft.Extensions hosted-service helpers that warm up an application through its own HTTP endpoint.
+- Public namespaces and behavior remain compatible with the original Infrastructure implementation.

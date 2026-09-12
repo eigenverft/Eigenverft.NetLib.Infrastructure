@@ -1,0 +1,13 @@
+<Solution>
+  <!-- Paths are relative to this file's final location.
+       PlaceSolutionInSolutionFolder true  → src/sln/Eigenverft.NetLib.Configuration.WritebackJson/Eigenverft.NetLib.Configuration.WritebackJson.slnx
+         (Readme.md beside this file; projects are ../../prj/).
+       PlaceSolutionInSolutionFolder false → repo root, so src/prj/ and src/sln/. -->
+  <Folder Name="/sln/Eigenverft.NetLib.Configuration.WritebackJson/">
+    <File Path="Readme.md" />
+  </Folder>
+  <Folder Name="/prj/">
+    <Project Path="../../prj/Eigenverft.NetLib.Configuration.WritebackJson.Tests/Eigenverft.NetLib.Configuration.WritebackJson.Tests.csproj" />
+    <Project Path="../../prj/Eigenverft.NetLib.Configuration.WritebackJson/Eigenverft.NetLib.Configuration.WritebackJson.csproj" />
+  </Folder>
+</Solution>

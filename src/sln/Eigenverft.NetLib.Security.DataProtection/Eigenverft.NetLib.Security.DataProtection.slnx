@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/sln/Eigenverft.NetLib.Security.DataProtection/">
+    <File Path="Readme.md" />
+  </Folder>
+  <Folder Name="/prj/">
+    <Project Path="../../prj/Eigenverft.NetLib.Security.DataProtection.Tests/Eigenverft.NetLib.Security.DataProtection.Tests.csproj" />
+    <Project Path="../../prj/Eigenverft.NetLib.Security.DataProtection/Eigenverft.NetLib.Security.DataProtection.csproj" />
+  </Folder>
+</Solution>

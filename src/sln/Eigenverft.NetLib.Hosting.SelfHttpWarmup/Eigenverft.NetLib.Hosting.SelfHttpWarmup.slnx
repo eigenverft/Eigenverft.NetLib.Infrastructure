@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/sln/Eigenverft.NetLib.Hosting.SelfHttpWarmup/">
+    <File Path="Readme.md" />
+  </Folder>
+  <Folder Name="/prj/">
+    <Project Path="../../prj/Eigenverft.NetLib.Hosting.SelfHttpWarmup.Tests/Eigenverft.NetLib.Hosting.SelfHttpWarmup.Tests.csproj" />
+    <Project Path="../../prj/Eigenverft.NetLib.Hosting.SelfHttpWarmup/Eigenverft.NetLib.Hosting.SelfHttpWarmup.csproj" />
+  </Folder>
+</Solution>

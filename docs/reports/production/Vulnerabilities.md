@@ -1,3 +1,0 @@
-﻿## Vulnerabilities Report for Projects: Eigenverft.NetLib.Infrastructure - 2026-08-28 UTC
-
-No vulnerabilities found.

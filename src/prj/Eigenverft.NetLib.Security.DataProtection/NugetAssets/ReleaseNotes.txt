@@ -1,0 +1,1 @@
+Initial Eigenverft.NetLib.Security.DataProtection capability package extracted from the historic WebLib Infrastructure implementation; public namespaces and APIs remain unchanged.
