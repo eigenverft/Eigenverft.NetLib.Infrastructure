@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -139,8 +138,6 @@ CREATE TABLE IF NOT EXISTS {0} (
             TimeSpan unsentRetention
             )
         {
-            SelfLog.Enable(Console.Error);
-
             if (string.IsNullOrEmpty(tableName) || !Regex.IsMatch(tableName, "^[A-Za-z0-9_]+$"))
                 throw new ArgumentException("Table name must be alphanumeric or underscore.", nameof(tableName));
 
@@ -199,20 +196,14 @@ DELETE FROM {_tableName}
         }
 
         /// <summary>
-        /// Converts a TimeSpan into a comma-separated sequence of SQLite relative modifiers,
-        /// e.g. "-1 days, -2 hours, -30 minutes".
+        /// Converts a TimeSpan into one valid SQLite relative modifier.
         /// </summary>
         /// <param name="span">The timespan to convert.</param>
-        /// <returns>A string you can feed to datetime('now', &lt;this&gt;).</returns>
+        /// <returns>A single relative-seconds modifier suitable for datetime('now', modifier).</returns>
         private static string BuildSqliteOffset(TimeSpan span)
-        {
-            var parts = new List<string>();
-            if (span.Days != 0) parts.Add($"{-span.Days} days");
-            if (span.Hours != 0) parts.Add($"{-span.Hours} hours");
-            if (span.Minutes != 0) parts.Add($"{-span.Minutes} minutes");
-            if (span.Seconds != 0) parts.Add($"{-span.Seconds} seconds");
-            return string.Join(", ", parts);
-        }
+            => span == TimeSpan.Zero
+                ? "0 seconds"
+                : FormattableString.Invariant($"{-span.TotalSeconds:R} seconds");
 
         /// <summary>
         /// Persists a log event to the local SQLite spool before any network delivery attempt.
@@ -359,15 +350,20 @@ VALUES
             using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             try
             {
-                var resp = await _httpClient.PostAsync(_endpoint, content, token);
+                using var resp = await _httpClient.PostAsync(_endpoint, content, token);
                 if (resp.IsSuccessStatusCode) return true;
                 if ((int)resp.StatusCode == 429 && resp.Headers.RetryAfter?.Delta != null)
                     _currentInterval = resp.Headers.RetryAfter.Delta.Value;
-                //SelfLog.WriteLine("HTTP error {0}", resp.StatusCode);
+                SelfLog.WriteLine("HTTP relay returned status code {0}.", (int)resp.StatusCode);
                 return false;
             }
-            catch (Exception)
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                SelfLog.WriteLine("HTTP relay request failed: {0}", ex.Message);
                 return false;
             }
         }
@@ -494,34 +490,24 @@ PRAGMA busy_timeout = 5000;";
 
         private static string SerializeProperties(LogEvent logEvent)
         {
-            var sb = new StringBuilder();
-            sb.Append('{');
-            bool first = true;
+            var properties = new Dictionary<string, string>(logEvent.Properties.Count);
             foreach (var kvp in logEvent.Properties)
             {
-                if (!first) sb.Append(',');
-                first = false;
-                sb.Append('\"').Append(EscapeJson(kvp.Key)).Append("\":\"")
-                  .Append(EscapeJson(kvp.Value.ToString()!)).Append('\"');
+                properties.Add(kvp.Key, kvp.Value.ToString()!);
             }
-            sb.Append('}');
-            return sb.ToString();
-        }
 
-        private static string EscapeJson(string s) => s
-            .Replace("\\", "\\\\")
-            .Replace("\"", "\\\"")
-            .Replace("\b", "\\b")
-            .Replace("\f", "\\f")
-            .Replace("\n", "\\n")
-            .Replace("\r", "\\r")
-            .Replace("\t", "\\t");
+            return JsonSerializer.Serialize(
+                properties,
+                typeof(Dictionary<string, string>),
+                LogBatchJsonContext.Default);
+        }
     }
 
     // JSON Source Generator Context for AOT/Trimming compatibility
     [JsonSerializable(typeof(LogBatchPayload))]
     [JsonSerializable(typeof(List<LogEntry>))]
     [JsonSerializable(typeof(LogEntry))]
+    [JsonSerializable(typeof(Dictionary<string, string>))]
     [JsonSourceGenerationOptions(
         PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
         WriteIndented = false,

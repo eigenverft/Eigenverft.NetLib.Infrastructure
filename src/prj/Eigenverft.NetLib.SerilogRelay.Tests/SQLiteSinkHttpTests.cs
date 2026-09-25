@@ -233,10 +233,18 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 {
                 }
 
+                string compositeOffset = InvokeBuildSqliteOffset(new TimeSpan(1, 2, 3, 4));
+                Assert.AreEqual("-93784 seconds", compositeOffset);
+                Assert.AreEqual("0 seconds", InvokeBuildSqliteOffset(TimeSpan.Zero));
+
+                using var offsetConnection = new SqliteConnection("Data Source=:memory:");
+                offsetConnection.Open();
+                using var offsetCommand = offsetConnection.CreateCommand();
+                offsetCommand.CommandText = "SELECT datetime('2026-01-02 03:04:05', $offset);";
+                offsetCommand.Parameters.AddWithValue("$offset", compositeOffset);
                 Assert.AreEqual(
-                    "-1 days, -2 hours, -3 minutes, -4 seconds",
-                    InvokeBuildSqliteOffset(new TimeSpan(1, 2, 3, 4)));
-                Assert.AreEqual(string.Empty, InvokeBuildSqliteOffset(TimeSpan.Zero));
+                    "2026-01-01 01:01:01",
+                    Convert.ToString(offsetCommand.ExecuteScalar(), CultureInfo.InvariantCulture));
             }
             finally
             {
@@ -269,7 +277,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 MessageTemplate template = new MessageTemplateParser().Parse("Failure {One} {Two}");
                 var properties = new[]
                 {
-                    new LogEventProperty("One", new ScalarValue("line\n\"quoted\"\\slash")),
+                    new LogEventProperty("One", new ScalarValue("line\n\"quoted\"\\slash\u0001")),
                     new LogEventProperty("Two", new ScalarValue(2)),
                 };
                 var logEvent = new LogEvent(
@@ -297,6 +305,9 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 using JsonDocument propertiesDocument = JsonDocument.Parse(reader.GetString(3));
                 Assert.IsTrue(propertiesDocument.RootElement.TryGetProperty("One", out _));
                 Assert.IsTrue(propertiesDocument.RootElement.TryGetProperty("Two", out _));
+                Assert.AreEqual(
+                    properties[0].Value.ToString(),
+                    propertiesDocument.RootElement.GetProperty("One").GetString());
             }
             finally
             {
@@ -363,6 +374,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         }
 
         [TestMethod]
+        [DoNotParallelize]
         public async Task SendBatchHandlesServerErrorsRetryAfterAndConnectionFailure()
         {
             string directory = CreateTemporaryDirectory();
@@ -370,6 +382,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             string connectionString = $"Data Source={databasePath}";
             var entries = new List<LogEntry> { CreateLogEntry(1, "HTTP test") };
             using var listener = new TcpListener(IPAddress.Loopback, 0);
+            using var selfLog = new StringWriter(CultureInfo.InvariantCulture);
+            SelfLog.Enable(selfLog);
 
             try
             {
@@ -389,6 +403,23 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 Task<string> serverErrorRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.InternalServerError);
                 Assert.IsFalse(await InvokeSendBatchAsync(sink, entries, CancellationToken.None));
                 _ = await serverErrorRequest.WaitAsync(TimeSpan.FromSeconds(5));
+                StringAssert.Contains(selfLog.ToString(), "HTTP relay returned status code 500.");
+
+                using (var cancellation = new CancellationTokenSource())
+                {
+                    cancellation.Cancel();
+                    OperationCanceledException? cancellationException = null;
+                    try
+                    {
+                        await InvokeSendBatchAsync(sink, entries, cancellation.Token);
+                    }
+                    catch (OperationCanceledException ex)
+                    {
+                        cancellationException = ex;
+                    }
+
+                    Assert.IsNotNull(cancellationException);
+                }
 
                 Task<string> throttledWithoutRetryAfter = ReceiveSingleRequestAsync(listener, HttpStatusCode.TooManyRequests);
                 Assert.IsFalse(await InvokeSendBatchAsync(sink, entries, CancellationToken.None));
@@ -404,11 +435,14 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             }
             finally
             {
+                SelfLog.Disable();
                 listener.Stop();
                 DeleteTemporaryDirectory(directory);
             }
 
             string failureDirectory = CreateTemporaryDirectory();
+            using var failureSelfLog = new StringWriter(CultureInfo.InvariantCulture);
+            SelfLog.Enable(failureSelfLog);
             try
             {
                 int closedPort = ReserveAndReleasePort();
@@ -423,20 +457,24 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                     TimeSpan.FromDays(3));
 
                 Assert.IsFalse(await InvokeSendBatchAsync(failureSink, entries, CancellationToken.None));
+                StringAssert.Contains(failureSelfLog.ToString(), "HTTP relay request failed:");
             }
             finally
             {
+                SelfLog.Disable();
                 DeleteTemporaryDirectory(failureDirectory);
             }
         }
 
         [TestMethod]
+        [DoNotParallelize]
         public void EmitReportsNonBusySqliteFailureWithoutThrowing()
         {
             string directory = CreateTemporaryDirectory();
             string databasePath = Path.Combine(directory, "relay.db");
             string connectionString = $"Data Source={databasePath}";
             using var selfLog = new StringWriter(CultureInfo.InvariantCulture);
+            SelfLog.Enable(selfLog);
 
             try
             {
@@ -458,7 +496,6 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                     command.ExecuteNonQuery();
                 }
 
-                SelfLog.Enable(selfLog);
                 sink.Emit(CreateLogEvent("will fail"));
 
                 StringAssert.Contains(selfLog.ToString(), "Failed to write log to SQLite");
@@ -605,6 +642,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         }
 
         [TestMethod]
+        [DoNotParallelize]
         public async Task SenderLoopReportsDatabaseFailure()
         {
             string directory = CreateTemporaryDirectory();

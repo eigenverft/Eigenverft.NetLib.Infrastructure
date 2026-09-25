@@ -38,6 +38,9 @@ Only small compatibility and correctness adaptations were made while bringing th
 - `Microsoft.Data.Sqlite` was updated from the archived `9.0.6` reference to `10.0.12` because the older dependency graph failed the repository's high-severity NuGet vulnerability gate;
 - nullable annotations/initialization and XML API documentation were added where required by the current strict project;
 - each `HttpClient` now uses the inherited static handler with `disposeHandler: false`, preventing one sink instance from disposing the shared handler for later instances;
+- retention cleanup still uses SQLite's own `now` clock, but composite `TimeSpan` values are now converted to one valid relative-seconds modifier instead of an invalid comma-separated single modifier;
+- the sink no longer configures Serilog's process-global `SelfLog`; the host owns `SelfLog` configuration, while SQLite and HTTP delivery failures are emitted into it when configured;
+- persisted Serilog properties keep their historical stringified-value shape, but JSON escaping is now delegated to source-generated `System.Text.Json` instead of the incomplete hand-written escaper;
 - compiler-generated `System.Text.Json` source-generator files are excluded from Coverlet measurement while the authored library code remains subject to the unchanged 100% line/branch/method threshold.
 - direct package references were refreshed to the current stable versions used by the repository: `Microsoft.Data.Sqlite 10.0.12`, `Serilog 4.4.0`, `Microsoft.NET.Test.Sdk 18.10.1`, `MSTest 4.4.1`, and `coverlet.msbuild 10.0.1`; `Nerdbank.GitVersioning 3.10.94` was already current.
 
