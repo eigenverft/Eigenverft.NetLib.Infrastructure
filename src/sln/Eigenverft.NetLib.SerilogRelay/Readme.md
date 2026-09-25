@@ -15,7 +15,7 @@ Package metadata, license, icon, and release notes live in `src/prj/Eigenverft.N
 
 Project revival and design context is kept here at solution level in [`REVIVAL.md`](REVIVAL.md); it is repository documentation and is intentionally not included in the NuGet package.
 
-The current functional implementation is `../../prj/Eigenverft.NetLib.SerilogRelay/SQLiteSinkHttp.cs`, migrated from the archived AxonInsight durable SQLite/HTTP Serilog sink with only compatibility-level changes.
+The current functional implementation is `../../prj/Eigenverft.NetLib.SerilogRelay/SerilogRelaySink.cs`, migrated from the archived AxonInsight `SQLiteSinkHttp` durable SQLite/HTTP Serilog sink and exposed through the package-aligned `WriteTo.SerilogRelay(...)` API.
 
 `--tl:off` is optional. Without it the CLI shows the compact terminal logger. Add `--tl:off` for the classic per-project log. The commands work either way.
 

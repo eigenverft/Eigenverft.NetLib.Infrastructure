@@ -4,12 +4,12 @@ Durable Serilog relay for forwarding application logs over HTTP while keeping a 
 
 ## Current implementation
 
-The package currently contains the functionally migrated AxonInsight `SQLiteSinkHttp` implementation. The migration intentionally keeps the existing sender behavior and public configuration shape instead of redesigning the relay at the same time.
+The package contains `SerilogRelaySink`, functionally migrated from the AxonInsight `SQLiteSinkHttp` implementation while retaining the durable sender behavior. Before the first package release, the public API was renamed to match the package purpose.
 
-Current Serilog configuration remains:
+Current Serilog configuration:
 
 ```csharp
-.WriteTo.SQLiteSinkHttp(
+.WriteTo.SerilogRelay(
     connectionString,
     "logs",
     endpoint: "https://logging.example/")

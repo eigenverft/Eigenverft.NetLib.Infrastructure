@@ -24,11 +24,11 @@ The revival was originally scaffolded as `Eigenverft.NetLib.SerilogCentralLoggin
 
 The historical sender implementation has now been functionally migrated into:
 
-`src/prj/Eigenverft.NetLib.SerilogRelay/SQLiteSinkHttp.cs`
+`src/prj/Eigenverft.NetLib.SerilogRelay/SerilogRelaySink.cs`
 
 The archived AxonInsight source was treated as read-only and was not modified. It was already available as an extracted directory rather than a ZIP archive, so no temporary extraction directory was required in the working repository.
 
-The migration intentionally avoided a protocol or API redesign. The current public configuration therefore still uses `.WriteTo.SQLiteSinkHttp(...)`, and the existing SQLite schema, background sender, batching, retention, retry, HTTP payload, and shutdown-flush behavior remain recognizable from the archived implementation.
+The migration intentionally avoided a protocol redesign, so the SQLite schema, background sender, batching, retention, retry, HTTP payload, and shutdown-flush behavior remain recognizable from the archived implementation. Before the first package release, the public naming was aligned with the new package: the sink type is now `SerilogRelaySink` and the Serilog configuration entry point is `.WriteTo.SerilogRelay(...)`.
 
 Only small compatibility and correctness adaptations were made while bringing the code into the current library:
 
@@ -74,7 +74,6 @@ The following remain redesign goals rather than part of the initial functional m
 - Replace unrestricted TLS bypass with explicit options suitable for self-signed/private infrastructure, such as opt-in self-signed acceptance or certificate pinning.
 - Use bounded retry/backoff with cancellation and reliable restart recovery.
 - Keep the protocol implementation inside this package so sender applications only depend on the relay, not on the CentralLogging service project.
-- Consider whether the public Serilog configuration should eventually move from the historical `.SQLiteSinkHttp(...)` name to a relay/CentralLogging-oriented name.
 - Consider broader packaging/publication requirements when the implementation and receiver contract stabilize.
 
 The archived sink remains the behavioral reference for the migrated baseline. Future work can now improve its weak edges from a tested, working starting point rather than reconstructing the behavior from scratch.

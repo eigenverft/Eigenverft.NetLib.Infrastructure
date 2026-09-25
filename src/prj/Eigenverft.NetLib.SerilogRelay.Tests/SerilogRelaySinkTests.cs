@@ -24,14 +24,14 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 {
     [TestClass]
     [DoNotParallelize]
-    public class SQLiteSinkHttpTests
+    public class SerilogRelaySinkTests
     {
         [TestMethod]
         public void ConstructorRejectsInvalidConfiguration()
         {
             const string connectionString = "Data Source=:memory:";
 
-            Assert.ThrowsExactly<ArgumentException>(() => new SQLiteSinkHttp(
+            Assert.ThrowsExactly<ArgumentException>(() => new SerilogRelaySink(
                 connectionString,
                 string.Empty,
                 endpoint: null,
@@ -41,7 +41,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 TimeSpan.FromDays(1),
                 TimeSpan.FromDays(3)));
 
-            Assert.ThrowsExactly<ArgumentException>(() => new SQLiteSinkHttp(
+            Assert.ThrowsExactly<ArgumentException>(() => new SerilogRelaySink(
                 connectionString,
                 "invalid-table",
                 endpoint: null,
@@ -51,7 +51,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 TimeSpan.FromDays(1),
                 TimeSpan.FromDays(3)));
 
-            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new SQLiteSinkHttp(
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new SerilogRelaySink(
                 connectionString,
                 "logs",
                 endpoint: null,
@@ -61,7 +61,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 TimeSpan.FromDays(1),
                 TimeSpan.FromDays(3)));
 
-            Assert.ThrowsExactly<ArgumentException>(() => new SQLiteSinkHttp(
+            Assert.ThrowsExactly<ArgumentException>(() => new SerilogRelaySink(
                 connectionString,
                 "logs",
                 endpoint: null,
@@ -82,7 +82,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             try
             {
                 using (Logger logger = new LoggerConfiguration()
-                    .WriteTo.SQLiteSinkHttp(
+                    .WriteTo.SerilogRelay(
                         connectionString,
                         "logs",
                         endpoint: null,
@@ -129,7 +129,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
                 Task<string> requestTask = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
 
-                var sink = new SQLiteSinkHttp(
+                var sink = new SerilogRelaySink(
                     connectionString,
                     "logs",
                     $"http://127.0.0.1:{port}/logs",
@@ -171,7 +171,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
                 Task<string> requestTask = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
 
-                var sink = new SQLiteSinkHttp(
+                var sink = new SerilogRelaySink(
                     connectionString,
                     "logs",
                     $"http://127.0.0.1:{port}/logs",
@@ -213,7 +213,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             {
                 using (Logger explicitLogger = new LoggerConfiguration()
                     .MinimumLevel.Verbose()
-                    .WriteTo.SQLiteSinkHttp(
+                    .WriteTo.SerilogRelay(
                         $"Data Source={explicitDatabasePath}",
                         "logs",
                         endpoint: null,
@@ -228,7 +228,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 }
 
                 using (Logger defaultLogger = new LoggerConfiguration()
-                    .WriteTo.SQLiteSinkHttp($"Data Source={defaultDatabasePath}", "logs")
+                    .WriteTo.SerilogRelay($"Data Source={defaultDatabasePath}", "logs")
                     .CreateLogger())
                 {
                 }
@@ -261,7 +261,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
             try
             {
-                using var sink = new SQLiteSinkHttp(
+                using var sink = new SerilogRelaySink(
                     connectionString,
                     "logs",
                     endpoint: null,
@@ -332,7 +332,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
             try
             {
-                await using (var noEndpointSink = new SQLiteSinkHttp(
+                await using (var noEndpointSink = new SerilogRelaySink(
                     connectionString,
                     "logs",
                     endpoint: null,
@@ -346,7 +346,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 }
 
                 int closedPort = ReserveAndReleasePort();
-                await using var thresholdSink = new SQLiteSinkHttp(
+                await using var thresholdSink = new SerilogRelaySink(
                     connectionString,
                     "logs",
                     $"http://127.0.0.1:{closedPort}/logs",
@@ -390,7 +390,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 listener.Start();
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
 
-                await using var sink = new SQLiteSinkHttp(
+                await using var sink = new SerilogRelaySink(
                     connectionString,
                     "logs",
                     $"http://127.0.0.1:{port}/logs",
@@ -446,7 +446,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             try
             {
                 int closedPort = ReserveAndReleasePort();
-                await using var failureSink = new SQLiteSinkHttp(
+                await using var failureSink = new SerilogRelaySink(
                     $"Data Source={Path.Combine(failureDirectory, "relay.db")}",
                     "logs",
                     $"http://127.0.0.1:{closedPort}/logs",
@@ -478,7 +478,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
             try
             {
-                using var sink = new SQLiteSinkHttp(
+                using var sink = new SerilogRelaySink(
                     connectionString,
                     "logs",
                     endpoint: null,
@@ -516,7 +516,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
             try
             {
-                using var sink = new SQLiteSinkHttp(
+                using var sink = new SerilogRelaySink(
                     connectionString,
                     "logs",
                     endpoint: null,
@@ -564,7 +564,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             try
             {
                 using (Logger logger = new LoggerConfiguration()
-                    .WriteTo.SQLiteSinkHttp(connectionString, "logs", endpoint: null)
+                    .WriteTo.SerilogRelay(connectionString, "logs", endpoint: null)
                     .CreateLogger())
                 {
                     for (int index = 0; index < 6; index++)
@@ -579,7 +579,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
                 Task<List<string>> serverTask = ReceiveRequestsAsync(listener, 7, HttpStatusCode.OK);
 
-                await using var relay = new SQLiteSinkHttp(
+                await using var relay = new SerilogRelaySink(
                     connectionString,
                     "logs",
                     $"http://127.0.0.1:{port}/logs",
@@ -611,7 +611,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
             try
             {
-                var sink = new SQLiteSinkHttp(
+                var sink = new SerilogRelaySink(
                     connectionString,
                     "logs",
                     $"http://127.0.0.1:{closedPort}/logs",
@@ -653,7 +653,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
             try
             {
-                var sink = new SQLiteSinkHttp(
+                var sink = new SerilogRelaySink(
                     connectionString,
                     "logs",
                     $"http://127.0.0.1:{closedPort}/logs",
@@ -714,7 +714,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
                 Task<string> requestTask = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
 
-                var sink = new SQLiteSinkHttp(
+                var sink = new SerilogRelaySink(
                     connectionString,
                     "logs",
                     $"http://127.0.0.1:{port}/logs",
@@ -757,7 +757,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         }
 
         private static async Task<bool> InvokeProcessPendingAsync(
-            SQLiteSinkHttp sink,
+            SerilogRelaySink sink,
             bool ignoreMinBatch,
             CancellationToken cancellationToken)
         {
@@ -767,7 +767,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         }
 
         private static async Task<bool> InvokeSendBatchAsync(
-            SQLiteSinkHttp sink,
+            SerilogRelaySink sink,
             List<LogEntry> entries,
             CancellationToken cancellationToken)
         {
@@ -779,21 +779,21 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         private static MethodInfo GetPrivateMethod(string name, bool isStatic)
         {
             BindingFlags flags = BindingFlags.NonPublic | (isStatic ? BindingFlags.Static : BindingFlags.Instance);
-            return typeof(SQLiteSinkHttp).GetMethod(name, flags)
-                ?? throw new MissingMethodException(typeof(SQLiteSinkHttp).FullName, name);
+            return typeof(SerilogRelaySink).GetMethod(name, flags)
+                ?? throw new MissingMethodException(typeof(SerilogRelaySink).FullName, name);
         }
 
-        private static void SetPrivateField<T>(SQLiteSinkHttp sink, string name, T value)
+        private static void SetPrivateField<T>(SerilogRelaySink sink, string name, T value)
         {
-            FieldInfo field = typeof(SQLiteSinkHttp).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)
-                ?? throw new MissingFieldException(typeof(SQLiteSinkHttp).FullName, name);
+            FieldInfo field = typeof(SerilogRelaySink).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new MissingFieldException(typeof(SerilogRelaySink).FullName, name);
             field.SetValue(sink, value);
         }
 
-        private static T GetPrivateField<T>(SQLiteSinkHttp sink, string name)
+        private static T GetPrivateField<T>(SerilogRelaySink sink, string name)
         {
-            FieldInfo field = typeof(SQLiteSinkHttp).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)
-                ?? throw new MissingFieldException(typeof(SQLiteSinkHttp).FullName, name);
+            FieldInfo field = typeof(SerilogRelaySink).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new MissingFieldException(typeof(SerilogRelaySink).FullName, name);
             return (T)field.GetValue(sink)!;
         }
 

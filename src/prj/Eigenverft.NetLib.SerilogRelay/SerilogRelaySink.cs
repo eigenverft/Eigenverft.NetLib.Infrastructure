@@ -18,9 +18,9 @@ using Serilog.Events;
 namespace Eigenverft.NetLib.SerilogRelay
 {
     /// <summary>
-    /// Provides extension methods to configure the high-reliability SQLite sink.
+    /// Provides extension methods to configure the durable Serilog relay.
     /// </summary>
-    public static class LoggerConfigurationSQLiteSinkHttp
+    public static class LoggerConfigurationSerilogRelayExtensions
     {
         /// <summary>
         /// Configures Serilog to persist events to SQLite and optionally relay pending events to an HTTP endpoint.
@@ -36,7 +36,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <param name="unsentRetention">How long unsent events are retained locally.</param>
         /// <param name="restrictedToMinimumLevel">The minimum Serilog event level accepted by the sink.</param>
         /// <returns>The original Serilog logger configuration.</returns>
-        public static LoggerConfiguration SQLiteSinkHttp(
+        public static LoggerConfiguration SerilogRelay(
             this LoggerSinkConfiguration loggerConfiguration,
             string connectionString,
             string tableName,
@@ -48,7 +48,7 @@ namespace Eigenverft.NetLib.SerilogRelay
             TimeSpan? unsentRetention = null,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum)
         {
-            var sink = new SQLiteSinkHttp(
+            var sink = new SerilogRelaySink(
                 connectionString,
                 tableName,
                 endpoint,
@@ -62,10 +62,10 @@ namespace Eigenverft.NetLib.SerilogRelay
     }
 
     /// <summary>
-    /// A high-reliability Serilog sink that persists each event immediately to SQLite
+    /// A durable Serilog relay sink that persists each event immediately to SQLite
     /// and ships stored events reliably to an HTTP endpoint.
     /// </summary>
-    public class SQLiteSinkHttp : ILogEventSink, IAsyncDisposable, IDisposable
+    public class SerilogRelaySink : ILogEventSink, IAsyncDisposable, IDisposable
     {
 
         private static readonly HttpClientHandler _handler = new HttpClientHandler
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS {0} (
         private bool _hasNewLogs;
 
         /// <summary>
-        /// Initializes a new instance of <see cref="SQLiteSinkHttp"/>.
+        /// Initializes a new instance of <see cref="SerilogRelaySink"/>.
         /// </summary>
         /// <param name="connectionString">The SQLite connection string.</param>
         /// <param name="tableName">The table name for storing logs.</param>
@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS {0} (
         /// <remarks>
         /// Ensures <paramref name="minBatchItems"/> is at least 1 and not greater than <paramref name="maxBatchItems"/>.
         /// </remarks>
-        public SQLiteSinkHttp(
+        public SerilogRelaySink(
             string connectionString,
             string tableName,
             string? endpoint,
