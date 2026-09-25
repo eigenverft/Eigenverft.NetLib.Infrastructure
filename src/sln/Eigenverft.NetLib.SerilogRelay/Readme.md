@@ -13,6 +13,8 @@ The `.slnx` and this readme live in this folder. Open a terminal here for the co
 
 Package metadata, license, icon, and release notes live in `src/prj/Eigenverft.NetLib.SerilogRelay/Properties/NugetMetadata/`.
 
+Project revival and design context is kept here at solution level in [`REVIVAL.md`](REVIVAL.md); it is repository documentation and is intentionally not included in the NuGet package.
+
 `--tl:off` is optional. Without it the CLI shows the compact terminal logger. Add `--tl:off` for the classic per-project log. The commands work either way.
 
 ## Restore and build

@@ -44,4 +44,4 @@ It should improve:
 
 This is the reusable library side of the revival and is the likely candidate for public packaging later if the project is opened.
 
-See `docs/REVIVAL.md` for the initial preservation and redesign notes.
+The initial preservation and redesign notes are maintained in the repository at `src/sln/Eigenverft.NetLib.SerilogRelay/REVIVAL.md`.
