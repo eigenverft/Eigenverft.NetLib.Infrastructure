@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `7f99054`, `310ce0b`, `5fe100a` — Add the `Eigenverft.NetLib.SerilogRelay` library scaffold in the current multi-library layout, migrate the prior SerilogCentralLoggingSink revival intent and placeholder stubs, use the current Eigenverft NuGet icon/metadata, and keep `REVIVAL.md` as solution-level repository documentation rather than NuGet package content.
+
 - `b4327db` — WP2 adds host-agnostic IP normalization and CIDR matching with parsed-network/list-match caches, plus one shared configuration-binding primitive for collection defaults. The legacy RequestFilters project remains unchanged.
 
 - `22646ee` — Review cleanup narrows collection-default replacement to initialized mutable lists/dictionaries, characterizes native binder merge/empty behavior, and exposes IP normalization/CIDR matching through small `IPAddress` extension APIs while preserving the CIDR caches.
