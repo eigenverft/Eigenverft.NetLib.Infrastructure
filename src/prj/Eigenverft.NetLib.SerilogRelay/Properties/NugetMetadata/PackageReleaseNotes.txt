@@ -1,3 +1,4 @@
 0.1.0 (2026-09-25)
 
- - Project creation.
+- Created the SerilogRelay library scaffold in Eigenverft.NetLib.Infrastructure.
+- Migrated the revival direction, historical references, and placeholder source/test stubs from Eigenverft.NetLib.SerilogCentralLoggingSink.
