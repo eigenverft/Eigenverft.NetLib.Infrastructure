@@ -1,4 +1,8 @@
 0.1.0 (2026-09-25)
 
-- Created the SerilogRelay library scaffold in Eigenverft.NetLib.Infrastructure.
-- Migrated the revival direction, historical references, and placeholder source/test stubs from Eigenverft.NetLib.SerilogCentralLoggingSink.
+- Created the SerilogRelay library in Eigenverft.NetLib.Infrastructure and migrated the revival context from Eigenverft.NetLib.SerilogCentralLoggingSink.
+- Functionally migrated the archived AxonInsight SQLiteSinkHttp sender: durable local SQLite spool, restart recovery, background HTTP batching, sent-state updates, retention, retry/backoff, Retry-After handling, and shutdown flush.
+- Kept the historical public SQLiteSinkHttp configuration and wire behavior for this first migration instead of redesigning the protocol.
+- Updated Microsoft.Data.Sqlite from the archived 9.0.6 reference to 10.0.12 to satisfy the repository vulnerability gate.
+- Refreshed direct dependencies to current stable releases, including Serilog 4.4.0, Microsoft.NET.Test.Sdk 18.10.1, MSTest 4.4.1, and coverlet.msbuild 10.0.1.
+- Added 15 regression tests covering persistence, restart recovery, delivery, SQLite busy handling, HTTP failure/throttling paths, shutdown behavior, and sender lifecycle; the authored net10 library code is at 100% line, branch, and method coverage.

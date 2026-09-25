@@ -36,6 +36,7 @@
     <CollectCoverage>true</CollectCoverage>
     <CoverletOutputFormat>opencover,json</CoverletOutputFormat>
     <CoverletOutput>./CoverletOutput/</CoverletOutput>
+    <ExcludeByFile>**/obj/**/System.Text.Json.SourceGeneration/**/*.cs</ExcludeByFile>
     <Include>[Eigenverft.NetLib.SerilogRelay]*</Include>
     <Threshold>100</Threshold>
     <ThresholdType>line,branch,method</ThresholdType>
@@ -75,10 +76,10 @@
 
   <!-- External dependencies -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="4.4.0" />
-    <PackageReference Include="MSTest.TestFramework" Version="4.4.0" />
-    <PackageReference Include="coverlet.msbuild" Version="6.0.0">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="MSTest.TestAdapter" Version="4.4.1" />
+    <PackageReference Include="MSTest.TestFramework" Version="4.4.1" />
+    <PackageReference Include="coverlet.msbuild" Version="10.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

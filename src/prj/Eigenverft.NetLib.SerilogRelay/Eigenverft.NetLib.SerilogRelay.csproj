@@ -71,6 +71,12 @@
     </PackageReference>
   </ItemGroup>
 
+  <!-- Functional dependencies carried forward from the archived AxonInsight SQLite/HTTP Serilog sink. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <PackageReference Include="Serilog" Version="4.4.0" />
+  </ItemGroup>
+
   <!-- Package metadata -->
   <!-- https://learn.microsoft.com/en-us/nuget/create-packages/package-authoring-best-practices -->
   <PropertyGroup>

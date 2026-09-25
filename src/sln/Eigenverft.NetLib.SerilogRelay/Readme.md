@@ -15,6 +15,8 @@ Package metadata, license, icon, and release notes live in `src/prj/Eigenverft.N
 
 Project revival and design context is kept here at solution level in [`REVIVAL.md`](REVIVAL.md); it is repository documentation and is intentionally not included in the NuGet package.
 
+The current functional implementation is `../../prj/Eigenverft.NetLib.SerilogRelay/SQLiteSinkHttp.cs`, migrated from the archived AxonInsight durable SQLite/HTTP Serilog sink with only compatibility-level changes.
+
 `--tl:off` is optional. Without it the CLI shows the compact terminal logger. Add `--tl:off` for the classic per-project log. The commands work either way.
 
 ## Restore and build
@@ -40,7 +42,7 @@ After a test run, the links below point to generated reports. Each selected targ
 [Test results (html)](../../prj/Eigenverft.NetLib.SerilogRelay.Tests/MSTestResults/result-net10.0.html)
 [Coverlet output](../../prj/Eigenverft.NetLib.SerilogRelay.Tests/CoverletOutput/coverage.net10.0.opencover.xml)
 
-Coverlet measures only the class library (`[Eigenverft.NetLib.SerilogRelay]*`) and fails `dotnet test` if line, branch, or method coverage is under 100%.
+Coverlet measures only the authored class-library code (`[Eigenverft.NetLib.SerilogRelay]*`) and fails `dotnet test` if line, branch, or method coverage is under 100%. Compiler-generated `System.Text.Json` source-generator files under `obj/` are excluded from coverage measurement. The migrated sink regression suite currently contains 15 tests; all 15 pass on `net10.0`, where authored library code reaches 100% line, branch, and method coverage.
 
 ## Pack
 
