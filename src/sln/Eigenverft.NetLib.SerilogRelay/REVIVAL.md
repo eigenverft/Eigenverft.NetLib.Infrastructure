@@ -43,12 +43,11 @@ Only small compatibility and correctness adaptations were made while bringing th
 - persisted Serilog properties keep their historical stringified-value shape, but JSON escaping is now delegated to source-generated `System.Text.Json` instead of the incomplete hand-written escaper;
 - synchronous and asynchronous disposal now share one shutdown task, so repeated/concurrent dispose callers join the same flush and no new event is accepted once shutdown begins;
 - each event receives a stable GUID `EventId` before its first local insert; the ID is persisted with the spool row and reused across HTTP retries and process restarts;
-- old spool schemas are upgraded in place by adding/backfilling `EventId` and creating a unique local index without discarding pending rows;
 - protocol version `1` is sent to `Eigenverft.Service.CentralLogging` `/api/v1/logs`; `BatchId` remains a new per-attempt correlation ID while `EventId` is the idempotency key;
 - the client API now treats the relay as fire-and-forget infrastructure: endpoint is the only normal remote-delivery input, while application identity, LocalApplicationData-based spool directory, `SerilogRelay.db` filename, and internal `SerilogRelayEvents` table are automatic; `spoolDirectory`, `spoolFileName`, and `applicationId` remain optional overrides;
 - each newly emitted event now persists producer identity together with the event: logical `ApplicationId`, pseudonymous stable `MachineId`, and `ProcessId`. This is intentionally per-event rather than batch-level because multiple processes can share one application spool and another process may later deliver the row;
 - `MachineId` is derived from an internal copy of the existing tested `PhysicalMachineBinding` source (SMBIOS system UUID on Windows, DMI product UUID on Linux, IOPlatformUUID on macOS, normalized and domain-separated SHA-256 hashed). The raw platform UUID never enters the wire payload, `MachineName` is not collected automatically, and fingerprint failure degrades to a null `MachineId` without breaking logging;
-- older spool schemas are upgraded with nullable `ApplicationId`, `MachineId`, and `ProcessId` columns, but historical rows remain null rather than receiving invented producer identity;
+- because the package is still being developed from scratch and has not been released, the current v1 spool schema is the first supported schema: `EventId`, `ApplicationId`, and `ProcessId` are required from row creation, while `MachineId` remains nullable when fingerprinting is unavailable; no pre-v1 schema compatibility code is carried;
 - `SQLITE_CORRUPT` and `SQLITE_NOTADB` now trigger serialized file-backed recovery: close/clear relay SQLite pools, quarantine the active DB plus WAL/SHM sidecars when still present, write a best-effort `corruption.json`, recreate the spool/schema, persist a durable `spool_corrupted` event in the fresh spool, and retry the failed database operation; `BUSY`, `LOCKED`, `FULL`, `CANTOPEN`, and `IOERR` are not misclassified as corruption;
 - compiler-generated `System.Text.Json` source-generator files are excluded from Coverlet measurement while the authored library code remains subject to the unchanged 100% line/branch/method threshold.
 - the copied cross-platform `PhysicalMachineBinding` helper and its environment-probe bridge are marked `[ExcludeFromCodeCoverage]` in this project because the original implementation already has dedicated MachineBinding tests; Relay coverage still measures the complete persistence/wire/null-fallback integration around `MachineId`.
@@ -58,7 +57,7 @@ The regression suite characterizes the migrated behavior, including:
 
 - local persistence before delivery;
 - restart-safe backlog recovery;
-- stable `EventId` reuse across retries and restart-safe legacy-spool identity migration;
+- stable `EventId` reuse across retries and restart-safe current-schema backlog recovery;
 - successful HTTP batching and `Sent = 1` updates;
 - shutdown flush below the normal minimum batch size;
 - repeated/concurrent sync/async disposal joining one shutdown operation and rejecting writes after shutdown begins;
@@ -66,11 +65,11 @@ The regression suite characterizes the migrated behavior, including:
 - SQLite busy/locked retry handling;
 - HTTP failures and `429 Retry-After`;
 - trace/span/exception/property persistence;
-- historical nullable database columns;
+- nullable optional event fields such as trace/span/exception/properties and unavailable `MachineId`;
 - sender-loop failure and cancellation paths.
 - real corrupted SQLite startup recovery, async read-time recovery, corruption-code classification, sidecar quarantine, non-file-backed behavior, and best-effort recovery/metadata failure paths.
 
-The current regression suite contains 28 tests. On `net10.0`, all 28 pass and authored library code reaches 100% line, branch, and method coverage. The solution also builds successfully for `net8.0` and `net10.0`. Real temporary end-to-end runs against the current `Eigenverft.Service.CentralLogging` receiver confirmed that `.WriteTo.SerilogRelay(...)` reaches `/api/v1/logs`, preserves the canonical `EventId`, and persists the producer `ApplicationId`, 64-character hashed `MachineId`, and `ProcessId` on the receiver.
+The current regression suite contains 27 tests. On `net10.0`, all 27 pass and authored library code reaches 100% line, branch, and method coverage. The solution also builds successfully for `net8.0` and `net10.0`. Real temporary end-to-end runs against the current `Eigenverft.Service.CentralLogging` receiver confirmed that `.WriteTo.SerilogRelay(...)` reaches `/api/v1/logs`, preserves the canonical `EventId`, and persists the producer `ApplicationId`, 64-character hashed `MachineId`, and `ProcessId` on the receiver.
 
 The inherited analyzer cleanup is now complete for the current relay source. The Release pack for both `net8.0` and `net10.0` completes with 0 warnings and 0 errors. Persisted rendered messages use `CultureInfo.InvariantCulture` so their text is stable across host/thread locales; the remaining analyzer fixes were private parameter ordering and format/conversion cleanup without behavioral redesign.
 

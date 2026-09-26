@@ -161,10 +161,10 @@ namespace Eigenverft.NetLib.SerilogRelay
         private const string TableSchema = @"
 CREATE TABLE IF NOT EXISTS {0} (
     Id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    EventId         TEXT,
-    ApplicationId   TEXT,
+    EventId         TEXT    NOT NULL UNIQUE,
+    ApplicationId   TEXT    NOT NULL,
     MachineId       TEXT,
-    ProcessId       INTEGER,
+    ProcessId       INTEGER NOT NULL,
     Timestamp       TEXT    NOT NULL,
     Level           TEXT    NOT NULL,
     RenderMessage   TEXT    NOT NULL,
@@ -247,7 +247,6 @@ CREATE TABLE IF NOT EXISTS {0} (
             ExecuteDatabaseWithRecovery(() =>
             {
                 EnsureTableCreatedCore();
-                EnsureEventIdentitySchemaCore();
                 CleanupOldLogsCore(sentRetention, unsentRetention);
             });
 
@@ -499,9 +498,9 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
                         {
                             Id = reader.GetInt64(0),
                             EventId = reader.GetString(1),
-                            ApplicationId = reader.IsDBNull(2) ? null : reader.GetString(2),
+                            ApplicationId = reader.GetString(2),
                             MachineId = reader.IsDBNull(3) ? null : reader.GetString(3),
-                            ProcessId = reader.IsDBNull(4) ? null : reader.GetInt32(4),
+                            ProcessId = reader.GetInt32(4),
                             Timestamp = reader.GetString(5),
                             Level = reader.GetString(6),
                             RenderMessage = reader.GetString(7),
@@ -556,66 +555,6 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             using var cmd = conn.CreateCommand();
             cmd.CommandText = TableSchema.Replace("{0}", TableName, StringComparison.Ordinal);
             cmd.ExecuteNonQuery();
-        }
-
-        private void EnsureEventIdentitySchemaCore()
-        {
-            using var conn = new SqliteConnection(_connectionString);
-            conn.Open();
-            ConfigurePragmas(conn);
-
-            var columns = new HashSet<string>(StringComparer.Ordinal);
-            using (var schema = conn.CreateCommand())
-            {
-                schema.CommandText = $"PRAGMA table_info({TableName});";
-                using var reader = schema.ExecuteReader();
-                while (reader.Read())
-                    columns.Add(reader.GetString(1));
-            }
-
-            EnsureColumn("EventId", "TEXT");
-            EnsureColumn("ApplicationId", "TEXT");
-            EnsureColumn("MachineId", "TEXT");
-            EnsureColumn("ProcessId", "INTEGER");
-
-            var rowsWithoutEventId = new List<long>();
-            using (var select = conn.CreateCommand())
-            {
-                select.CommandText = $"SELECT Id FROM {TableName} WHERE EventId IS NULL OR EventId = '';";
-                using var reader = select.ExecuteReader();
-                while (reader.Read())
-                    rowsWithoutEventId.Add(reader.GetInt64(0));
-            }
-
-            using (var tx = conn.BeginTransaction())
-            {
-                foreach (long id in rowsWithoutEventId)
-                {
-                    using var update = conn.CreateCommand();
-                    update.Transaction = tx;
-                    update.CommandText = $"UPDATE {TableName} SET EventId = $eventId WHERE Id = $id;";
-                    update.Parameters.AddWithValue("$eventId", Guid.NewGuid().ToString("D"));
-                    update.Parameters.AddWithValue("$id", id);
-                    update.ExecuteNonQuery();
-                }
-
-                tx.Commit();
-            }
-
-            using var index = conn.CreateCommand();
-            index.CommandText = $"CREATE UNIQUE INDEX IF NOT EXISTS IX_{TableName}_EventId ON {TableName}(EventId);";
-            index.ExecuteNonQuery();
-
-            void EnsureColumn(string columnName, string type)
-            {
-                if (columns.Contains(columnName))
-                    return;
-
-                using var alter = conn.CreateCommand();
-                alter.CommandText = $"ALTER TABLE {TableName} ADD COLUMN {columnName} {type};";
-                alter.ExecuteNonQuery();
-                columns.Add(columnName);
-            }
         }
 
         // Apply durable settings to SQLite connection
@@ -735,7 +674,6 @@ PRAGMA busy_timeout = 5000;";
                 WriteCorruptionMetadata(quarantineDirectory, quarantineId, exception);
 
                 EnsureTableCreatedCore();
-                EnsureEventIdentitySchemaCore();
                 InsertCorruptionEventCore(quarantineId, exception);
 
                 Interlocked.Exchange(ref _pendingCount, GetPendingCountCore());
@@ -999,9 +937,9 @@ VALUES
     {
         public long Id { get; set; }
         public string EventId { get; set; } = string.Empty;
-        public string? ApplicationId { get; set; }
+        public string ApplicationId { get; set; } = string.Empty;
         public string? MachineId { get; set; }
-        public int? ProcessId { get; set; }
+        public int ProcessId { get; set; }
         public string Timestamp { get; set; } = string.Empty;
         public string Level { get; set; } = string.Empty;
         public string RenderMessage { get; set; } = string.Empty;

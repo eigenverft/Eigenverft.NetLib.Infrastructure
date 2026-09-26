@@ -639,79 +639,6 @@ LIMIT 1;";
 
 
         [TestMethod]
-        public async Task LegacySpoolMigrationAssignsStableEventIds()
-        {
-            string directory = CreateTemporaryDirectory();
-            string databasePath = Path.Combine(directory, "legacy.db");
-            string connectionString = $"Data Source={databasePath}";
-
-            try
-            {
-                using (var connection = new SqliteConnection(connectionString))
-                {
-                    connection.Open();
-                    using var command = connection.CreateCommand();
-                    command.CommandText = @"
-CREATE TABLE SerilogRelayEvents (
-    Id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    Timestamp       TEXT    NOT NULL,
-    Level           TEXT    NOT NULL,
-    RenderMessage   TEXT    NOT NULL,
-    MessageTemplate TEXT    NOT NULL,
-    TraceId         TEXT,
-    SpanId          TEXT,
-    Exception       TEXT,
-    Properties      TEXT,
-    Sent            INTEGER NOT NULL DEFAULT 0,
-    CreatedAt       TEXT    NOT NULL DEFAULT (datetime('now'))
-);
-INSERT INTO SerilogRelayEvents (Timestamp, Level, RenderMessage, MessageTemplate, Sent)
-VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
-                    command.ExecuteNonQuery();
-                }
-
-                string firstEventId;
-                await using (var firstSink = new SerilogRelaySink(
-                    connectionString,
-                    endpoint: null,
-                    minBatchItems: 1,
-                    maxBatchItems: 10,
-                    TimeSpan.FromMilliseconds(20),
-                    TimeSpan.FromDays(1),
-                    TimeSpan.FromDays(3)))
-                {
-                    firstEventId = ReadSingleEventId(connectionString);
-                    Assert.IsTrue(Guid.TryParseExact(firstEventId, "D", out _));
-                    using var identityConnection = new SqliteConnection(connectionString);
-                    identityConnection.Open();
-                    using var identityCommand = identityConnection.CreateCommand();
-                    identityCommand.CommandText = "SELECT ApplicationId, MachineId, ProcessId FROM SerilogRelayEvents ORDER BY Id LIMIT 1;";
-                    using SqliteDataReader identityReader = identityCommand.ExecuteReader();
-                    Assert.IsTrue(identityReader.Read());
-                    Assert.IsTrue(identityReader.IsDBNull(0));
-                    Assert.IsTrue(identityReader.IsDBNull(1));
-                    Assert.IsTrue(identityReader.IsDBNull(2));
-                }
-
-                await using (var secondSink = new SerilogRelaySink(
-                    connectionString,
-                    endpoint: null,
-                    minBatchItems: 1,
-                    maxBatchItems: 10,
-                    TimeSpan.FromMilliseconds(20),
-                    TimeSpan.FromDays(1),
-                    TimeSpan.FromDays(3)))
-                {
-                    Assert.AreEqual(firstEventId, ReadSingleEventId(connectionString));
-                }
-            }
-            finally
-            {
-                DeleteTemporaryDirectory(directory);
-            }
-        }
-
-        [TestMethod]
         public async Task DisposeIsIdempotentAcrossSyncAndAsyncCallers()
         {
             string directory = CreateTemporaryDirectory();
@@ -1081,7 +1008,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 using (var command = blocker.CreateCommand())
                 {
                     command.Transaction = transaction;
-                    command.CommandText = "INSERT INTO SerilogRelayEvents (Timestamp, Level, RenderMessage, MessageTemplate, Sent) VALUES ('x','Information','blocker','blocker',0);";
+                    command.CommandText = "INSERT INTO SerilogRelayEvents (EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, Sent) VALUES ('11111111-1111-1111-1111-111111111111','Busy.Test.App','TEST-MACHINE-ID',4242,'x','Information','blocker','blocker',0);";
                     command.ExecuteNonQuery();
                 }
 
@@ -1103,7 +1030,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
         }
 
         [TestMethod]
-        public async Task RestartRecoveryDrainsBacklogIncludingNullLegacyColumns()
+        public async Task RestartRecoveryDrainsCurrentSchemaBacklogWithNullOptionalColumns()
         {
             string directory = CreateTemporaryDirectory();
             string databasePath = Path.Combine(directory, "relay.db");
@@ -1443,15 +1370,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
         }
 
 
-        private static string ReadSingleEventId(string connectionString)
-        {
-            using var connection = new SqliteConnection(connectionString);
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = "SELECT EventId FROM SerilogRelayEvents ORDER BY Id LIMIT 1;";
-            return Convert.ToString(command.ExecuteScalar(), CultureInfo.InvariantCulture) ?? string.Empty;
-        }
-
         private static LogEvent CreateLogEvent(string message)
         {
             MessageTemplate template = new MessageTemplateParser().Parse(message);
@@ -1469,6 +1387,9 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
             {
                 Id = id,
                 EventId = Guid.NewGuid().ToString("D"),
+                ApplicationId = "Test.Entry.App",
+                MachineId = "TEST-MACHINE-ID",
+                ProcessId = 4242,
                 Timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
                 Level = LogEventLevel.Information.ToString(),
                 RenderMessage = renderedMessage,
@@ -1484,8 +1405,8 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
             using var command = connection.CreateCommand();
             string eventId = Guid.NewGuid().ToString("D");
             command.CommandText = nullOptionals
-                ? "INSERT INTO SerilogRelayEvents (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent) VALUES ($eventId,'legacy','Information','legacy nulls','legacy nulls',NULL,NULL,NULL,NULL,0);"
-                : "INSERT INTO SerilogRelayEvents (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent) VALUES ($eventId,'legacy','Information','legacy','legacy','','','','{}',0);";
+                ? "INSERT INTO SerilogRelayEvents (EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent) VALUES ($eventId,'Test.Raw.App',NULL,4242,'current','Information','current nulls','current nulls',NULL,NULL,NULL,NULL,0);"
+                : "INSERT INTO SerilogRelayEvents (EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent) VALUES ($eventId,'Test.Raw.App','TEST-MACHINE-ID',4242,'current','Information','current','current','','','','{}',0);";
             command.Parameters.AddWithValue("$eventId", eventId);
             command.ExecuteNonQuery();
         }
