@@ -165,7 +165,7 @@ namespace Eigenverft.NetLib.SerilogRelay
 
         private const int MaxBusyRetries = 5;
         private const int BusyRetryDelayMs = 100;
-        private const int EmergencyBufferCapacity = 1024;
+        private const int EmergencyBufferCapacity = 16384;
         private const int EmergencyRetryDelayMs = 250;
         private const string TableName = "SerilogRelayEvents";
         private const string CorruptionDirectoryName = "corrupted";
@@ -489,8 +489,10 @@ VALUES
                     while (_emergencyChannel.Reader.TryRead(out LogEntry? entry))
                     {
                         bool completed = false;
-                        while (!completed && !token.IsCancellationRequested)
+                        while (!completed)
                         {
+                            token.ThrowIfCancellationRequested();
+
                             try
                             {
                                 ExecuteDatabaseWithRecovery(() => PersistLogEntryCore(entry));

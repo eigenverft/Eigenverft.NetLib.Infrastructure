@@ -1175,15 +1175,21 @@ END;";
                 CancellationTokenSource cts =
                     GetPrivateField<CancellationTokenSource>(sink, "_cts");
                 cts.Cancel();
-                await GetPrivateField<Task>(sink, "_emergencyTask")
-                    .WaitAsync(TimeSpan.FromSeconds(5));
+                Task emergencyTask = GetPrivateField<Task>(sink, "_emergencyTask");
+                try
+                {
+                    await emergencyTask.WaitAsync(TimeSpan.FromSeconds(5));
+                }
+                catch (OperationCanceledException) when (cts.IsCancellationRequested)
+                {
+                }
 
                 MethodInfo enqueue = GetPrivateMethod(
                     "EnqueueEmergency",
                     isStatic: false);
                 var exception = new IOException("simulated unavailable spool");
 
-                for (int index = 0; index < 1026; index++)
+                for (int index = 0; index < 16386; index++)
                 {
                     enqueue.Invoke(
                         sink,
@@ -1195,14 +1201,14 @@ END;";
                 }
 
                 Assert.AreEqual(
-                    1024L,
+                    16384L,
                     GetPrivateField<long>(sink, "_emergencyBufferedCount"));
                 Assert.AreEqual(
                     2L,
                     GetPrivateField<long>(sink, "_emergencyDroppedCount"));
                 StringAssert.Contains(
                     selfLog.ToString(),
-                    "emergency buffer is full (1024 events)");
+                    "emergency buffer is full (16384 events)");
             }
             finally
             {
