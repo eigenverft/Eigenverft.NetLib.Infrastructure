@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -240,7 +241,7 @@ VALUES
                     cmd.Parameters.AddWithValue("$eventId", eventId);
                     cmd.Parameters.AddWithValue("$ts", logEvent.Timestamp.UtcDateTime.ToString("o"));
                     cmd.Parameters.AddWithValue("$lvl", logEvent.Level.ToString());
-                    cmd.Parameters.AddWithValue("$rendered", logEvent.RenderMessage());
+                    cmd.Parameters.AddWithValue("$rendered", logEvent.RenderMessage(CultureInfo.InvariantCulture));
                     cmd.Parameters.AddWithValue("$tmpl", logEvent.MessageTemplate.Text);
                     cmd.Parameters.AddWithValue("$tid", logEvent.TraceId?.ToHexString() ?? string.Empty);
                     cmd.Parameters.AddWithValue("$sid", logEvent.SpanId?.ToHexString() ?? string.Empty);
@@ -280,7 +281,7 @@ VALUES
 
                     // only send when we've hit the minimum threshold
                     if (pending >= _minBatchSize)
-                        didWork = await ProcessPendingAsync(token, ignoreMinBatch: false);
+                        didWork = await ProcessPendingAsync(ignoreMinBatch: false, token);
 
                     // backoff or reset interval
                     if (!didWork)
@@ -318,7 +319,7 @@ VALUES
         /// <param name="token">Cancellation token.</param>
         /// <param name="ignoreMinBatch">If true, skips the minimum batch-size check.</param>
         /// <returns>True if any logs were successfully sent.</returns>
-        private async Task<bool> ProcessPendingAsync(CancellationToken token, bool ignoreMinBatch)
+        private async Task<bool> ProcessPendingAsync(bool ignoreMinBatch, CancellationToken token)
         {
             long pending = Interlocked.Read(ref _pendingCount);
             if (!ignoreMinBatch && pending < _minBatchSize)
@@ -433,7 +434,7 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             ConfigurePragmas(conn);
             using var cmd = conn.CreateCommand();
             cmd.CommandText = $"SELECT COUNT(*) FROM {_tableName} WHERE Sent = 0";
-            return Convert.ToInt64(cmd.ExecuteScalar());
+            return Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
 
         // Ensure the logs table exists in SQLite
@@ -443,7 +444,7 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             conn.Open();
             ConfigurePragmas(conn);
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = string.Format(TableSchema, _tableName);
+            cmd.CommandText = TableSchema.Replace("{0}", _tableName, StringComparison.Ordinal);
             cmd.ExecuteNonQuery();
         }
 
@@ -573,7 +574,7 @@ PRAGMA busy_timeout = 5000;";
                         if (count == 0)
                             break;
 
-                        bool didWork = await ProcessPendingAsync(CancellationToken.None, ignoreMinBatch: true).ConfigureAwait(false);
+                        bool didWork = await ProcessPendingAsync(ignoreMinBatch: true, CancellationToken.None).ConfigureAwait(false);
                         if (!didWork)
                             await Task.Delay(100).ConfigureAwait(false);
                     }

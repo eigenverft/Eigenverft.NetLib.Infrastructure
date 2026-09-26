@@ -117,6 +117,49 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         }
 
         [TestMethod]
+        [DoNotParallelize]
+        public void RenderedMessagesAreInvariantAcrossHostCultures()
+        {
+            string directory = CreateTemporaryDirectory();
+            string databasePath = Path.Combine(directory, "relay.db");
+            string connectionString = $"Data Source={databasePath}";
+            CultureInfo originalCulture = CultureInfo.CurrentCulture;
+            CultureInfo originalUiCulture = CultureInfo.CurrentUICulture;
+
+            try
+            {
+                CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+                CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("de-DE");
+
+                using (Logger logger = new LoggerConfiguration()
+                    .WriteTo.SerilogRelay(
+                        connectionString,
+                        "logs",
+                        endpoint: null,
+                        minimumBatchSize: 20,
+                        maximumBatchSize: 100,
+                        baseInterval: TimeSpan.FromMilliseconds(20))
+                    .CreateLogger())
+                {
+                    logger.Information("Value {Value:0.0}", 1.5m);
+                }
+
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT RenderMessage FROM logs ORDER BY Id LIMIT 1;";
+                Assert.AreEqual("Value 1.5", Convert.ToString(command.ExecuteScalar(), CultureInfo.InvariantCulture));
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = originalCulture;
+                CultureInfo.CurrentUICulture = originalUiCulture;
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
         public async Task BackgroundSenderPostsBatchAndMarksRowSent()
         {
             string directory = CreateTemporaryDirectory();
@@ -880,7 +923,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
             CancellationToken cancellationToken)
         {
             MethodInfo method = GetPrivateMethod("ProcessPendingAsync", isStatic: false);
-            var task = (Task<bool>)method.Invoke(sink, new object[] { cancellationToken, ignoreMinBatch })!;
+            var task = (Task<bool>)method.Invoke(sink, new object[] { ignoreMinBatch, cancellationToken })!;
             return await task;
         }
 

@@ -63,9 +63,17 @@ The regression suite characterizes the migrated behavior, including:
 - historical nullable database columns;
 - sender-loop failure and cancellation paths.
 
-The current regression suite contains 17 tests. On `net10.0`, all 17 pass and authored library code reaches 100% line, branch, and method coverage. The solution also builds successfully for `net8.0` and `net10.0`. A real temporary end-to-end run against the current `Eigenverft.Service.CentralLogging` receiver confirmed that `.WriteTo.SerilogRelay(...)` reaches `/api/v1/logs` and persists the same canonical `EventId` on the receiver.
+The current regression suite contains 18 tests. On `net10.0`, all 18 pass and authored library code reaches 100% line, branch, and method coverage. The solution also builds successfully for `net8.0` and `net10.0`. A real temporary end-to-end run against the current `Eigenverft.Service.CentralLogging` receiver confirmed that `.WriteTo.SerilogRelay(...)` reaches `/api/v1/logs` and persists the same canonical `EventId` on the receiver.
 
-The baseline migration intentionally leaves non-functional analyzer cleanup for a separate follow-up. A full `net8.0`/`net10.0` build succeeds; five distinct inherited analyzer findings remain (repeated per target framework in a clean Release pack): culture-sensitive formatting/conversion at three call sites (`CA1305`), cancellation-token parameter ordering (`CA1068`), and repeated format parsing (`CA1863`). The prior `CA2012`/`CA1816` disposal findings are resolved by the F5 shared-disposal implementation.
+The inherited analyzer cleanup is now complete for the current relay source. The Release pack for both `net8.0` and `net10.0` completes with 0 warnings and 0 errors. Persisted rendered messages use `CultureInfo.InvariantCulture` so their text is stable across host/thread locales; the remaining analyzer fixes were private parameter ordering and format/conversion cleanup without behavioral redesign.
+
+## Deferred follow-up
+
+The following review items are intentionally deferred rather than missing from the current baseline:
+
+- **TLS policy (F1):** replace the inherited unrestricted certificate acceptance with normal platform certificate validation by default, plus an explicit opt-in mechanism for private/self-signed infrastructure when that deployment model is designed.
+- **Authentication (U1):** add an explicit sender-authentication mechanism such as bearer tokens when the CentralLogging deployment/authentication model is defined. Event/application fields must not be treated as authenticated identity merely because they appear in the payload.
+- **Operational health/status (U2):** consider a small observable relay status surface for values such as pending count, last successful delivery, and last delivery failure. `SelfLog` remains the current diagnostic path; a larger health API is intentionally deferred.
 
 ## Bring back better
 
