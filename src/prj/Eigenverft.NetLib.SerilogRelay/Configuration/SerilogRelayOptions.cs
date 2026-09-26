@@ -3,54 +3,58 @@ using System;
 namespace Eigenverft.NetLib.SerilogRelay
 {
     /// <summary>
-    /// Configures SerilogRelay local storage, delivery, endpoint retry, and emergency-memory behavior.
+    /// Configures SerilogRelay application-spool, delivery, endpoint retry, and emergency-memory behavior.
     /// </summary>
     public sealed class SerilogRelayOptions
     {
         /// <summary>
-        /// Gets durable local-storage retention and capacity options.
+        /// Gets options that apply to the shared durable spool selected by ApplicationId/spool path.
+        /// Multiple processes of the same application may use this spool.
         /// </summary>
-        public LocalStorageOptions LocalStorage { get; } = new LocalStorageOptions();
+        public ApplicationSpoolOptions ApplicationSpool { get; } = new ApplicationSpoolOptions();
 
         /// <summary>
-        /// Gets normal background-delivery options.
+        /// Gets normal background-delivery options for this sink/process.
         /// </summary>
         public DeliveryOptions Delivery { get; } = new DeliveryOptions();
 
         /// <summary>
-        /// Gets remote endpoint retry options.
+        /// Gets remote endpoint retry options for this sink/process.
         /// </summary>
         public EndpointRetryOptions EndpointRetry { get; } = new EndpointRetryOptions();
 
         /// <summary>
-        /// Gets volatile emergency memory-buffer options used when durable persistence is unavailable.
+        /// Gets volatile emergency memory-buffer options for this sink/process.
         /// </summary>
         public EmergencyMemoryBufferOptions EmergencyMemoryBuffer { get; } = new EmergencyMemoryBufferOptions();
     }
 
     /// <summary>
-    /// Configures durable local-storage retention and capacity behavior.
+    /// Configures behavior of the durable application spool shared by processes that resolve to the same spool path.
     /// </summary>
-    public sealed class LocalStorageOptions
+    public sealed class ApplicationSpoolOptions
     {
         /// <summary>
-        /// Gets or sets how long successfully delivered events remain in local storage.
+        /// Gets or sets how long successfully delivered events remain in the shared application spool.
+        /// Cleanup is spool-wide, not limited to events created by the current process.
         /// </summary>
-        public TimeSpan SentRetention { get; set; } = TimeSpan.FromDays(1);
+        public TimeSpan SentEventRetention { get; set; } = TimeSpan.FromDays(1);
 
         /// <summary>
-        /// Gets or sets the maximum durable local storage budget in bytes.
+        /// Gets or sets the maximum physical size of the shared application spool in bytes.
+        /// This is currently a spool-wide physical ceiling shared by all processes using the same spool path.
         /// </summary>
-        public long MaxBytes { get; set; } = 64L * 1024L * 1024L;
+        public long MaxPhysicalBytes { get; set; } = 64L * 1024L * 1024L;
 
         /// <summary>
-        /// Gets or sets the maximum age of unsent events. A null value preserves unsent events regardless of age.
+        /// Gets or sets the maximum age of unsent events in the shared application spool.
+        /// A null value preserves unsent events regardless of age. Cleanup is spool-wide.
         /// </summary>
-        public TimeSpan? UnsentMaxAge { get; set; }
+        public TimeSpan? UnsentEventMaxAge { get; set; }
     }
 
     /// <summary>
-    /// Configures normal background delivery.
+    /// Configures normal background delivery for this sink/process.
     /// </summary>
     public sealed class DeliveryOptions
     {
@@ -76,7 +80,7 @@ namespace Eigenverft.NetLib.SerilogRelay
     }
 
     /// <summary>
-    /// Configures retry timing for the remote relay endpoint.
+    /// Configures retry timing for the remote relay endpoint for this sink/process.
     /// </summary>
     public sealed class EndpointRetryOptions
     {
@@ -107,7 +111,7 @@ namespace Eigenverft.NetLib.SerilogRelay
     }
 
     /// <summary>
-    /// Configures the bounded volatile emergency memory buffer used when durable persistence is unavailable.
+    /// Configures the bounded volatile emergency memory buffer for this sink/process.
     /// </summary>
     public sealed class EmergencyMemoryBufferOptions
     {

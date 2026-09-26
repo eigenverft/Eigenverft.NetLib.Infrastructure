@@ -124,13 +124,13 @@ namespace Eigenverft.NetLib.SerilogRelay
         private void ApplyDeferredUnsentCleanup()
         {
             if (Interlocked.Exchange(ref _startupUnsentCleanupPending, 0) == 0
-                || !_unsentRetention.HasValue)
+                || !_applicationSpoolUnsentEventMaxAge.HasValue)
             {
                 return;
             }
 
             ExecuteDatabaseWithRecovery(() =>
-                CleanupOldLogsCore(_sentRetention, _unsentRetention));
+                CleanupApplicationSpoolRetentionCore(_applicationSpoolSentEventRetention, _applicationSpoolUnsentEventMaxAge));
             Interlocked.Exchange(ref _pendingCount, ExecuteDatabaseWithRecovery(GetPendingCountCore));
 
             if (Interlocked.Read(ref _pendingCount) == 0)

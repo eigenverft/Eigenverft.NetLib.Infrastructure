@@ -17,7 +17,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <summary>
         /// Deletes sent entries older than the configured retention and optionally expires unsent entries.
         /// </summary>
-        private void CleanupOldLogsCore(TimeSpan sentRetention, TimeSpan? unsentRetention)
+        private void CleanupApplicationSpoolRetentionCore(TimeSpan sentRetention, TimeSpan? unsentRetention)
         {
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
@@ -72,17 +72,17 @@ DELETE FROM {TableName}
                     if (!emptySpoolFitChecked)
                     {
                         emptySpoolFitChecked = true;
-                        if (!CanPersistInEmptySpoolCore(entry))
+                        if (!CanPersistInEmptyApplicationSpoolCore(entry))
                             return false;
                     }
 
-                    if (!TryReclaimSpoolSpaceCore())
+                    if (!TryReclaimApplicationSpoolSpaceCore())
                         return false;
                 }
             }
         }
 
-        private bool CanPersistInEmptySpoolCore(LogEntry entry)
+        private bool CanPersistInEmptyApplicationSpoolCore(LogEntry entry)
         {
             using var conn = new SqliteConnection("Data Source=:memory:");
             conn.Open();
@@ -141,28 +141,28 @@ VALUES
             tx.Commit();
         }
 
-        private bool TryReclaimSpoolSpaceCore()
+        private bool TryReclaimApplicationSpoolSpaceCore()
         {
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
             ConfigurePragmas(conn);
             using var tx = conn.BeginTransaction();
 
-            int deletedSent = DeleteOldestSpoolRowsCore(conn, tx, sent: true, limit: 256);
+            int deletedSent = DeleteOldestApplicationSpoolRowsCore(conn, tx, sent: true, limit: 256);
             int deletedUnsent = deletedSent == 0
-                ? DeleteOldestSpoolRowsCore(conn, tx, sent: false, limit: 64)
+                ? DeleteOldestApplicationSpoolRowsCore(conn, tx, sent: false, limit: 64)
                 : 0;
             tx.Commit();
 
             if (deletedUnsent > 0)
             {
-                Interlocked.Add(ref _spoolDroppedCount, deletedUnsent);
+                Interlocked.Add(ref _applicationSpoolDroppedCount, deletedUnsent);
                 Volatile.Write(ref _pendingCountNeedsRefresh, 1);
-                if (Interlocked.Exchange(ref _spoolOverflowReported, 1) == 0)
+                if (Interlocked.Exchange(ref _applicationSpoolOverflowReported, 1) == 0)
                 {
                     SelfLog.WriteLine(
                         "SerilogRelay spool reached its {0}-byte budget; {1} oldest unsent events were evicted to keep disk usage bounded.",
-                        _maxSpoolBytes,
+                        _maxApplicationSpoolPhysicalBytes,
                         deletedUnsent);
                 }
             }
@@ -170,7 +170,7 @@ VALUES
             return deletedSent + deletedUnsent > 0;
         }
 
-        private static int DeleteOldestSpoolRowsCore(
+        private static int DeleteOldestApplicationSpoolRowsCore(
             SqliteConnection connection,
             SqliteTransaction transaction,
             bool sent,
@@ -204,15 +204,15 @@ DELETE FROM {TableName}
         }
 
 
-        private void RecordSpoolRejected()
+        private void RecordApplicationSpoolCapacityRejected()
         {
-            long dropped = Interlocked.Increment(ref _spoolDroppedCount);
-            if (Interlocked.Exchange(ref _spoolOverflowReported, 1) != 0)
+            long dropped = Interlocked.Increment(ref _applicationSpoolDroppedCount);
+            if (Interlocked.Exchange(ref _applicationSpoolOverflowReported, 1) != 0)
                 return;
 
             SelfLog.WriteLine(
                 "SerilogRelay spool reached its {0}-byte budget; incoming events are being dropped because no retained rows can be reclaimed. Total spool-capacity loss: {1}.",
-                _maxSpoolBytes,
+                _maxApplicationSpoolPhysicalBytes,
                 dropped);
         }
 
@@ -337,10 +337,10 @@ PRAGMA wal_autocheckpoint = 16;";
                     CultureInfo.InvariantCulture);
             }
 
-            long maxPages = Math.Max(1L, _maxSpoolBytes / pageSize);
+            long maxPages = Math.Max(1L, _maxApplicationSpoolPhysicalBytes / pageSize);
             long journalSizeLimit = Math.Max(
                 pageSize * 8L,
-                Math.Min(_maxSpoolBytes / 32L, 8L * 1024L * 1024L));
+                Math.Min(_maxApplicationSpoolPhysicalBytes / 32L, 8L * 1024L * 1024L));
 
             using var budgetCommand = conn.CreateCommand();
             budgetCommand.CommandText = FormattableString.Invariant($@"
@@ -581,31 +581,6 @@ VALUES
             File.Move(sourcePath, targetPath);
         }
 
-        private static FileStream? AcquireSpoolLease(string? databasePath)
-        {
-            if (string.IsNullOrWhiteSpace(databasePath))
-                return null;
-
-            string directory = Path.GetDirectoryName(databasePath)!;
-            if (!Directory.Exists(directory))
-                return null;
-
-            string leasePath = databasePath + ".lock";
-            try
-            {
-                return new FileStream(
-                    leasePath,
-                    FileMode.OpenOrCreate,
-                    FileAccess.ReadWrite,
-                    FileShare.None);
-            }
-            catch (IOException ex) when (File.Exists(leasePath))
-            {
-                throw new InvalidOperationException(
-                    $"SerilogRelay spool '{databasePath}' is already in use. Version 1 supports exactly one active SerilogRelay sink per spool path. Configure a distinct spool path for another process or sink.",
-                    ex);
-            }
-        }
 
         private static string? ResolveDatabasePath(string connectionString)
         {

@@ -38,8 +38,8 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <param name="minimumBatchSize">The minimum pending-event count required before normal background delivery starts.</param>
         /// <param name="maximumBatchSize">The maximum number of events included in one HTTP batch.</param>
         /// <param name="baseInterval">The normal delay between background delivery attempts.</param>
-        /// <param name="sentRetention">How long successfully sent events are retained locally.</param>
-        /// <param name="unsentRetention">How long unsent events are retained locally.</param>
+        /// <param name="sentRetention">How long successfully sent events are retained in the shared application spool. This applies spool-wide across processes using the same spool path.</param>
+        /// <param name="unsentRetention">Optional maximum age for unsent events in the shared application spool. This applies spool-wide across processes using the same spool path.</param>
         /// <param name="restrictedToMinimumLevel">The minimum Serilog event level accepted by the sink.</param>
         public static LoggerConfiguration SerilogRelay(
             this LoggerSinkConfiguration loggerConfiguration,
@@ -59,8 +59,8 @@ namespace Eigenverft.NetLib.SerilogRelay
             options.Delivery.MinimumBatchEvents = minimumBatchSize;
             options.Delivery.MaximumBatchEvents = maximumBatchSize;
             options.Delivery.PollInterval = baseInterval ?? TimeSpan.FromSeconds(5);
-            options.LocalStorage.SentRetention = sentRetention ?? TimeSpan.FromDays(1);
-            options.LocalStorage.UnsentMaxAge = unsentRetention;
+            options.ApplicationSpool.SentEventRetention = sentRetention ?? TimeSpan.FromDays(1);
+            options.ApplicationSpool.UnsentEventMaxAge = unsentRetention;
 
             return SerilogRelay(
                 loggerConfiguration,
@@ -225,7 +225,6 @@ CREATE TABLE IF NOT EXISTS {0} (
 
         private readonly string _connectionString;
         private readonly string? _databasePath;
-        private readonly FileStream? _spoolLease;
         private readonly SemaphoreSlim _databaseGate = new SemaphoreSlim(1, 1);
         private readonly string? _endpoint;
         private readonly string _applicationId;
@@ -235,9 +234,9 @@ CREATE TABLE IF NOT EXISTS {0} (
         private readonly int _maxBatchSize;
         private readonly TimeSpan _baseInterval;
         private readonly TimeSpan _maximumBatchWait;
-        private readonly TimeSpan _sentRetention;
-        private readonly TimeSpan? _unsentRetention;
-        private readonly long _maxSpoolBytes;
+        private readonly TimeSpan _applicationSpoolSentEventRetention;
+        private readonly TimeSpan? _applicationSpoolUnsentEventMaxAge;
+        private readonly long _maxApplicationSpoolPhysicalBytes;
         private readonly TimeSpan _minimumCatchUpInterval = TimeSpan.FromSeconds(1);
         private readonly RetryGate _retryGate;
 
@@ -253,11 +252,11 @@ CREATE TABLE IF NOT EXISTS {0} (
         private long _emergencyBufferedCount;
         private long _emergencyBufferedPayloadBytes;
         private long _emergencyDroppedCount;
-        private long _spoolDroppedCount;
+        private long _applicationSpoolDroppedCount;
         private int _emergencyOverflowReported;
         private int _spoolUnavailable;
         private int _pendingCountNeedsRefresh;
-        private int _spoolOverflowReported;
+        private int _applicationSpoolOverflowReported;
         private int _startupBacklogPending;
         private int _startupUnsentCleanupPending;
         private readonly object _signalLock = new object();
@@ -313,7 +312,6 @@ CREATE TABLE IF NOT EXISTS {0} (
 
             _connectionString = connectionString;
             _databasePath = ResolveDatabasePath(connectionString);
-            _spoolLease = AcquireSpoolLease(_databasePath);
             _endpoint = endpoint;
             _applicationId = LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(applicationId);
             _machineId = ResolveMachineId();
@@ -322,9 +320,9 @@ CREATE TABLE IF NOT EXISTS {0} (
             _maxBatchSize = options.Delivery.MaximumBatchEvents;
             _baseInterval = options.Delivery.PollInterval;
             _maximumBatchWait = options.Delivery.MaximumBatchWait;
-            _sentRetention = options.LocalStorage.SentRetention;
-            _unsentRetention = options.LocalStorage.UnsentMaxAge;
-            _maxSpoolBytes = options.LocalStorage.MaxBytes;
+            _applicationSpoolSentEventRetention = options.ApplicationSpool.SentEventRetention;
+            _applicationSpoolUnsentEventMaxAge = options.ApplicationSpool.UnsentEventMaxAge;
+            _maxApplicationSpoolPhysicalBytes = options.ApplicationSpool.MaxPhysicalBytes;
             _retryGate = new RetryGate(options.EndpointRetry);
             _emergencyBufferCapacity = options.EmergencyMemoryBuffer.MaxBufferedEvents;
             _maxEmergencyBufferedPayloadBytes = options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes;
@@ -350,9 +348,9 @@ CREATE TABLE IF NOT EXISTS {0} (
                 ExecuteDatabaseWithRecovery(() =>
                 {
                     EnsureTableCreatedCore();
-                    CleanupOldLogsCore(
-                        _sentRetention,
-                        string.IsNullOrEmpty(_endpoint) ? _unsentRetention : null);
+                    CleanupApplicationSpoolRetentionCore(
+                        _applicationSpoolSentEventRetention,
+                        string.IsNullOrEmpty(_endpoint) ? _applicationSpoolUnsentEventMaxAge : null);
                 });
 
                 _pendingCount = ExecuteDatabaseWithRecovery(GetPendingCountCore);
@@ -366,7 +364,7 @@ CREATE TABLE IF NOT EXISTS {0} (
                 }
 
                 _startupUnsentCleanupPending =
-                    !string.IsNullOrEmpty(_endpoint) && _unsentRetention.HasValue ? 1 : 0;
+                    !string.IsNullOrEmpty(_endpoint) && _applicationSpoolUnsentEventMaxAge.HasValue ? 1 : 0;
             }
             catch (Exception ex)
             {
@@ -396,8 +394,8 @@ CREATE TABLE IF NOT EXISTS {0} (
             options.Delivery.MaximumBatchEvents = maxBatchItems;
             options.Delivery.PollInterval = baseInterval;
             options.Delivery.MaximumBatchWait = maximumBatchWait ?? TimeSpan.FromSeconds(5);
-            options.LocalStorage.SentRetention = sentRetention;
-            options.LocalStorage.UnsentMaxAge = unsentRetention;
+            options.ApplicationSpool.SentEventRetention = sentRetention;
+            options.ApplicationSpool.UnsentEventMaxAge = unsentRetention;
 
             if (retryOptions is not null)
             {
@@ -427,11 +425,11 @@ CREATE TABLE IF NOT EXISTS {0} (
                 throw new ArgumentOutOfRangeException(nameof(options), "Delivery poll interval must be greater than zero.");
             if (options.Delivery.MaximumBatchWait <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(options), "Maximum batch wait must be greater than zero.");
-            if (options.LocalStorage.SentRetention < TimeSpan.Zero)
+            if (options.ApplicationSpool.SentEventRetention < TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(options), "Sent retention must not be negative.");
-            if (options.LocalStorage.UnsentMaxAge.HasValue && options.LocalStorage.UnsentMaxAge.Value < TimeSpan.Zero)
+            if (options.ApplicationSpool.UnsentEventMaxAge.HasValue && options.ApplicationSpool.UnsentEventMaxAge.Value < TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(options), "Unsent retention must not be negative.");
-            if (options.LocalStorage.MaxBytes < 4096)
+            if (options.ApplicationSpool.MaxPhysicalBytes < 4096)
                 throw new ArgumentOutOfRangeException(nameof(options), "Spool byte budget must be at least one SQLite page (4096 bytes).");
             if (options.EmergencyMemoryBuffer.MaxBufferedEvents < 1)
                 throw new ArgumentOutOfRangeException(nameof(options), "Emergency event capacity must be at least 1.");
@@ -474,7 +472,7 @@ CREATE TABLE IF NOT EXISTS {0} (
                     bool persisted = ExecuteDatabaseWithRecovery(() => PersistLogEntryCore(entry));
                     if (!persisted)
                     {
-                        RecordSpoolRejected();
+                        RecordApplicationSpoolCapacityRejected();
                         return;
                     }
 
@@ -627,7 +625,6 @@ CREATE TABLE IF NOT EXISTS {0} (
             }
             finally
             {
-                _spoolLease?.Dispose();
                 _httpClient.Dispose();
                 _cts.Dispose();
                 _databaseGate.Dispose();

@@ -2,148 +2,138 @@
 
 ## Purpose
 
-This document defines the supported v1 operating contract and the remaining release gates for
-`Eigenverft.NetLib.SerilogRelay`.
+This document tracks the remaining release gates for `Eigenverft.NetLib.SerilogRelay`.
 
-Historical migration notes are useful background, but they are no longer the release contract.
-The current implementation and tests are authoritative for behavior.
-
-## Supported v1 operating contract
-
-### One active sink per file-backed spool
-
-Version 1 supports exactly **one active `SerilogRelaySink` instance per file-backed spool
-path**.
-
-This is enforced at runtime by an exclusive lease held for the lifetime of the sink. A second
-sink/process attempting to use the same spool path fails immediately with a clear error. The
-lease is released when the sink is disposed.
-
-Multiple application processes may still use SerilogRelay when each process is configured with
-a distinct spool path. Cross-process row claiming, shared sender state, and coordinated
-corruption recovery for one shared spool are deliberately **not** part of the v1 contract.
-
-This is a supported-scope decision, not an unfinished multi-process implementation.
-
-### Receiver exposure before sender authentication
-
-Bearer authentication is not implemented yet.
-
-Until authentication is added, the supported receiver deployment is limited to a trusted
-boundary:
-
-- loopback/local-machine deployment;
-- a private/trusted network;
-- or a trusted reverse proxy/gateway that controls external access.
-
-Do **not** expose an unauthenticated CentralLogging ingestion endpoint directly to an untrusted
-or public network.
-
-`ApplicationId`, `MachineId`, `ProcessId`, `EventId`, and other payload fields are
-diagnostic/protocol identity only. They are not authenticated sender identity.
-
-Normal platform TLS certificate validation remains enabled by default. The
-`dangerousAcceptAnyServerCertificate` option is for deliberate development/private test
-scenarios only and does not provide authentication.
-
-### Delivery semantics
-
-The relay/receiver contract is at-least-once transport with idempotent receiver storage:
-
-- each event receives a stable `EventId`;
-- retries may use a new `BatchId`;
-- receiver-side duplicate handling uses `EventId`;
-- success is expected only after receiver persistence succeeds.
-
-The relay is fire-and-forget from the application logging call path, but durable local storage
-is attempted before normal network delivery.
-
-### Runtime targets
-
-The package targets:
-
-- `net8.0`
-- `net10.0`
-
-Both target frameworks must compile successfully for release. Release CI should execute tests
-for every supported runtime available in the release environment.
+It must describe open work as open work. A missing capability must not be converted into a
+narrower v1 promise merely to remove it from the blocker list.
 
 ## Current release gates
 
-### Gate A - Operating contract and documentation
+### Gate A - Shared application-spool multi-process support
 
-**Resolved by the current v1 contract.**
+**Open release blocker.**
 
-The package README, solution README, reliability documentation, and this document must all say
-the same thing:
+Multiple processes of the same application resolve to the same default spool path. Multiple
+active sinks can open and write that spool; SerilogRelay must therefore support this as a normal
+operating mode rather than requiring distinct spool files.
 
-- one active sink per file-backed spool;
-- no shared-spool multi-process support in v1;
-- unauthenticated receivers stay inside a trusted boundary;
-- producer identity fields are not authentication.
+Current useful behavior already exists:
 
-### Gate B - Bearer authentication
+- each row contains `ApplicationId`, `MachineId`, and `ProcessId`;
+- multiple active sinks can persist into the same file-backed spool;
+- any sender may currently load/send unsent rows from that spool;
+- receiver idempotency is based on stable `EventId`.
+
+The remaining work is coordination/correctness, not a single-owner restriction:
+
+- atomic claims/leases for concurrent senders;
+- expired-claim recovery after process death;
+- discovery of rows added by other processes;
+- cross-process corruption-recovery coordination;
+- clear semantics for differing `ApplicationSpool` settings across processes.
+
+A process is not required to send only rows it originally created. Draining backlog from an
+older/dead process of the same logical application is useful behavior.
+
+#### Shaped implementation direction
+
+The current target for Gate A is:
+
+1. add atomic claim/lease state to pending rows;
+2. let any process sharing the application spool claim unclaimed or expired rows;
+3. keep `ProcessId` as event-origin metadata rather than an ownership restriction;
+4. identify the current claim owner independently enough to avoid PID-reuse ambiguity;
+5. let claims expire after process death so another process can continue the backlog;
+6. keep `Delivery` and `EndpointRetry` process-local to the sender that currently owns the
+   claim;
+7. periodically inspect the shared spool for claimable work so one process can discover backlog
+   produced by another;
+8. coordinate physical corruption quarantine/recreate with a short-lived cross-process recovery
+   lock only.
+
+This deliberately avoids a leader process, application-wide RetryGate, application-wide
+delivery budget, or a lifetime-exclusive spool owner.
+
+The exact claim columns/SQL transaction shape remain implementation details to be finalized
+when Gate A is implemented and tested.
+
+#### Application-spool limit scope
+
+Retention/reclaim settings are spool-wide and are named accordingly:
+
+- `ApplicationSpool.SentEventRetention`;
+- `ApplicationSpool.UnsentEventMaxAge`.
+
+The main unresolved limit question is:
+
+```text
+ApplicationSpool.MaxPhysicalBytes = 64 MiB
+```
+
+Today this is a physical ceiling for the whole shared spool. It is not a per-process quota.
+
+Before release we must decide whether the product contract needs:
+
+- one shared physical application-spool ceiling;
+- an additional logical per-process quota;
+- or both as separate concepts.
+
+This decision must be explicit in API naming and documentation.
+
+### Gate B - Operating-contract/documentation consistency
+
+**Open until Gate A semantics are settled.**
+
+README, XML docs, tests, and `RELIABILITY.md` must use the same scope vocabulary:
+
+- Application spool = shared durable storage for processes using the same spool path;
+- Delivery / EndpointRetry / EmergencyMemoryBuffer = process-local runtime behavior;
+- `ProcessId` = row origin/diagnostic process identity, not an ownership barrier.
+
+### Gate C - Bearer authentication
 
 **Intentionally last.**
 
-Bearer authentication is the remaining feature gate if v1 is expected to support direct
-remote/external ingestion without relying on a trusted proxy boundary.
+Bearer authentication remains the final security feature after the multi-process/storage
+contract is settled.
 
-Until it is implemented, the private/proxy-protected receiver scope above is the supported
-contract.
+Until bearer authentication is implemented, an ingestion endpoint must remain inside a trusted
+boundary such as loopback/private network or behind a trusted proxy/gateway.
 
-The authentication change should stay small:
+Producer identity fields are not authentication.
 
-- sender option for a bearer token/credential source;
-- `Authorization: Bearer ...` on relay requests;
-- receiver validation/configuration in `Eigenverft.Service.CentralLogging`;
-- tests proving accepted, missing, and invalid credentials;
-- no use of event/application identity as an authentication substitute.
+### Gate D - Final release validation
 
-Do not expand this into a general identity-provider framework unless a real deployment requires
-one.
-
-### Gate C - Final release validation
-
-Before package publication:
+After functional blockers are closed:
 
 1. clean restore/build;
-2. test all supported target frameworks in CI/release environment;
-3. run the repository's coverage gate;
+2. execute supported target-framework tests in release CI;
+3. pass repository coverage gates;
 4. `dotnet pack`;
-5. inspect package contents/README;
-6. perform one sender-to-current-CentralLogging smoke test using the supported deployment
-   boundary;
-7. after bearer auth is added, repeat the smoke test with authentication enabled.
+5. inspect package contents and package README;
+6. smoke-test sender -> current CentralLogging receiver;
+7. repeat the smoke test with bearer authentication once Gate C is implemented.
 
-This is release verification rather than a design blocker.
+## Not currently release blockers
 
-## Not release blockers for v1
+Unless new evidence changes priority:
 
-The following are explicitly follow-up work unless deployment evidence changes their priority:
+- alternate storage backends / ORM abstraction;
+- a general provider framework;
+- richer health/status APIs beyond current diagnostics;
+- server-driven configuration/handshake;
+- post-recovery global rate limiting;
+- a general dead-letter subsystem for heterogeneous receivers;
+- exact process-RSS accounting for Emergency memory.
 
-- shared-spool multi-process coordination/row leases;
-- dedicated relay health/status API beyond current `SelfLog` diagnostics;
-- alternate storage backends or ORM abstraction;
-- server-driven relay configuration/handshake;
-- process-instance/installation identifiers beyond the current producer identity;
-- post-recovery rate limiting beyond current delivery bounds;
-- a general dead-letter/per-event retry subsystem;
-- exact process-RAM accounting for the Emergency memory buffer;
-- public receiver exposure without bearer auth.
+## Known follow-up
 
-## Known limitation to watch
-
-Permanent receiver rejections are not yet isolated into a dead-letter path. A persistently
-rejected oldest batch can therefore remain pending and be retried. With the matched v1
-CentralLogging contract this should represent a protocol/configuration defect rather than normal
-operation.
-
-This is worth addressing before broad heterogeneous receiver support, but it is not currently a
-blocker for the controlled v1 relay/receiver pair.
+A permanently rejected oldest event/batch is not yet isolated into a dead-letter path. This
+remains worth addressing before broad heterogeneous receiver support, but it is separate from
+the current shared-spool multi-process blocker.
 
 ## Historical origin
 
-SerilogRelay was migrated from the discontinued AxonInsight `SQLiteSinkHttp` pattern. The
-historical implementation remains useful background for why the relay is durable-first, but new
-release decisions are defined here and in `RELIABILITY.md`, not by the archived implementation.
+SerilogRelay preserves the durable-first behavior of the discontinued AxonInsight
+`SQLiteSinkHttp` pattern. Current decisions are defined by the implementation, tests,
+`RELIABILITY.md`, and this release-readiness document.

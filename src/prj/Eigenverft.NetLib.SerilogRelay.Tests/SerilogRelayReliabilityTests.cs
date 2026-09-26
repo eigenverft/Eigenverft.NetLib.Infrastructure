@@ -318,7 +318,7 @@ END;";
             try
             {
                 var options = new SerilogRelayOptions();
-                options.LocalStorage.MaxBytes = 128L * 1024L;
+                options.ApplicationSpool.MaxPhysicalBytes = 128L * 1024L;
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
@@ -355,7 +355,7 @@ WHERE Sent = 0;";
                     selfLog.ToString(),
                     "spool reached its 131072-byte budget");
                 Assert.IsLessThanOrEqualTo(
-                    options.LocalStorage.MaxBytes,
+                    options.ApplicationSpool.MaxPhysicalBytes,
                     new FileInfo(databasePath).Length);
             }
             finally
@@ -457,7 +457,7 @@ WHERE Sent = 0;";
             try
             {
                 var options = new SerilogRelayOptions();
-                options.LocalStorage.MaxBytes = 64L * 1024L;
+                options.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
@@ -472,7 +472,7 @@ WHERE Sent = 0;";
                 Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
                 Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
                 Assert.AreEqual(0, GetPrivateField<int>(sink, "_spoolUnavailable"));
-                Assert.AreEqual(2L, GetPrivateField<long>(sink, "_spoolDroppedCount"));
+                Assert.AreEqual(2L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
                 StringAssert.Contains(
                     selfLog.ToString(),
                     "incoming events are being dropped because no retained rows can be reclaimed");
@@ -493,7 +493,7 @@ WHERE Sent = 0;";
             try
             {
                 var options = new SerilogRelayOptions();
-                options.LocalStorage.MaxBytes = 64L * 1024L;
+                options.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
@@ -505,12 +505,12 @@ WHERE Sent = 0;";
                 sink.Emit(CreateLogEvent("backlog 2"));
 
                 Assert.AreEqual(3L, GetUnsentCount(connectionString));
-                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_spoolDroppedCount"));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
 
                 sink.Emit(CreateLogEvent(new string('x', 256 * 1024)));
 
                 Assert.AreEqual(3L, GetUnsentCount(connectionString));
-                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_spoolDroppedCount"));
+                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
                 Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
 
                 using var connection = new SqliteConnection(connectionString);
@@ -540,7 +540,7 @@ SELECT COUNT(*)
             try
             {
                 var options = new SerilogRelayOptions();
-                options.LocalStorage.MaxBytes = 64L * 1024L;
+                options.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
@@ -579,7 +579,7 @@ VALUES
                 sink.Emit(CreateLogEvent("small event still fits an empty spool"));
 
                 Assert.AreEqual(0L, GetUnsentCount(connectionString));
-                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_spoolDroppedCount"));
+                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
                 Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
                 Assert.AreEqual(0, GetPrivateField<int>(sink, "_spoolUnavailable"));
             }
@@ -616,11 +616,11 @@ UPDATE SerilogRelayEvents
                     Assert.AreEqual(1, command.ExecuteNonQuery());
                 }
 
-                bool reclaimed = InvokePrivateMethod<bool>(sink, "TryReclaimSpoolSpaceCore");
+                bool reclaimed = InvokePrivateMethod<bool>(sink, "TryReclaimApplicationSpoolSpaceCore");
 
                 Assert.IsTrue(reclaimed);
                 Assert.AreEqual(1L, GetUnsentCount(connectionString));
-                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_spoolDroppedCount"));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
             }
             finally
             {
@@ -683,7 +683,7 @@ UPDATE SerilogRelayEvents
             try
             {
                 var options = new SerilogRelayOptions();
-                options.LocalStorage.MaxBytes = 64L * 1024L;
+                options.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
                 options.EmergencyMemoryBuffer.MaxBufferedEvents = 10;
                 options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = 1024L * 1024L;
 
@@ -723,7 +723,7 @@ END;";
                     () => GetPrivateField<long>(sink, "_emergencyBufferedCount") == 0,
                     TimeSpan.FromSeconds(5));
 
-                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_spoolDroppedCount"));
+                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
                 Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
                 Assert.AreEqual(0, GetPrivateField<int>(sink, "_spoolUnavailable"));
                 Assert.AreEqual(0L, GetUnsentCount(connectionString));
@@ -735,52 +735,26 @@ END;";
         }
 
         [TestMethod]
-        public async Task InMemorySpoolDoesNotAcquireFileBackedLease()
-        {
-            await using var sink = new SerilogRelaySink(
-                "Data Source=:memory:",
-                endpoint: null,
-                new SerilogRelayOptions());
-
-            Assert.IsNull(GetPrivateField<FileStream?>(sink, "_spoolLease"));
-        }
-
-        [TestMethod]
-        public async Task FileBackedSpoolAllowsOnlyOneActiveSinkAndReleasesLeaseOnDispose()
+        public async Task FileBackedApplicationSpoolAllowsMultipleActiveSinks()
         {
             string directory = CreateTemporaryDirectory();
             string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
 
             try
             {
-                var first = new SerilogRelaySink(
+                await using var first = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+                await using var second = new SerilogRelaySink(
                     connectionString,
                     endpoint: null,
                     new SerilogRelayOptions());
 
-                try
-                {
-                    InvalidOperationException conflict = Assert.ThrowsExactly<InvalidOperationException>(
-                        () => new SerilogRelaySink(
-                            connectionString,
-                            endpoint: null,
-                            new SerilogRelayOptions()));
+                first.Emit(CreateLogEvent("from first process"));
+                second.Emit(CreateLogEvent("from second process"));
 
-                    StringAssert.Contains(
-                        conflict.Message,
-                        "exactly one active SerilogRelay sink per spool path");
-                }
-                finally
-                {
-                    await first.DisposeAsync();
-                }
-
-                await using var reopened = new SerilogRelaySink(
-                    connectionString,
-                    endpoint: null,
-                    new SerilogRelayOptions());
-
-                Assert.AreEqual(0L, GetUnsentCount(connectionString));
+                Assert.AreEqual(2L, GetUnsentCount(connectionString));
             }
             finally
             {
@@ -797,7 +771,7 @@ END;";
             try
             {
                 var initialOptions = new SerilogRelayOptions();
-                initialOptions.LocalStorage.MaxBytes = 2L * 1024L * 1024L;
+                initialOptions.ApplicationSpool.MaxPhysicalBytes = 2L * 1024L * 1024L;
 
                 await using (var writer = new SerilogRelaySink(
                     connectionString,
@@ -825,7 +799,7 @@ END;";
                 }
 
                 var reducedOptions = new SerilogRelayOptions();
-                reducedOptions.LocalStorage.MaxBytes = 64L * 1024L;
+                reducedOptions.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
 
                 await using (var reader = new SerilogRelaySink(
                     connectionString,

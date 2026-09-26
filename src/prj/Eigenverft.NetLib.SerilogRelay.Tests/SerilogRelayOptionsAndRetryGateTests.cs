@@ -12,9 +12,9 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         {
             var options = new SerilogRelayOptions();
 
-            Assert.AreEqual(TimeSpan.FromDays(1), options.LocalStorage.SentRetention);
-            Assert.IsNull(options.LocalStorage.UnsentMaxAge);
-            Assert.AreEqual(64L * 1024L * 1024L, options.LocalStorage.MaxBytes);
+            Assert.AreEqual(TimeSpan.FromDays(1), options.ApplicationSpool.SentEventRetention);
+            Assert.IsNull(options.ApplicationSpool.UnsentEventMaxAge);
+            Assert.AreEqual(64L * 1024L * 1024L, options.ApplicationSpool.MaxPhysicalBytes);
             Assert.AreEqual(20, options.Delivery.MinimumBatchEvents);
             Assert.AreEqual(100, options.Delivery.MaximumBatchEvents);
             Assert.AreEqual(TimeSpan.FromSeconds(5), options.Delivery.PollInterval);
@@ -27,9 +27,9 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             Assert.AreEqual(16384, options.EmergencyMemoryBuffer.MaxBufferedEvents);
             Assert.AreEqual(64L * 1024L * 1024L, options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes);
 
-            options.LocalStorage.SentRetention = TimeSpan.FromHours(12);
-            options.LocalStorage.UnsentMaxAge = TimeSpan.FromDays(30);
-            options.LocalStorage.MaxBytes = 8192;
+            options.ApplicationSpool.SentEventRetention = TimeSpan.FromHours(12);
+            options.ApplicationSpool.UnsentEventMaxAge = TimeSpan.FromDays(30);
+            options.ApplicationSpool.MaxPhysicalBytes = 8192;
             options.Delivery.MinimumBatchEvents = 3;
             options.Delivery.MaximumBatchEvents = 9;
             options.Delivery.PollInterval = TimeSpan.FromSeconds(2);
@@ -42,9 +42,9 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             options.EmergencyMemoryBuffer.MaxBufferedEvents = 123;
             options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = 456;
 
-            Assert.AreEqual(TimeSpan.FromHours(12), options.LocalStorage.SentRetention);
-            Assert.AreEqual(TimeSpan.FromDays(30), options.LocalStorage.UnsentMaxAge);
-            Assert.AreEqual(8192L, options.LocalStorage.MaxBytes);
+            Assert.AreEqual(TimeSpan.FromHours(12), options.ApplicationSpool.SentEventRetention);
+            Assert.AreEqual(TimeSpan.FromDays(30), options.ApplicationSpool.UnsentEventMaxAge);
+            Assert.AreEqual(8192L, options.ApplicationSpool.MaxPhysicalBytes);
             Assert.AreEqual(3, options.Delivery.MinimumBatchEvents);
             Assert.AreEqual(9, options.Delivery.MaximumBatchEvents);
             Assert.AreEqual(TimeSpan.FromSeconds(2), options.Delivery.PollInterval);
@@ -171,9 +171,9 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 typeof(ArgumentException));
             AssertInvalid(options => options.Delivery.PollInterval = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.MaximumBatchWait = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
-            AssertInvalid(options => options.LocalStorage.SentRetention = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));
-            AssertInvalid(options => options.LocalStorage.UnsentMaxAge = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));
-            AssertInvalid(options => options.LocalStorage.MaxBytes = 4095, typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.ApplicationSpool.SentEventRetention = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.ApplicationSpool.UnsentEventMaxAge = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.ApplicationSpool.MaxPhysicalBytes = 4095, typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.EmergencyMemoryBuffer.MaxBufferedEvents = 0, typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = 0, typeof(ArgumentOutOfRangeException));
         }

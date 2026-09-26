@@ -95,7 +95,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                                 if (!persisted)
                                 {
                                     MarkSpoolRecovered();
-                                    RecordSpoolRejected();
+                                    RecordApplicationSpoolCapacityRejected();
                                     CompleteEmergencyEntry(bufferedEntry);
                                     completed = true;
                                     continue;
