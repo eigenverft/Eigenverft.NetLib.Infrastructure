@@ -28,7 +28,7 @@ The historical sender implementation has now been functionally migrated into:
 
 The archived AxonInsight source was treated as read-only and was not modified. It was already available as an extracted directory rather than a ZIP archive, so no temporary extraction directory was required in the working repository.
 
-The migration intentionally avoided a protocol redesign, so the SQLite schema, background sender, batching, retention, retry, HTTP payload, and shutdown-flush behavior remain recognizable from the archived implementation. Before the first package release, the public naming was aligned with the new package: the sink type is now `SerilogRelaySink` and the Serilog configuration entry point is `.WriteTo.SerilogRelay(...)`.
+The initial migration deliberately avoided a protocol redesign, keeping the SQLite spool, background sender, batching, retention, retry, and shutdown-flush behavior recognizable from the archive. The subsequent F7 hardening introduces the first intentional wire evolution: protocol version `1` adds stable event identity for idempotent receiver ingestion while retaining the historical event fields. Before the first package release, the public naming was also aligned with the new package: the sink type is `SerilogRelaySink` and the Serilog configuration entry point is `.WriteTo.SerilogRelay(...)`.
 
 Only small compatibility and correctness adaptations were made while bringing the code into the current library:
 
@@ -41,6 +41,10 @@ Only small compatibility and correctness adaptations were made while bringing th
 - retention cleanup still uses SQLite's own `now` clock, but composite `TimeSpan` values are now converted to one valid relative-seconds modifier instead of an invalid comma-separated single modifier;
 - the sink no longer configures Serilog's process-global `SelfLog`; the host owns `SelfLog` configuration, while SQLite and HTTP delivery failures are emitted into it when configured;
 - persisted Serilog properties keep their historical stringified-value shape, but JSON escaping is now delegated to source-generated `System.Text.Json` instead of the incomplete hand-written escaper;
+- synchronous and asynchronous disposal now share one shutdown task, so repeated/concurrent dispose callers join the same flush and no new event is accepted once shutdown begins;
+- each event receives a stable GUID `EventId` before its first local insert; the ID is persisted with the spool row and reused across HTTP retries and process restarts;
+- old spool schemas are upgraded in place by adding/backfilling `EventId` and creating a unique local index without discarding pending rows;
+- protocol version `1` is sent to `Eigenverft.Service.CentralLogging` `/api/v1/logs`; `BatchId` remains a new per-attempt correlation ID while `EventId` is the idempotency key;
 - compiler-generated `System.Text.Json` source-generator files are excluded from Coverlet measurement while the authored library code remains subject to the unchanged 100% line/branch/method threshold.
 - direct package references were refreshed to the current stable versions used by the repository: `Microsoft.Data.Sqlite 10.0.12`, `Serilog 4.4.0`, `Microsoft.NET.Test.Sdk 18.10.1`, `MSTest 4.4.1`, and `coverlet.msbuild 10.0.1`; `Nerdbank.GitVersioning 3.10.94` was already current.
 
@@ -48,8 +52,10 @@ The regression suite characterizes the migrated behavior, including:
 
 - local persistence before delivery;
 - restart-safe backlog recovery;
+- stable `EventId` reuse across retries and restart-safe legacy-spool identity migration;
 - successful HTTP batching and `Sent = 1` updates;
 - shutdown flush below the normal minimum batch size;
+- repeated/concurrent sync/async disposal joining one shutdown operation and rejecting writes after shutdown begins;
 - failed shutdown retry behavior;
 - SQLite busy/locked retry handling;
 - HTTP failures and `429 Retry-After`;
@@ -57,9 +63,9 @@ The regression suite characterizes the migrated behavior, including:
 - historical nullable database columns;
 - sender-loop failure and cancellation paths.
 
-The current regression suite contains 15 tests. On `net10.0`, all 15 pass and authored library code reaches 100% line, branch, and method coverage. The solution also builds successfully for `net8.0` and `net10.0`.
+The current regression suite contains 17 tests. On `net10.0`, all 17 pass and authored library code reaches 100% line, branch, and method coverage. The solution also builds successfully for `net8.0` and `net10.0`. A real temporary end-to-end run against the current `Eigenverft.Service.CentralLogging` receiver confirmed that `.WriteTo.SerilogRelay(...)` reaches `/api/v1/logs` and persists the same canonical `EventId` on the receiver.
 
-The baseline migration intentionally leaves inherited analyzer cleanup for a separate follow-up. A full `net8.0`/`net10.0` build currently succeeds but reports 16 analyzer warnings across both target frameworks, covering the inherited culture-sensitive formatting, cancellation-token parameter ordering, repeated formatting, synchronous `ValueTask` consumption in `Dispose()`, and dispose-pattern guidance (`CA1305`, `CA1068`, `CA1863`, `CA2012`, and `CA1816`). These were not rewritten during the functional migration because doing so would go beyond the agreed light-adaptation scope.
+The baseline migration intentionally leaves non-functional analyzer cleanup for a separate follow-up. A full `net8.0`/`net10.0` build succeeds; five distinct inherited analyzer findings remain (repeated per target framework in a clean Release pack): culture-sensitive formatting/conversion at three call sites (`CA1305`), cancellation-token parameter ordering (`CA1068`), and repeated format parsing (`CA1863`). The prior `CA2012`/`CA1816` disposal findings are resolved by the F5 shared-disposal implementation.
 
 ## Bring back better
 
@@ -67,7 +73,6 @@ The following remain redesign goals rather than part of the initial functional m
 
 - Keep target endpoint as the only essential sender configuration for the normal case.
 - Infer sensible application/instance identity and spool location by default, while allowing overrides.
-- Generate stable event IDs before delivery and carry them through retries.
 - Keep SQLite as the durable spool initially; avoid putting a lossy in-memory queue in front of persistence.
 - Define explicit behavior for SQLite busy/full/failure states and expose those failures through Serilog SelfLog or another observable diagnostic path.
 - Support bearer tokens without making authentication mandatory for loopback/private deployments.

@@ -12,20 +12,24 @@ Current Serilog configuration:
 .WriteTo.SerilogRelay(
     connectionString,
     "logs",
-    endpoint: "https://logging.example/")
+    endpoint: "https://logging.example/api/v1/logs")
 ```
 
 The migrated relay currently provides:
 
 - durable SQLite persistence before any network delivery attempt;
 - `Sent = 0` pending rows that survive process restarts and network outages;
+- a stable per-event `EventId` persisted in the local spool before delivery and reused across retries/restarts;
+- automatic one-time `EventId` backfill for pre-F7 spool databases, followed by a unique local index;
 - an independent background sender that loads and posts pending rows in batches;
+- protocol version `1` batches for `Eigenverft.Service.CentralLogging`, with `BatchId` used as per-attempt correlation and `EventId` as the idempotency key;
 - successful-delivery marking with `Sent = 1`;
 - configurable minimum and maximum batch sizes;
 - retention cleanup for sent and unsent rows;
 - SQLite WAL mode, `synchronous=FULL`, busy timeout, and busy/locked retry handling;
 - adaptive sender delay and HTTP `429 Retry-After` handling;
 - a shutdown flush that attempts to send remaining pending rows;
+- idempotent shared sync/async disposal: concurrent/repeated disposal joins one shutdown operation and new events are rejected once shutdown begins;
 - Serilog `SelfLog` diagnostics for local persistence and sender-loop failures.
 
 The implementation targets `net8.0` and `net10.0`.
@@ -52,9 +56,7 @@ This first functional migration deliberately does not redesign the historical pr
 
 - TLS certificate validation still uses the inherited unrestricted certificate callback;
 - bearer-token authentication is not implemented yet;
-- events do not yet receive stable delivery IDs for idempotent server-side handling;
-- each HTTP batch receives a newly generated batch ID;
-- the HTTP payload remains the migrated historical wire shape;
+- each HTTP attempt receives a newly generated `BatchId`; this is intentional correlation metadata, while stable `EventId` values provide retry idempotency;
 - operational diagnostics remain primarily Serilog `SelfLog` rather than a dedicated relay health surface.
 
 These are known follow-up areas, not accidental omissions from the migration.

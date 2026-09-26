@@ -98,15 +98,16 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 connection.Open();
 
                 using var command = connection.CreateCommand();
-                command.CommandText = "SELECT Level, RenderMessage, MessageTemplate, Properties, Sent FROM logs ORDER BY Id LIMIT 1;";
+                command.CommandText = "SELECT EventId, Level, RenderMessage, MessageTemplate, Properties, Sent FROM logs ORDER BY Id LIMIT 1;";
 
                 using SqliteDataReader reader = command.ExecuteReader();
                 Assert.IsTrue(reader.Read());
-                Assert.AreEqual("Information", reader.GetString(0));
-                Assert.AreEqual("Hello 42", reader.GetString(1));
-                Assert.AreEqual("Hello {Value}", reader.GetString(2));
-                StringAssert.Contains(reader.GetString(3), "\"Value\":\"42\"");
-                Assert.AreEqual(0L, reader.GetInt64(4));
+                Assert.IsTrue(Guid.TryParseExact(reader.GetString(0), "D", out _));
+                Assert.AreEqual("Information", reader.GetString(1));
+                Assert.AreEqual("Hello 42", reader.GetString(2));
+                Assert.AreEqual("Hello {Value}", reader.GetString(3));
+                StringAssert.Contains(reader.GetString(4), "\"Value\":\"42\"");
+                Assert.AreEqual(0L, reader.GetInt64(5));
                 Assert.IsFalse(reader.Read());
             }
             finally
@@ -145,6 +146,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 string body = await requestTask.WaitAsync(TimeSpan.FromSeconds(5));
                 using JsonDocument document = JsonDocument.Parse(body);
                 Assert.AreEqual(1, document.RootElement.GetProperty("count").GetInt32());
+                Assert.AreEqual(1, document.RootElement.GetProperty("protocolVersion").GetInt32());
+                Assert.IsTrue(Guid.TryParseExact(document.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString(), "D", out _));
                 Assert.AreEqual("Relay 7", document.RootElement.GetProperty("logs")[0].GetProperty("renderMessage").GetString());
 
                 await WaitForSentStateAsync(connectionString, expectedSent: 1L, TimeSpan.FromSeconds(5));
@@ -201,6 +204,112 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             }
         }
 
+
+
+        [TestMethod]
+        public async Task LegacySpoolMigrationAssignsStableEventIds()
+        {
+            string directory = CreateTemporaryDirectory();
+            string databasePath = Path.Combine(directory, "legacy.db");
+            string connectionString = $"Data Source={databasePath}";
+
+            try
+            {
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using var command = connection.CreateCommand();
+                    command.CommandText = @"
+CREATE TABLE logs (
+    Id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    Timestamp       TEXT    NOT NULL,
+    Level           TEXT    NOT NULL,
+    RenderMessage   TEXT    NOT NULL,
+    MessageTemplate TEXT    NOT NULL,
+    TraceId         TEXT,
+    SpanId          TEXT,
+    Exception       TEXT,
+    Properties      TEXT,
+    Sent            INTEGER NOT NULL DEFAULT 0,
+    CreatedAt       TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+INSERT INTO logs (Timestamp, Level, RenderMessage, MessageTemplate, Sent)
+VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
+                    command.ExecuteNonQuery();
+                }
+
+                string firstEventId;
+                await using (var firstSink = new SerilogRelaySink(
+                    connectionString,
+                    "logs",
+                    endpoint: null,
+                    minBatchItems: 1,
+                    maxBatchItems: 10,
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3)))
+                {
+                    firstEventId = ReadSingleEventId(connectionString);
+                    Assert.IsTrue(Guid.TryParseExact(firstEventId, "D", out _));
+                }
+
+                await using (var secondSink = new SerilogRelaySink(
+                    connectionString,
+                    "logs",
+                    endpoint: null,
+                    minBatchItems: 1,
+                    maxBatchItems: 10,
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3)))
+                {
+                    Assert.AreEqual(firstEventId, ReadSingleEventId(connectionString));
+                }
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task DisposeIsIdempotentAcrossSyncAndAsyncCallers()
+        {
+            string directory = CreateTemporaryDirectory();
+            string databasePath = Path.Combine(directory, "relay.db");
+            string connectionString = $"Data Source={databasePath}";
+
+            try
+            {
+                var sink = new SerilogRelaySink(
+                    connectionString,
+                    "logs",
+                    endpoint: null,
+                    minBatchItems: 1,
+                    maxBatchItems: 10,
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3));
+
+                SetPrivateField(
+                    sink,
+                    "_senderTask",
+                    Task.FromCanceled(new CancellationToken(canceled: true)));
+
+                Task firstDispose = sink.DisposeAsync().AsTask();
+                Task secondDispose = sink.DisposeAsync().AsTask();
+                await Task.WhenAll(firstDispose, secondDispose);
+
+                sink.Dispose();
+
+                Assert.ThrowsExactly<ObjectDisposedException>(
+                    () => sink.Emit(CreateLogEvent("after dispose")));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
 
         [TestMethod]
         public void ExplicitOptionalSettingsAndRetentionOffsetsAreSupported()
@@ -402,7 +511,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
                 Task<string> serverErrorRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.InternalServerError);
                 Assert.IsFalse(await InvokeSendBatchAsync(sink, entries, CancellationToken.None));
-                _ = await serverErrorRequest.WaitAsync(TimeSpan.FromSeconds(5));
+                string firstAttemptBody = await serverErrorRequest.WaitAsync(TimeSpan.FromSeconds(5));
                 StringAssert.Contains(selfLog.ToString(), "HTTP relay returned status code 500.");
 
                 using (var cancellation = new CancellationTokenSource())
@@ -430,8 +539,17 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                     HttpStatusCode.TooManyRequests,
                     "Retry-After: 1\r\n");
                 Assert.IsFalse(await InvokeSendBatchAsync(sink, entries, CancellationToken.None));
-                _ = await retryRequest.WaitAsync(TimeSpan.FromSeconds(5));
+                string retryAttemptBody = await retryRequest.WaitAsync(TimeSpan.FromSeconds(5));
                 Assert.AreEqual(TimeSpan.FromSeconds(1), GetPrivateField<TimeSpan>(sink, "_currentInterval"));
+
+                using JsonDocument firstAttempt = JsonDocument.Parse(firstAttemptBody);
+                using JsonDocument retryAttempt = JsonDocument.Parse(retryAttemptBody);
+                Assert.AreEqual(1, firstAttempt.RootElement.GetProperty("protocolVersion").GetInt32());
+                Assert.AreEqual(entries[0].EventId, firstAttempt.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString());
+                Assert.AreEqual(entries[0].EventId, retryAttempt.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString());
+                Assert.AreNotEqual(
+                    firstAttempt.RootElement.GetProperty("batchId").GetString(),
+                    retryAttempt.RootElement.GetProperty("batchId").GetString());
             }
             finally
             {
@@ -797,6 +915,16 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             return (T)field.GetValue(sink)!;
         }
 
+
+        private static string ReadSingleEventId(string connectionString)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT EventId FROM logs ORDER BY Id LIMIT 1;";
+            return Convert.ToString(command.ExecuteScalar(), CultureInfo.InvariantCulture) ?? string.Empty;
+        }
+
         private static LogEvent CreateLogEvent(string message)
         {
             MessageTemplate template = new MessageTemplateParser().Parse(message);
@@ -813,6 +941,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             return new LogEntry
             {
                 Id = id,
+                EventId = Guid.NewGuid().ToString("D"),
                 Timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
                 Level = LogEventLevel.Information.ToString(),
                 RenderMessage = renderedMessage,
@@ -826,9 +955,11 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var command = connection.CreateCommand();
+            string eventId = Guid.NewGuid().ToString("D");
             command.CommandText = nullOptionals
-                ? "INSERT INTO logs (Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent) VALUES ('legacy','Information','legacy nulls','legacy nulls',NULL,NULL,NULL,NULL,0);"
-                : "INSERT INTO logs (Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent) VALUES ('legacy','Information','legacy','legacy','','','','{}',0);";
+                ? "INSERT INTO logs (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent) VALUES ($eventId,'legacy','Information','legacy nulls','legacy nulls',NULL,NULL,NULL,NULL,0);"
+                : "INSERT INTO logs (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent) VALUES ($eventId,'legacy','Information','legacy','legacy','','','','{}',0);";
+            command.Parameters.AddWithValue("$eventId", eventId);
             command.ExecuteNonQuery();
         }
 

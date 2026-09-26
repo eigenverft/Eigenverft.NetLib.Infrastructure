@@ -8,4 +8,7 @@
 - Corrected composite retention cleanup to use a valid single SQLite relative-time modifier while retaining SQLite as the source of the current clock.
 - Stopped taking ownership of Serilog's process-global SelfLog configuration and restored HTTP status/transport diagnostics through caller-configured SelfLog.
 - Replaced hand-written property JSON escaping with source-generated System.Text.Json while preserving the historical stringified Serilog property-value contract.
-- Added 15 regression tests covering persistence, restart recovery, delivery, SQLite busy handling, HTTP failure/throttling paths, shutdown behavior, and sender lifecycle; the authored net10 library code is at 100% line, branch, and method coverage.
+- Made synchronous/asynchronous disposal idempotent by sharing one shutdown task across repeated or concurrent callers; new events are rejected after shutdown begins.
+- Added protocol version 1 event-level idempotency: every event receives a stable persisted `EventId`, legacy spools are backfilled on first open, retries reuse the same event identity, and `BatchId` remains per-attempt correlation metadata.
+- Verified the v1 wire contract end-to-end against `Eigenverft.Service.CentralLogging` `/api/v1/logs` using the real relay and receiver implementations.
+- Added 17 regression tests covering persistence, restart recovery, stable event identity, legacy-spool migration, delivery, SQLite busy handling, HTTP failure/throttling paths, idempotent shutdown, and sender lifecycle; the authored net10 library code is at 100% line, branch, and method coverage.

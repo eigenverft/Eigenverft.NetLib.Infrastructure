@@ -83,6 +83,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         private const string TableSchema = @"
 CREATE TABLE IF NOT EXISTS {0} (
     Id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    EventId         TEXT,
     Timestamp       TEXT    NOT NULL,
     Level           TEXT    NOT NULL,
     RenderMessage   TEXT    NOT NULL,
@@ -112,6 +113,10 @@ CREATE TABLE IF NOT EXISTS {0} (
         private long _pendingCount;
         private readonly object _signalLock = new object();
         private bool _hasNewLogs;
+
+        private readonly object _disposeLock = new object();
+        private Task? _disposeTask;
+        private int _disposeStarted;
 
         /// <summary>
         /// Initializes a new instance of <see cref="SerilogRelaySink"/>.
@@ -155,6 +160,7 @@ CREATE TABLE IF NOT EXISTS {0} (
             _currentInterval = baseInterval;
 
             EnsureTableCreated();
+            EnsureEventIdentitySchema();
 
             CleanupOldLogs(sentRetention, unsentRetention);
 
@@ -211,6 +217,9 @@ DELETE FROM {_tableName}
         /// <param name="logEvent">The Serilog event to persist.</param>
         public void Emit(LogEvent logEvent)
         {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeStarted) != 0, this);
+
+            string eventId = Guid.NewGuid().ToString("D");
             int attempts = 0;
             while (true)
             {
@@ -224,10 +233,11 @@ DELETE FROM {_tableName}
                     cmd.Transaction = tx;
                     cmd.CommandText = $@"
 INSERT INTO {_tableName}
-  (Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
+  (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
 VALUES
-  ($ts, $lvl, $rendered, $tmpl, $tid, $sid, $ex, $props, 0);";
+  ($eventId, $ts, $lvl, $rendered, $tmpl, $tid, $sid, $ex, $props, 0);";
 
+                    cmd.Parameters.AddWithValue("$eventId", eventId);
                     cmd.Parameters.AddWithValue("$ts", logEvent.Timestamp.UtcDateTime.ToString("o"));
                     cmd.Parameters.AddWithValue("$lvl", logEvent.Level.ToString());
                     cmd.Parameters.AddWithValue("$rendered", logEvent.RenderMessage());
@@ -341,6 +351,7 @@ VALUES
         {
             var payload = new LogBatchPayload
             {
+                ProtocolVersion = 1,
                 BatchId = Guid.NewGuid().ToString(),
                 Timestamp = DateTime.UtcNow.ToString("o"),
                 Count = entries.Count,
@@ -377,7 +388,7 @@ VALUES
             ConfigurePragmas(conn);
             using var cmd = conn.CreateCommand();
             cmd.CommandText = $@"
-SELECT Id, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties
+SELECT Id, EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties
 FROM {_tableName}
 WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             using var reader = await cmd.ExecuteReaderAsync(token);
@@ -386,14 +397,15 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
                 list.Add(new LogEntry
                 {
                     Id = reader.GetInt64(0),
-                    Timestamp = reader.GetString(1),
-                    Level = reader.GetString(2),
-                    RenderMessage = reader.GetString(3),
-                    MessageTemplate = reader.GetString(4),
-                    TraceId = reader.IsDBNull(5) ? null : reader.GetString(5),
-                    SpanId = reader.IsDBNull(6) ? null : reader.GetString(6),
-                    Exception = reader.IsDBNull(7) ? null : reader.GetString(7),
-                    Properties = reader.IsDBNull(8) ? null : reader.GetString(8)
+                    EventId = reader.GetString(1),
+                    Timestamp = reader.GetString(2),
+                    Level = reader.GetString(3),
+                    RenderMessage = reader.GetString(4),
+                    MessageTemplate = reader.GetString(5),
+                    TraceId = reader.IsDBNull(6) ? null : reader.GetString(6),
+                    SpanId = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    Exception = reader.IsDBNull(8) ? null : reader.GetString(8),
+                    Properties = reader.IsDBNull(9) ? null : reader.GetString(9)
                 });
             }
             return list;
@@ -435,6 +447,63 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             cmd.ExecuteNonQuery();
         }
 
+        private void EnsureEventIdentitySchema()
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            conn.Open();
+            ConfigurePragmas(conn);
+
+            bool hasEventId = false;
+            using (var schema = conn.CreateCommand())
+            {
+                schema.CommandText = $"PRAGMA table_info({_tableName});";
+                using var reader = schema.ExecuteReader();
+                while (reader.Read())
+                {
+                    if (string.Equals(reader.GetString(1), "EventId", StringComparison.Ordinal))
+                    {
+                        hasEventId = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hasEventId)
+            {
+                using var alter = conn.CreateCommand();
+                alter.CommandText = $"ALTER TABLE {_tableName} ADD COLUMN EventId TEXT;";
+                alter.ExecuteNonQuery();
+            }
+
+            var rowsWithoutEventId = new List<long>();
+            using (var select = conn.CreateCommand())
+            {
+                select.CommandText = $"SELECT Id FROM {_tableName} WHERE EventId IS NULL OR EventId = '';";
+                using var reader = select.ExecuteReader();
+                while (reader.Read())
+                    rowsWithoutEventId.Add(reader.GetInt64(0));
+            }
+
+            using (var tx = conn.BeginTransaction())
+            {
+                foreach (long id in rowsWithoutEventId)
+                {
+                    using var update = conn.CreateCommand();
+                    update.Transaction = tx;
+                    update.CommandText = $"UPDATE {_tableName} SET EventId = $eventId WHERE Id = $id;";
+                    update.Parameters.AddWithValue("$eventId", Guid.NewGuid().ToString("D"));
+                    update.Parameters.AddWithValue("$id", id);
+                    update.ExecuteNonQuery();
+                }
+
+                tx.Commit();
+            }
+
+            using var index = conn.CreateCommand();
+            index.CommandText = $"CREATE UNIQUE INDEX IF NOT EXISTS IX_{_tableName}_EventId ON {_tableName}(EventId);";
+            index.ExecuteNonQuery();
+        }
+
         // Apply durable settings to SQLite connection
         private static void ConfigurePragmas(SqliteConnection conn)
         {
@@ -456,36 +525,65 @@ PRAGMA busy_timeout = 5000;";
         /// </summary>
         public void Dispose()
         {
-            // Ensure async disposal runs to completion
-            DisposeAsync().GetAwaiter().GetResult();
+            GetOrCreateDisposeTask().GetAwaiter().GetResult();
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
         /// Flushes pending logs on shutdown, ensuring all writes and sends complete.
         /// </summary>
-        // Flush all logs and stop processing on shutdown
         public async ValueTask DisposeAsync()
         {
-            _cts.Cancel();
-            try { await _senderTask; } catch { /* ignore */ }
+            await GetOrCreateDisposeTask().ConfigureAwait(false);
+            GC.SuppressFinalize(this);
+        }
 
-            if (!string.IsNullOrEmpty(_endpoint))
+        private Task GetOrCreateDisposeTask()
+        {
+            lock (_disposeLock)
             {
-                var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(3);
-                while (DateTime.UtcNow < deadline)
-                {
-                    var count = GetPendingCount();
-                    if (count == 0) break;
+                if (_disposeTask is not null)
+                    return _disposeTask;
 
-                    // Flush regardless of minimum threshold
-                    var didWork = await ProcessPendingAsync(CancellationToken.None, ignoreMinBatch: true);
-                    if (!didWork)
-                        await Task.Delay(100);
+                Volatile.Write(ref _disposeStarted, 1);
+                _disposeTask = Task.Run(DisposeCoreAsync);
+                return _disposeTask;
+            }
+        }
+
+        private async Task DisposeCoreAsync()
+        {
+            _cts.Cancel();
+            try
+            {
+                try
+                {
+                    await _senderTask.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+                {
+                }
+
+                if (!string.IsNullOrEmpty(_endpoint))
+                {
+                    var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(3);
+                    while (DateTime.UtcNow < deadline)
+                    {
+                        long count = GetPendingCount();
+                        if (count == 0)
+                            break;
+
+                        bool didWork = await ProcessPendingAsync(CancellationToken.None, ignoreMinBatch: true).ConfigureAwait(false);
+                        if (!didWork)
+                            await Task.Delay(100).ConfigureAwait(false);
+                    }
                 }
             }
-
-            _httpClient.Dispose();
-            _cts.Dispose();
+            finally
+            {
+                _httpClient.Dispose();
+                _cts.Dispose();
+            }
         }
 
         private static string SerializeProperties(LogEvent logEvent)
@@ -521,6 +619,7 @@ PRAGMA busy_timeout = 5000;";
     /// </summary>
     internal class LogBatchPayload
     {
+        public int ProtocolVersion { get; set; }
         public List<LogEntry> Logs { get; set; } = new List<LogEntry>();
         public string BatchId { get; set; } = string.Empty;
         public string Timestamp { get; set; } = string.Empty;
@@ -533,6 +632,7 @@ PRAGMA busy_timeout = 5000;";
     internal class LogEntry
     {
         public long Id { get; set; }
+        public string EventId { get; set; } = string.Empty;
         public string Timestamp { get; set; } = string.Empty;
         public string Level { get; set; } = string.Empty;
         public string RenderMessage { get; set; } = string.Empty;
