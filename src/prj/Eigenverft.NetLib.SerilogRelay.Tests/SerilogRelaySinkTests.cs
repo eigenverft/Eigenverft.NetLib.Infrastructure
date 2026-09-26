@@ -959,7 +959,7 @@ LIMIT 1;";
 
         [TestMethod]
         [DoNotParallelize]
-        public void EmitReportsNonBusySqliteFailureWithoutThrowing()
+        public async Task EmitBuffersNonBusySqliteFailureAndPersistsAfterRecovery()
         {
             string directory = CreateTemporaryDirectory();
             string databasePath = Path.Combine(directory, "relay.db");
@@ -969,7 +969,7 @@ LIMIT 1;";
 
             try
             {
-                using var sink = new SerilogRelaySink(
+                await using var sink = new SerilogRelaySink(
                     connectionString,
                     endpoint: null,
                     minBatchItems: 1,
@@ -982,13 +982,384 @@ LIMIT 1;";
                 {
                     connection.Open();
                     using var command = connection.CreateCommand();
+                    command.CommandText = @"
+CREATE TRIGGER fail_serilog_relay_insert
+BEFORE INSERT ON SerilogRelayEvents
+BEGIN
+    SELECT RAISE(ABORT, 'simulated write failure');
+END;";
+                    command.ExecuteNonQuery();
+                }
+
+                sink.Emit(CreateLogEvent("will recover"));
+
+                StringAssert.Contains(
+                    selfLog.ToString(),
+                    "local spool is unavailable; using the bounded volatile emergency buffer");
+                Assert.AreEqual(
+                    1L,
+                    GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+
+                await Task.Delay(350);
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using var command = connection.CreateCommand();
+                    command.CommandText = "DROP TRIGGER fail_serilog_relay_insert;";
+                    command.ExecuteNonQuery();
+                }
+
+                await WaitUntilAsync(
+                    () => GetPrivateField<long>(sink, "_emergencyBufferedCount") == 0,
+                    TimeSpan.FromSeconds(5));
+
+                using var recoveredConnection = new SqliteConnection(connectionString);
+                recoveredConnection.Open();
+                using var recoveredCommand = recoveredConnection.CreateCommand();
+                recoveredCommand.CommandText =
+                    "SELECT COUNT(*) FROM SerilogRelayEvents WHERE RenderMessage = 'will recover';";
+                Assert.AreEqual(1L, Convert.ToInt64(
+                    recoveredCommand.ExecuteScalar(),
+                    CultureInfo.InvariantCulture));
+
+                StringAssert.Contains(
+                    selfLog.ToString(),
+                    "local spool recovered; durable persistence resumed");
+            }
+            finally
+            {
+                SelfLog.Disable();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DoNotParallelize]
+        public async Task EmergencyBufferRescuesEventDirectlyOverHttpWhenSpoolIsUnavailable()
+        {
+            string directory = CreateTemporaryDirectory();
+            string databasePath = Path.Combine(directory, "relay.db");
+            string connectionString = $"Data Source={databasePath}";
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            using var selfLog = new StringWriter(CultureInfo.InvariantCulture);
+            SelfLog.Enable(selfLog);
+
+            try
+            {
+                listener.Start();
+                int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+                Task<string> requestTask = ReceiveSingleRequestAsync(
+                    listener,
+                    HttpStatusCode.OK);
+
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    $"http://127.0.0.1:{port}/logs",
+                    minBatchItems: 1,
+                    maxBatchItems: 10,
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3),
+                    applicationId: "Emergency.Http.App");
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using var command = connection.CreateCommand();
                     command.CommandText = "DROP TABLE SerilogRelayEvents;";
                     command.ExecuteNonQuery();
                 }
 
-                sink.Emit(CreateLogEvent("will fail"));
+                sink.Emit(CreateLogEvent("emergency http"));
 
-                StringAssert.Contains(selfLog.ToString(), "Failed to write log to SQLite");
+                string body = await requestTask.WaitAsync(TimeSpan.FromSeconds(5));
+                using JsonDocument document = JsonDocument.Parse(body);
+                JsonElement sentLog = document.RootElement.GetProperty("logs")[0];
+
+                Assert.AreEqual("emergency http", sentLog.GetProperty("renderMessage").GetString());
+                Assert.AreEqual("Emergency.Http.App", sentLog.GetProperty("applicationId").GetString());
+                Assert.AreEqual(0L, sentLog.GetProperty("id").GetInt64());
+                Assert.IsTrue(Guid.TryParseExact(
+                    sentLog.GetProperty("eventId").GetString(),
+                    "D",
+                    out _));
+
+                await WaitUntilAsync(
+                    () => GetPrivateField<long>(sink, "_emergencyBufferedCount") == 0,
+                    TimeSpan.FromSeconds(5));
+                StringAssert.Contains(
+                    selfLog.ToString(),
+                    "local spool is unavailable; using the bounded volatile emergency buffer");
+            }
+            finally
+            {
+                SelfLog.Disable();
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DoNotParallelize]
+        public async Task StartupSpoolFailureStillAllowsEmergencyHttpDelivery()
+        {
+            string directory = CreateTemporaryDirectory();
+            string blockedParent = Path.Combine(directory, "blocked");
+            File.WriteAllText(blockedParent, "not a directory");
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            using var selfLog = new StringWriter(CultureInfo.InvariantCulture);
+            SelfLog.Enable(selfLog);
+
+            try
+            {
+                listener.Start();
+                int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+                Task<string> requestTask = ReceiveSingleRequestAsync(
+                    listener,
+                    HttpStatusCode.OK);
+
+                using Logger logger = new LoggerConfiguration()
+                    .WriteTo.SerilogRelay(
+                        endpoint: $"http://127.0.0.1:{port}/logs",
+                        spoolDirectory: blockedParent,
+                        applicationId: "Emergency.Startup.App",
+                        minimumBatchSize: 1,
+                        maximumBatchSize: 10,
+                        baseInterval: TimeSpan.FromMilliseconds(20))
+                    .CreateLogger();
+
+                logger.Information("startup rescue");
+
+                string body = await requestTask.WaitAsync(TimeSpan.FromSeconds(5));
+                using JsonDocument document = JsonDocument.Parse(body);
+                JsonElement sentLog = document.RootElement.GetProperty("logs")[0];
+                Assert.AreEqual("startup rescue", sentLog.GetProperty("renderMessage").GetString());
+                Assert.AreEqual("Emergency.Startup.App", sentLog.GetProperty("applicationId").GetString());
+
+                StringAssert.Contains(
+                    selfLog.ToString(),
+                    "could not create the local spool directory");
+                StringAssert.Contains(
+                    selfLog.ToString(),
+                    "local spool is unavailable; using the bounded volatile emergency buffer");
+            }
+            finally
+            {
+                SelfLog.Disable();
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+
+        [TestMethod]
+        [DoNotParallelize]
+        public async Task EmergencyBufferIsHardBoundedAndReportsOverflow()
+        {
+            string directory = CreateTemporaryDirectory();
+            using var selfLog = new StringWriter(CultureInfo.InvariantCulture);
+            SelfLog.Enable(selfLog);
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    $"Data Source={Path.Combine(directory, "relay.db")}",
+                    endpoint: null,
+                    minBatchItems: 1,
+                    maxBatchItems: 10,
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3));
+
+                CancellationTokenSource cts =
+                    GetPrivateField<CancellationTokenSource>(sink, "_cts");
+                cts.Cancel();
+                await GetPrivateField<Task>(sink, "_emergencyTask")
+                    .WaitAsync(TimeSpan.FromSeconds(5));
+
+                MethodInfo enqueue = GetPrivateMethod(
+                    "EnqueueEmergency",
+                    isStatic: false);
+                var exception = new IOException("simulated unavailable spool");
+
+                for (int index = 0; index < 1026; index++)
+                {
+                    enqueue.Invoke(
+                        sink,
+                        new object[]
+                        {
+                            CreateLogEntry(index + 1, $"emergency {index}"),
+                            exception,
+                        });
+                }
+
+                Assert.AreEqual(
+                    1024L,
+                    GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.AreEqual(
+                    2L,
+                    GetPrivateField<long>(sink, "_emergencyDroppedCount"));
+                StringAssert.Contains(
+                    selfLog.ToString(),
+                    "emergency buffer is full (1024 events)");
+            }
+            finally
+            {
+                SelfLog.Disable();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DoNotParallelize]
+        public async Task EmergencyWorkerRecognizesAlreadyPersistedEventAfterAmbiguousWrite()
+        {
+            string directory = CreateTemporaryDirectory();
+            using var selfLog = new StringWriter(CultureInfo.InvariantCulture);
+            SelfLog.Enable(selfLog);
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    $"Data Source={Path.Combine(directory, "relay.db")}",
+                    endpoint: null,
+                    minBatchItems: 1,
+                    maxBatchItems: 10,
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3));
+
+                LogEntry entry = CreateLogEntry(0, "ambiguous");
+                entry.TraceId = null;
+                entry.SpanId = null;
+                entry.Exception = null;
+                entry.Properties = null;
+
+                GetPrivateMethod("PersistLogEntryCore", isStatic: false)
+                    .Invoke(sink, new object[] { entry });
+
+                GetPrivateMethod("EnqueueEmergency", isStatic: false)
+                    .Invoke(
+                        sink,
+                        new object[]
+                        {
+                            entry,
+                            new IOException("simulated ambiguous write result"),
+                        });
+
+                await WaitUntilAsync(
+                    () => GetPrivateField<long>(sink, "_emergencyBufferedCount") == 0,
+                    TimeSpan.FromSeconds(5));
+
+                Assert.AreEqual(
+                    1L,
+                    GetPrivateField<long>(sink, "_pendingCount"));
+                StringAssert.Contains(
+                    selfLog.ToString(),
+                    "local spool recovered; durable persistence resumed");
+            }
+            finally
+            {
+                SelfLog.Disable();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DoNotParallelize]
+        public async Task EmergencyWorkerCancellationLeavesCurrentVolatileEventAccounted()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString =
+                $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    minBatchItems: 1,
+                    maxBatchItems: 10,
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3));
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using var command = connection.CreateCommand();
+                    command.CommandText = @"
+CREATE TRIGGER fail_serilog_relay_insert
+BEFORE INSERT ON SerilogRelayEvents
+BEGIN
+    SELECT RAISE(ABORT, 'simulated write failure');
+END;";
+                    command.ExecuteNonQuery();
+                }
+
+                sink.Emit(CreateLogEvent("cancel volatile"));
+
+                await WaitUntilAsync(
+                    () => GetPrivateField<long>(sink, "_emergencyBufferedCount") == 1,
+                    TimeSpan.FromSeconds(5));
+                await Task.Delay(350);
+
+                CancellationTokenSource cts =
+                    GetPrivateField<CancellationTokenSource>(sink, "_cts");
+                cts.Cancel();
+
+                await GetPrivateField<Task>(sink, "_emergencyTask")
+                    .WaitAsync(TimeSpan.FromSeconds(5));
+
+                Assert.AreEqual(
+                    1L,
+                    GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DoNotParallelize]
+        public async Task EmitMaterializationFailureIsReportedWithoutThrowing()
+        {
+            string directory = CreateTemporaryDirectory();
+            using var selfLog = new StringWriter(CultureInfo.InvariantCulture);
+            SelfLog.Enable(selfLog);
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    $"Data Source={Path.Combine(directory, "relay.db")}",
+                    endpoint: null,
+                    minBatchItems: 1,
+                    maxBatchItems: 10,
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3));
+
+                MessageTemplate template =
+                    new MessageTemplateParser().Parse("materialization failure");
+                var logEvent = new LogEvent(
+                    DateTimeOffset.UtcNow,
+                    LogEventLevel.Information,
+                    exception: null,
+                    template,
+                    new[]
+                    {
+                        new LogEventProperty(
+                            "Bad",
+                            new ScalarValue(new ThrowingToStringObject())),
+                    });
+
+                sink.Emit(logEvent);
+
+                StringAssert.Contains(
+                    selfLog.ToString(),
+                    "could not materialize a log event");
             }
             finally
             {
@@ -1382,6 +1753,12 @@ LIMIT 1;";
             return (T)field.GetValue(sink)!;
         }
 
+
+        private sealed class ThrowingToStringObject
+        {
+            public override string ToString()
+                => throw new InvalidOperationException("expected ToString failure");
+        }
 
         private static LogEvent CreateLogEvent(string message)
         {

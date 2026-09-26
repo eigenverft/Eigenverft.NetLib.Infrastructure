@@ -44,7 +44,8 @@ A relative `spoolDirectory` is resolved below the application-specific default r
 
 The migrated relay currently provides:
 
-- durable SQLite persistence before any network delivery attempt;
+- durable SQLite persistence before any network delivery attempt in normal operation;
+- bounded emergency fallback when the local spool cannot accept an event: an internal 1024-event `System.Threading.Channels` buffer retains already-materialized events in memory, retries SQLite first, and can rescue them directly to the configured HTTP endpoint while local persistence remains unavailable;
 - fire-and-forget client defaults that automatically choose the application identity, spool directory, spool filename, and internal table name;
 - automatic per-event producer identity: `ApplicationId`, `MachineId`, and `ProcessId` are persisted with each new spool row before delivery so shared-spool multi-process producers remain distinguishable after retries or sender handoff;
 - `MachineId` is a stable SHA-256 platform fingerprint derived locally from the system/platform UUID (SMBIOS on Windows, DMI on Linux, IOPlatformUUID on macOS). The raw platform UUID and `MachineName` are not transmitted by the relay;
@@ -58,6 +59,7 @@ The migrated relay currently provides:
 - retention cleanup for sent and unsent rows;
 - SQLite WAL mode, `synchronous=FULL`, busy timeout, and busy/locked retry handling;
 - explicit SQLite corruption handling for `SQLITE_CORRUPT` / `SQLITE_NOTADB`: the file-backed spool is quarantined under `corrupted/<quarantine-id>/`, any DB/WAL/SHM files still present are moved together, `corruption.json` is written best-effort, a fresh spool is created, and a durable `spool_corrupted` event is inserted before normal logging resumes;
+- non-corruption spool failures (for example full/open/I/O/storage failures) enter a volatile degraded mode instead of immediately dropping the event; the Channel is bounded so a sustained storage failure cannot grow RAM without limit, and overflow/unresolved shutdown loss is reported through Serilog `SelfLog`;
 - adaptive sender delay and HTTP `429 Retry-After` handling;
 - normal platform TLS certificate validation by default, with explicit `dangerousAcceptAnyServerCertificate: true` opt-in for deliberately untrusted/private development infrastructure;
 - a shutdown flush that attempts to send remaining pending rows;
@@ -91,6 +93,7 @@ The current implementation intentionally defers the remaining security/operation
 - operational diagnostics remain primarily Serilog `SelfLog` rather than a dedicated relay health surface.
 - the default application-level spool can be shared by parallel processes. SQLite and receiver-side `EventId` idempotency preserve correctness, but sender claiming is not yet coordinated across processes, so parallel senders may temporarily issue duplicate HTTP attempts; corruption quarantine is also best-effort if another process still holds the spool files open.
 
+- the emergency buffer's fixed 1024-event capacity is a technical safety limit, not the final limits model. File-spool byte/event caps, memory byte/age budgets, oversized individual events, and behavior for prolonged endpoint outages (for example 1h/12h/1d/7d) remain a separate design pass. A healthy local spool continues to absorb normal endpoint outages without using emergency memory.
 These are known follow-up areas, not accidental omissions from the migration.
 
 The longer-term preservation and redesign notes are maintained in the repository at `src/sln/Eigenverft.NetLib.SerilogRelay/REVIVAL.md`.

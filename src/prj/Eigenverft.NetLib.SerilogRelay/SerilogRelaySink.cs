@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 using Microsoft.Data.Sqlite;
@@ -59,7 +60,16 @@ namespace Eigenverft.NetLib.SerilogRelay
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum)
         {
             string spoolPath = ResolveSpoolPath(spoolDirectory, spoolFileName, applicationId);
-            Directory.CreateDirectory(Path.GetDirectoryName(spoolPath)!);
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(spoolPath)!);
+            }
+            catch (Exception ex)
+            {
+                SelfLog.WriteLine(
+                    "SerilogRelay could not create the local spool directory; startup will continue in emergency mode if the spool remains unavailable. Error: {0}",
+                    ex.Message);
+            }
 
             string connectionString = new SqliteConnectionStringBuilder
             {
@@ -155,6 +165,8 @@ namespace Eigenverft.NetLib.SerilogRelay
 
         private const int MaxBusyRetries = 5;
         private const int BusyRetryDelayMs = 100;
+        private const int EmergencyBufferCapacity = 1024;
+        private const int EmergencyRetryDelayMs = 250;
         private const string TableName = "SerilogRelayEvents";
         private const string CorruptionDirectoryName = "corrupted";
         private const string CorruptionEventType = "spool_corrupted";
@@ -194,9 +206,15 @@ CREATE TABLE IF NOT EXISTS {0} (
 
         private readonly CancellationTokenSource _cts;
         private readonly Task _senderTask;
+        private readonly Channel<LogEntry> _emergencyChannel;
+        private readonly Task _emergencyTask;
         private readonly HttpClient _httpClient;
 
         private long _pendingCount;
+        private long _emergencyBufferedCount;
+        private long _emergencyDroppedCount;
+        private int _emergencyOverflowReported;
+        private int _spoolUnavailable;
         private readonly object _signalLock = new object();
         private bool _hasNewLogs;
 
@@ -247,15 +265,6 @@ CREATE TABLE IF NOT EXISTS {0} (
             _baseInterval = baseInterval;
             _currentInterval = baseInterval;
 
-            ExecuteDatabaseWithRecovery(() =>
-            {
-                EnsureTableCreatedCore();
-                CleanupOldLogsCore(sentRetention, unsentRetention);
-            });
-
-            _pendingCount = ExecuteDatabaseWithRecovery(GetPendingCountCore);
-
-
             _httpClient = new HttpClient(
                 GetHttpClientHandler(dangerousAcceptAnyServerCertificate),
                 disposeHandler: false)
@@ -263,6 +272,32 @@ CREATE TABLE IF NOT EXISTS {0} (
                 Timeout = TimeSpan.FromSeconds(2),
             };
             _cts = new CancellationTokenSource();
+            _emergencyChannel = Channel.CreateBounded<LogEntry>(
+                new BoundedChannelOptions(EmergencyBufferCapacity)
+                {
+                    SingleReader = true,
+                    SingleWriter = false,
+                    FullMode = BoundedChannelFullMode.Wait,
+                    AllowSynchronousContinuations = false,
+                });
+
+            try
+            {
+                ExecuteDatabaseWithRecovery(() =>
+                {
+                    EnsureTableCreatedCore();
+                    CleanupOldLogsCore(sentRetention, unsentRetention);
+                });
+
+                _pendingCount = ExecuteDatabaseWithRecovery(GetPendingCountCore);
+            }
+            catch (Exception ex)
+            {
+                _pendingCount = 0;
+                MarkSpoolUnavailable(ex);
+            }
+
+            _emergencyTask = Task.Run(EmergencyLoopAsync, _cts.Token);
 
             // only start sender if endpoint provided
             _senderTask = !string.IsNullOrEmpty(_endpoint)
@@ -320,17 +355,25 @@ DELETE FROM {TableName}
         {
             ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeStarted) != 0, this);
 
-            string eventId = Guid.NewGuid().ToString("D");
+            LogEntry entry;
+            try
+            {
+                entry = CreateLogEntry(logEvent, Guid.NewGuid().ToString("D"));
+            }
+            catch (Exception ex)
+            {
+                SelfLog.WriteLine("SerilogRelay could not materialize a log event: {0}", ex.Message);
+                return;
+            }
+
             int attempts = 0;
             while (true)
             {
                 try
                 {
-                    ExecuteDatabaseWithRecovery(() => PersistLogEventCore(logEvent, eventId));
-
-                    Interlocked.Increment(ref _pendingCount);
-                    lock (_signalLock) { _hasNewLogs = true; }
-                    break;
+                    ExecuteDatabaseWithRecovery(() => PersistLogEntryCore(entry));
+                    OnPersistedToSpool();
+                    return;
                 }
                 catch (SqliteException ex) when (IsBusyError(ex) && attempts++ < MaxBusyRetries)
                 {
@@ -338,13 +381,32 @@ DELETE FROM {TableName}
                 }
                 catch (Exception ex)
                 {
-                    SelfLog.WriteLine("Failed to write log to SQLite: {0}", ex.Message);
-                    break;
+                    EnqueueEmergency(entry, ex);
+                    return;
                 }
             }
         }
 
-        private void PersistLogEventCore(LogEvent logEvent, string eventId)
+        private LogEntry CreateLogEntry(LogEvent logEvent, string eventId)
+        {
+            return new LogEntry
+            {
+                EventId = eventId,
+                ApplicationId = _applicationId,
+                MachineId = _machineId,
+                ProcessId = _processId,
+                Timestamp = logEvent.Timestamp.UtcDateTime.ToString("o", CultureInfo.InvariantCulture),
+                Level = logEvent.Level.ToString(),
+                RenderMessage = logEvent.RenderMessage(CultureInfo.InvariantCulture),
+                MessageTemplate = logEvent.MessageTemplate.Text,
+                TraceId = logEvent.TraceId?.ToHexString() ?? string.Empty,
+                SpanId = logEvent.SpanId?.ToHexString() ?? string.Empty,
+                Exception = logEvent.Exception?.ToString() ?? string.Empty,
+                Properties = SerializeProperties(logEvent),
+            };
+        }
+
+        private void PersistLogEntryCore(LogEntry entry)
         {
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
@@ -358,21 +420,148 @@ INSERT INTO {TableName}
 VALUES
   ($eventId, $applicationId, $machineId, $processId, $ts, $lvl, $rendered, $tmpl, $tid, $sid, $ex, $props, 0);";
 
-            cmd.Parameters.AddWithValue("$eventId", eventId);
-            cmd.Parameters.AddWithValue("$applicationId", _applicationId);
-            cmd.Parameters.AddWithValue("$machineId", (object?)_machineId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("$processId", _processId);
-            cmd.Parameters.AddWithValue("$ts", logEvent.Timestamp.UtcDateTime.ToString("o", CultureInfo.InvariantCulture));
-            cmd.Parameters.AddWithValue("$lvl", logEvent.Level.ToString());
-            cmd.Parameters.AddWithValue("$rendered", logEvent.RenderMessage(CultureInfo.InvariantCulture));
-            cmd.Parameters.AddWithValue("$tmpl", logEvent.MessageTemplate.Text);
-            cmd.Parameters.AddWithValue("$tid", logEvent.TraceId?.ToHexString() ?? string.Empty);
-            cmd.Parameters.AddWithValue("$sid", logEvent.SpanId?.ToHexString() ?? string.Empty);
-            cmd.Parameters.AddWithValue("$ex", logEvent.Exception?.ToString() ?? string.Empty);
-            cmd.Parameters.AddWithValue("$props", SerializeProperties(logEvent));
+            cmd.Parameters.AddWithValue("$eventId", entry.EventId);
+            cmd.Parameters.AddWithValue("$applicationId", entry.ApplicationId);
+            cmd.Parameters.AddWithValue("$machineId", (object?)entry.MachineId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$processId", entry.ProcessId);
+            cmd.Parameters.AddWithValue("$ts", entry.Timestamp);
+            cmd.Parameters.AddWithValue("$lvl", entry.Level);
+            cmd.Parameters.AddWithValue("$rendered", entry.RenderMessage);
+            cmd.Parameters.AddWithValue("$tmpl", entry.MessageTemplate);
+            cmd.Parameters.AddWithValue("$tid", (object?)entry.TraceId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$sid", (object?)entry.SpanId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$ex", (object?)entry.Exception ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$props", (object?)entry.Properties ?? DBNull.Value);
 
             cmd.ExecuteNonQuery();
             tx.Commit();
+        }
+
+        private bool EventExistsCore(string eventId)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            conn.Open();
+            ConfigurePragmas(conn);
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"SELECT 1 FROM {TableName} WHERE EventId = $eventId LIMIT 1;";
+            cmd.Parameters.AddWithValue("$eventId", eventId);
+            return cmd.ExecuteScalar() is not null;
+        }
+
+        private void OnPersistedToSpool()
+        {
+            Interlocked.Increment(ref _pendingCount);
+            lock (_signalLock)
+            {
+                _hasNewLogs = true;
+            }
+
+            MarkSpoolRecovered();
+        }
+
+        private void EnqueueEmergency(LogEntry entry, Exception exception)
+        {
+            MarkSpoolUnavailable(exception);
+
+            Interlocked.Increment(ref _emergencyBufferedCount);
+            if (_emergencyChannel.Writer.TryWrite(entry))
+                return;
+
+            Interlocked.Decrement(ref _emergencyBufferedCount);
+            long dropped = Interlocked.Increment(ref _emergencyDroppedCount);
+            if (Interlocked.Exchange(ref _emergencyOverflowReported, 1) == 0)
+            {
+                SelfLog.WriteLine(
+                    "SerilogRelay emergency buffer is full ({0} events). Events are now being dropped; total dropped: {1}.",
+                    EmergencyBufferCapacity,
+                    dropped);
+            }
+        }
+
+        private async Task EmergencyLoopAsync()
+        {
+            CancellationToken token = _cts.Token;
+
+            try
+            {
+                while (await _emergencyChannel.Reader.WaitToReadAsync(token).ConfigureAwait(false))
+                {
+                    while (_emergencyChannel.Reader.TryRead(out LogEntry? entry))
+                    {
+                        bool completed = false;
+                        while (!completed && !token.IsCancellationRequested)
+                        {
+                            try
+                            {
+                                ExecuteDatabaseWithRecovery(() => PersistLogEntryCore(entry));
+                                OnPersistedToSpool();
+                                CompleteEmergencyEntry();
+                                completed = true;
+                                continue;
+                            }
+                            catch (Exception ex)
+                            {
+                                MarkSpoolUnavailable(ex);
+
+                                try
+                                {
+                                    if (ExecuteDatabaseWithRecovery(() => EventExistsCore(entry.EventId)))
+                                    {
+                                        OnPersistedToSpool();
+                                        CompleteEmergencyEntry();
+                                        completed = true;
+                                        continue;
+                                    }
+                                }
+                                catch (Exception verificationException)
+                                {
+                                    MarkSpoolUnavailable(verificationException);
+                                }
+                            }
+
+                            if (!string.IsNullOrEmpty(_endpoint)
+                                && await SendBatchAsync(
+                                    new List<LogEntry> { entry },
+                                    token).ConfigureAwait(false))
+                            {
+                                CompleteEmergencyEntry();
+                                completed = true;
+                                continue;
+                            }
+
+                            await Task.Delay(EmergencyRetryDelayMs, token).ConfigureAwait(false);
+                        }
+
+                    }
+                }
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+            }
+        }
+
+        private void CompleteEmergencyEntry()
+        {
+            Interlocked.Decrement(ref _emergencyBufferedCount);
+        }
+
+        private void MarkSpoolUnavailable(Exception exception)
+        {
+            if (Interlocked.CompareExchange(ref _spoolUnavailable, 1, 0) != 0)
+                return;
+
+            SelfLog.WriteLine(
+                "SerilogRelay local spool is unavailable; using the bounded volatile emergency buffer. Error: {0}",
+                exception.Message);
+        }
+
+        private void MarkSpoolRecovered()
+        {
+            if (Interlocked.Exchange(ref _spoolUnavailable, 0) == 0)
+                return;
+
+            Interlocked.Exchange(ref _emergencyOverflowReported, 0);
+            SelfLog.WriteLine("SerilogRelay local spool recovered; durable persistence resumed.");
         }
 
         // Continuously send stored logs to the HTTP endpoint
@@ -867,29 +1056,56 @@ VALUES
 
         private async Task DisposeCoreAsync()
         {
-            _cts.Cancel();
+            _emergencyChannel.Writer.TryComplete();
+
             try
             {
+                Task emergencyDrainDeadline = Task.Delay(TimeSpan.FromSeconds(3));
+                await Task.WhenAny(_emergencyTask, emergencyDrainDeadline).ConfigureAwait(false);
+
+                _cts.Cancel();
+
                 try
                 {
-                    await _senderTask.ConfigureAwait(false);
+                    await Task.WhenAll(_senderTask, _emergencyTask).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (_cts.IsCancellationRequested)
                 {
                 }
 
+                long volatileRemaining = Interlocked.Read(ref _emergencyBufferedCount);
+                long dropped = Interlocked.Read(ref _emergencyDroppedCount);
+                if (volatileRemaining > 0 || dropped > 0)
+                {
+                    SelfLog.WriteLine(
+                        "SerilogRelay shutdown with {0} volatile emergency events unresolved and {1} emergency events dropped because the bounded buffer was full.",
+                        volatileRemaining,
+                        dropped);
+                }
+
                 if (!string.IsNullOrEmpty(_endpoint))
                 {
-                    var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(3);
-                    while (DateTime.UtcNow < deadline)
+                    try
                     {
-                        long count = ExecuteDatabaseWithRecovery(GetPendingCountCore);
-                        if (count == 0)
-                            break;
+                        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(3);
+                        while (DateTime.UtcNow < deadline)
+                        {
+                            long count = ExecuteDatabaseWithRecovery(GetPendingCountCore);
+                            if (count == 0)
+                                break;
 
-                        bool didWork = await ProcessPendingAsync(ignoreMinBatch: true, CancellationToken.None).ConfigureAwait(false);
-                        if (!didWork)
-                            await Task.Delay(100).ConfigureAwait(false);
+                            bool didWork = await ProcessPendingAsync(
+                                ignoreMinBatch: true,
+                                CancellationToken.None).ConfigureAwait(false);
+                            if (!didWork)
+                                await Task.Delay(100).ConfigureAwait(false);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        SelfLog.WriteLine(
+                            "SerilogRelay could not complete durable spool drain during shutdown: {0}",
+                            ex.Message);
                     }
                 }
             }
