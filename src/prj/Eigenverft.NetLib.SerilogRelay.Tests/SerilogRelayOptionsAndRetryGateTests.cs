@@ -12,50 +12,50 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         {
             var options = new SerilogRelayOptions();
 
-            Assert.AreEqual(TimeSpan.FromDays(1), options.Spool.SentRetention);
-            Assert.IsNull(options.Spool.UnsentMaxAge);
-            Assert.AreEqual(64L * 1024L * 1024L, options.Spool.MaxBytes);
+            Assert.AreEqual(TimeSpan.FromDays(1), options.LocalStorage.SentRetention);
+            Assert.IsNull(options.LocalStorage.UnsentMaxAge);
+            Assert.AreEqual(64L * 1024L * 1024L, options.LocalStorage.MaxBytes);
             Assert.AreEqual(20, options.Delivery.MinimumBatchEvents);
             Assert.AreEqual(100, options.Delivery.MaximumBatchEvents);
             Assert.AreEqual(TimeSpan.FromSeconds(5), options.Delivery.PollInterval);
             Assert.AreEqual(TimeSpan.FromSeconds(5), options.Delivery.MaximumBatchWait);
-            Assert.AreEqual(TimeSpan.FromSeconds(5), options.Retry.InitialDelay);
-            Assert.AreEqual(2d, options.Retry.Multiplier);
-            Assert.AreEqual(TimeSpan.FromMinutes(5), options.Retry.MaximumDelay);
-            Assert.AreEqual(0.2d, options.Retry.JitterRatio);
-            Assert.IsTrue(options.Retry.RespectRetryAfter);
-            Assert.AreEqual(16384, options.Emergency.MaxBufferedEvents);
-            Assert.AreEqual(64L * 1024L * 1024L, options.Emergency.MaxBufferedPayloadBytes);
+            Assert.AreEqual(TimeSpan.FromSeconds(5), options.EndpointRetry.InitialDelay);
+            Assert.AreEqual(2d, options.EndpointRetry.Multiplier);
+            Assert.AreEqual(TimeSpan.FromMinutes(5), options.EndpointRetry.MaximumDelay);
+            Assert.AreEqual(0.2d, options.EndpointRetry.JitterRatio);
+            Assert.IsTrue(options.EndpointRetry.RespectRetryAfter);
+            Assert.AreEqual(16384, options.EmergencyMemoryBuffer.MaxBufferedEvents);
+            Assert.AreEqual(64L * 1024L * 1024L, options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes);
 
-            options.Spool.SentRetention = TimeSpan.FromHours(12);
-            options.Spool.UnsentMaxAge = TimeSpan.FromDays(30);
-            options.Spool.MaxBytes = 8192;
+            options.LocalStorage.SentRetention = TimeSpan.FromHours(12);
+            options.LocalStorage.UnsentMaxAge = TimeSpan.FromDays(30);
+            options.LocalStorage.MaxBytes = 8192;
             options.Delivery.MinimumBatchEvents = 3;
             options.Delivery.MaximumBatchEvents = 9;
             options.Delivery.PollInterval = TimeSpan.FromSeconds(2);
             options.Delivery.MaximumBatchWait = TimeSpan.FromSeconds(7);
-            options.Retry.InitialDelay = TimeSpan.FromSeconds(1);
-            options.Retry.Multiplier = 3d;
-            options.Retry.MaximumDelay = TimeSpan.FromSeconds(30);
-            options.Retry.JitterRatio = 0.1d;
-            options.Retry.RespectRetryAfter = false;
-            options.Emergency.MaxBufferedEvents = 123;
-            options.Emergency.MaxBufferedPayloadBytes = 456;
+            options.EndpointRetry.InitialDelay = TimeSpan.FromSeconds(1);
+            options.EndpointRetry.Multiplier = 3d;
+            options.EndpointRetry.MaximumDelay = TimeSpan.FromSeconds(30);
+            options.EndpointRetry.JitterRatio = 0.1d;
+            options.EndpointRetry.RespectRetryAfter = false;
+            options.EmergencyMemoryBuffer.MaxBufferedEvents = 123;
+            options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = 456;
 
-            Assert.AreEqual(TimeSpan.FromHours(12), options.Spool.SentRetention);
-            Assert.AreEqual(TimeSpan.FromDays(30), options.Spool.UnsentMaxAge);
-            Assert.AreEqual(8192L, options.Spool.MaxBytes);
+            Assert.AreEqual(TimeSpan.FromHours(12), options.LocalStorage.SentRetention);
+            Assert.AreEqual(TimeSpan.FromDays(30), options.LocalStorage.UnsentMaxAge);
+            Assert.AreEqual(8192L, options.LocalStorage.MaxBytes);
             Assert.AreEqual(3, options.Delivery.MinimumBatchEvents);
             Assert.AreEqual(9, options.Delivery.MaximumBatchEvents);
             Assert.AreEqual(TimeSpan.FromSeconds(2), options.Delivery.PollInterval);
             Assert.AreEqual(TimeSpan.FromSeconds(7), options.Delivery.MaximumBatchWait);
-            Assert.AreEqual(TimeSpan.FromSeconds(1), options.Retry.InitialDelay);
-            Assert.AreEqual(3d, options.Retry.Multiplier);
-            Assert.AreEqual(TimeSpan.FromSeconds(30), options.Retry.MaximumDelay);
-            Assert.AreEqual(0.1d, options.Retry.JitterRatio);
-            Assert.IsFalse(options.Retry.RespectRetryAfter);
-            Assert.AreEqual(123, options.Emergency.MaxBufferedEvents);
-            Assert.AreEqual(456L, options.Emergency.MaxBufferedPayloadBytes);
+            Assert.AreEqual(TimeSpan.FromSeconds(1), options.EndpointRetry.InitialDelay);
+            Assert.AreEqual(3d, options.EndpointRetry.Multiplier);
+            Assert.AreEqual(TimeSpan.FromSeconds(30), options.EndpointRetry.MaximumDelay);
+            Assert.AreEqual(0.1d, options.EndpointRetry.JitterRatio);
+            Assert.IsFalse(options.EndpointRetry.RespectRetryAfter);
+            Assert.AreEqual(123, options.EmergencyMemoryBuffer.MaxBufferedEvents);
+            Assert.AreEqual(456L, options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes);
         }
 
         [TestMethod]
@@ -64,29 +64,29 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             Assert.ThrowsExactly<ArgumentNullException>(() => new RetryGate(null!));
 
             Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
-                new RetryGate(new RetryOptions { InitialDelay = TimeSpan.Zero }));
+                new RetryGate(new EndpointRetryOptions { InitialDelay = TimeSpan.Zero }));
 
             Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
-                new RetryGate(new RetryOptions { Multiplier = 0.5d }));
+                new RetryGate(new EndpointRetryOptions { Multiplier = 0.5d }));
 
             Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
-                new RetryGate(new RetryOptions
+                new RetryGate(new EndpointRetryOptions
                 {
                     InitialDelay = TimeSpan.FromSeconds(10),
                     MaximumDelay = TimeSpan.FromSeconds(5),
                 }));
 
             Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
-                new RetryGate(new RetryOptions { JitterRatio = -0.01d }));
+                new RetryGate(new EndpointRetryOptions { JitterRatio = -0.01d }));
 
             Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
-                new RetryGate(new RetryOptions { JitterRatio = 1.01d }));
+                new RetryGate(new EndpointRetryOptions { JitterRatio = 1.01d }));
         }
 
         [TestMethod]
         public void RetryGateControlsAttemptLifetimeBackoffJitterAndReset()
         {
-            var options = new RetryOptions
+            var options = new EndpointRetryOptions
             {
                 InitialDelay = TimeSpan.FromSeconds(10),
                 Multiplier = 2d,
@@ -130,7 +130,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             DateTimeOffset serverNotBefore = now.AddMinutes(1);
 
             var respectingGate = new RetryGate(
-                new RetryOptions
+                new EndpointRetryOptions
                 {
                     InitialDelay = TimeSpan.FromSeconds(5),
                     MaximumDelay = TimeSpan.FromSeconds(5),
@@ -144,7 +144,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             Assert.AreEqual(serverNotBefore, respectingGate.NextAttemptAt);
 
             var ignoringGate = new RetryGate(
-                new RetryOptions
+                new EndpointRetryOptions
                 {
                     InitialDelay = TimeSpan.FromSeconds(5),
                     MaximumDelay = TimeSpan.FromSeconds(5),
@@ -171,11 +171,11 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 typeof(ArgumentException));
             AssertInvalid(options => options.Delivery.PollInterval = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.MaximumBatchWait = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
-            AssertInvalid(options => options.Spool.SentRetention = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));
-            AssertInvalid(options => options.Spool.UnsentMaxAge = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));
-            AssertInvalid(options => options.Spool.MaxBytes = 4095, typeof(ArgumentOutOfRangeException));
-            AssertInvalid(options => options.Emergency.MaxBufferedEvents = 0, typeof(ArgumentOutOfRangeException));
-            AssertInvalid(options => options.Emergency.MaxBufferedPayloadBytes = 0, typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.LocalStorage.SentRetention = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.LocalStorage.UnsentMaxAge = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.LocalStorage.MaxBytes = 4095, typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.EmergencyMemoryBuffer.MaxBufferedEvents = 0, typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = 0, typeof(ArgumentOutOfRangeException));
         }
 
         private static void AssertInvalid(Action<SerilogRelayOptions> configure, Type expectedExceptionType)

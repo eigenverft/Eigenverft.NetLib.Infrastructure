@@ -5,14 +5,14 @@ namespace Eigenverft.NetLib.SerilogRelay
     internal sealed class RetryGate
     {
         private readonly object _sync = new object();
-        private readonly RetryOptions _options;
+        private readonly EndpointRetryOptions _options;
         private readonly Func<double> _nextDouble;
 
         private int _consecutiveFailures;
         private DateTimeOffset? _nextAttemptAt;
         private bool _attemptInFlight;
 
-        internal RetryGate(RetryOptions options, Func<double>? nextDouble = null)
+        internal RetryGate(EndpointRetryOptions options, Func<double>? nextDouble = null)
         {
             ArgumentNullException.ThrowIfNull(options);
 

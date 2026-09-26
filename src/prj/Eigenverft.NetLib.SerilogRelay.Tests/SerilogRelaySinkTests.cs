@@ -873,7 +873,7 @@ LIMIT 1;";
             {
                 listener.Start();
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-                var retryOptions = new RetryOptions
+                var retryOptions = new EndpointRetryOptions
                 {
                     InitialDelay = TimeSpan.FromMilliseconds(200),
                     Multiplier = 1d,

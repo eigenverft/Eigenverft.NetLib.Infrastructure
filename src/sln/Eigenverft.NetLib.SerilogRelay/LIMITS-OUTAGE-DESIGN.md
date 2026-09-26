@@ -50,19 +50,19 @@ behavior, prefer one options model with complete defaults:
 
 ```text
 SerilogRelayOptions
-  Spool
+  LocalStorage
   Delivery
-  Retry
-  Emergency
+  EndpointRetry
+  EmergencyMemoryBuffer
 ```
 
 Preferred names:
 
 - `SerilogRelayOptions`
-- `SpoolOptions`
+- `LocalStorageOptions`
 - `DeliveryOptions`
-- `RetryOptions`
-- `EmergencyOptions`
+- `EndpointRetryOptions`
+- `EmergencyMemoryBufferOptions`
 
 Do not create public policy classes for Shutdown, Diagnostics, permanent failures, storage
 providers, or other rare cases unless implementation work proves they are actually needed.
@@ -73,26 +73,26 @@ needed for the new settings. Both paths must use the same internal defaults and 
 ## Suggested defaults
 
 ```text
-SpoolOptions
-  MaxSpoolBytes          = 64 MiB        // conditional implementation, see section 7
-  SentRetention          = 1 day
-  UnsentMaxAge           = none
-  UnsentOverflowAction   = DropOldest
+LocalStorageOptions
+  MaxBytes                = 64 MiB
+  SentRetention           = 1 day
+  UnsentMaxAge            = none
 
 DeliveryOptions
-  MinimumBatchEvents     = 20
-  MaximumBatchEvents     = 100
-  MaximumBatchWait       = 5 seconds
+  MinimumBatchEvents      = 20
+  MaximumBatchEvents      = 100
+  PollInterval            = 5 seconds
+  MaximumBatchWait        = 5 seconds
 
-RetryOptions
-  InitialDelay           = 5 seconds
-  Multiplier             = 2
-  MaximumDelay           = 5 minutes
-  Jitter                 = +/-20%
-  RespectRetryAfter      = true
+EndpointRetryOptions
+  InitialDelay            = 5 seconds
+  Multiplier              = 2
+  MaximumDelay            = 5 minutes
+  JitterRatio             = 0.20
+  RespectRetryAfter       = true
 
-EmergencyOptions
-  MaxBufferedEvents      = 16384
+EmergencyMemoryBufferOptions
+  MaxBufferedEvents       = 16384
   MaxBufferedPayloadBytes = 64 MiB
 ```
 
@@ -357,7 +357,7 @@ Implement the 64 MiB cap in this change **only if it can be done robustly as a c
 inside the existing spool code**.
 
 The current implementation uses SQLite, so a small SQLite-specific mechanism is acceptable
-inside `RelaySpool` if it stays simple.
+inside `Storage/SerilogRelaySink.Spool.cs` if it stays simple.
 
 Do not build for this change:
 
@@ -414,42 +414,59 @@ Otherwise record permanent-event isolation as a focused follow-up.
 The current sink carries many responsibilities. Split only where the responsibility is already
 clear and the extraction makes the implementation easier to test or reason about.
 
-A sufficient first target is approximately:
+The implemented first split stays responsibility-based without adding runtime abstractions:
 
 ```text
 SerilogRelaySink.cs
-SerilogRelayOptions.cs
-RelaySpool.cs
-RetryGate.cs
 
-LogEntry.cs
-LogBatchPayload.cs
-LogBatchJsonContext.cs
+Configuration/
+  SerilogRelayOptions.cs
+
+Delivery/
+  RetryGate.cs
+  SerilogRelaySink.Delivery.cs
+
+Emergency/
+  SerilogRelaySink.EmergencyMemoryBuffer.cs
+
+Storage/
+  SerilogRelaySink.Spool.cs
+
+Models/
+  LogEntry.cs
+  LogBatchPayload.cs
+
+Serialization/
+  LogBatchJsonContext.cs
+  SerilogRelaySink.Serialization.cs
 ```
 
 ## Responsibilities
 
-`SerilogRelaySink` may continue to own:
+`SerilogRelaySink.cs` keeps construction, Serilog event materialization, shared state, and
+lifecycle/disposal.
 
-- Serilog event materialization;
-- sender loop;
-- HTTP orchestration;
-- Emergency worker;
-- lifecycle/disposal.
+Cohesive operational blocks stay on the same `partial` sink but live in responsibility folders:
 
-`RelaySpool` should own the current durable-storage implementation details:
+- `Delivery/SerilogRelaySink.Delivery.cs`: sender loop, batching, HTTP delivery, RetryGate orchestration;
+- `Emergency/SerilogRelaySink.EmergencyMemoryBuffer.cs`: bounded volatile fallback and recovery loop;
+- `Storage/SerilogRelaySink.Spool.cs`: durable persistence, retention/capacity, reads/marks, corruption recovery;
+- `Serialization/SerilogRelaySink.Serialization.cs`: Serilog property serialization.
+
+`Storage/SerilogRelaySink.Spool.cs` is a `partial` of the same sink and groups the current
+durable-storage implementation details:
 
 - persistence;
 - pending reads/counts;
 - sent marking;
-- retention;
-- optional capacity if implemented;
-- existing corruption recovery.
+- retention/capacity;
+- corruption recovery.
 
-`RetryGate` owns only endpoint-attempt timing/state.
+This split is organizational, not a storage-provider abstraction. No `IRelaySpool`, provider
+registry, or extra runtime indirection is introduced.
 
-Moving `LogEntry`, `LogBatchPayload`, and `LogBatchJsonContext` out of the large sink file is
-reasonable if it makes the file easier to work with.
+`RetryGate` owns only endpoint-attempt timing/state. Models and source-generation context live
+in their own responsibility folders.
 
 Do not create a class or interface for every section of this guideline.
 
@@ -520,7 +537,7 @@ When implementation starts, use this order:
 4. add one shared `RetryGate` and route normal sender + Emergency HTTP rescue through it;
 5. add Emergency payload-byte accounting/bound;
 6. make shutdown delivery obey a real cancellation deadline;
-7. extract `RelaySpool` / DTO files where that directly simplifies the changed code;
+7. keep the implemented responsibility split (`Storage` partial, Models, Serialization) where it directly simplifies the changed code;
 8. implement the 64 MiB spool cap only if it remains a contained robust change;
 9. add/update the behavior tests above;
 10. run the full existing SerilogRelay test suite and preserve current unrelated behavior.

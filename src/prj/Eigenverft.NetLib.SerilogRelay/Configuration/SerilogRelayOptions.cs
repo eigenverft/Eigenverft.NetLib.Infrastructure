@@ -3,14 +3,14 @@ using System;
 namespace Eigenverft.NetLib.SerilogRelay
 {
     /// <summary>
-    /// Configures SerilogRelay delivery, retry, spool-retention, and emergency-buffer behavior.
+    /// Configures SerilogRelay local storage, delivery, endpoint retry, and emergency-memory behavior.
     /// </summary>
     public sealed class SerilogRelayOptions
     {
         /// <summary>
-        /// Gets durable-spool retention options.
+        /// Gets durable local-storage retention and capacity options.
         /// </summary>
-        public SpoolOptions Spool { get; } = new SpoolOptions();
+        public LocalStorageOptions LocalStorage { get; } = new LocalStorageOptions();
 
         /// <summary>
         /// Gets normal background-delivery options.
@@ -18,28 +18,28 @@ namespace Eigenverft.NetLib.SerilogRelay
         public DeliveryOptions Delivery { get; } = new DeliveryOptions();
 
         /// <summary>
-        /// Gets endpoint retry options.
+        /// Gets remote endpoint retry options.
         /// </summary>
-        public RetryOptions Retry { get; } = new RetryOptions();
+        public EndpointRetryOptions EndpointRetry { get; } = new EndpointRetryOptions();
 
         /// <summary>
-        /// Gets volatile emergency-buffer options.
+        /// Gets volatile emergency memory-buffer options used when durable persistence is unavailable.
         /// </summary>
-        public EmergencyOptions Emergency { get; } = new EmergencyOptions();
+        public EmergencyMemoryBufferOptions EmergencyMemoryBuffer { get; } = new EmergencyMemoryBufferOptions();
     }
 
     /// <summary>
-    /// Configures durable-spool retention and capacity behavior.
+    /// Configures durable local-storage retention and capacity behavior.
     /// </summary>
-    public sealed class SpoolOptions
+    public sealed class LocalStorageOptions
     {
         /// <summary>
-        /// Gets or sets how long successfully delivered events remain in the local spool.
+        /// Gets or sets how long successfully delivered events remain in local storage.
         /// </summary>
         public TimeSpan SentRetention { get; set; } = TimeSpan.FromDays(1);
 
         /// <summary>
-        /// Gets or sets the maximum durable local spool budget in bytes.
+        /// Gets or sets the maximum durable local storage budget in bytes.
         /// </summary>
         public long MaxBytes { get; set; } = 64L * 1024L * 1024L;
 
@@ -76,9 +76,9 @@ namespace Eigenverft.NetLib.SerilogRelay
     }
 
     /// <summary>
-    /// Configures endpoint retry timing.
+    /// Configures retry timing for the remote relay endpoint.
     /// </summary>
-    public sealed class RetryOptions
+    public sealed class EndpointRetryOptions
     {
         /// <summary>
         /// Gets or sets the first delay after an endpoint failure.
@@ -107,9 +107,9 @@ namespace Eigenverft.NetLib.SerilogRelay
     }
 
     /// <summary>
-    /// Configures the bounded volatile emergency buffer used when durable persistence is unavailable.
+    /// Configures the bounded volatile emergency memory buffer used when durable persistence is unavailable.
     /// </summary>
-    public sealed class EmergencyOptions
+    public sealed class EmergencyMemoryBufferOptions
     {
         /// <summary>
         /// Gets or sets the maximum number of events buffered in memory.

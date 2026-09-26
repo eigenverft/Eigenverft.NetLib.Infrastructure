@@ -129,7 +129,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 options.Delivery.MaximumBatchEvents = 100;
                 options.Delivery.PollInterval = TimeSpan.FromSeconds(1);
                 options.Delivery.MaximumBatchWait = TimeSpan.FromMilliseconds(200);
-                options.Retry.JitterRatio = 0d;
+                options.EndpointRetry.JitterRatio = 0d;
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
@@ -230,10 +230,10 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 options.Delivery.MaximumBatchEvents = 10;
                 options.Delivery.PollInterval = TimeSpan.FromMilliseconds(20);
                 options.Delivery.MaximumBatchWait = TimeSpan.FromMilliseconds(20);
-                options.Retry.InitialDelay = TimeSpan.FromMilliseconds(100);
-                options.Retry.MaximumDelay = TimeSpan.FromMilliseconds(100);
-                options.Retry.Multiplier = 1d;
-                options.Retry.JitterRatio = 0d;
+                options.EndpointRetry.InitialDelay = TimeSpan.FromMilliseconds(100);
+                options.EndpointRetry.MaximumDelay = TimeSpan.FromMilliseconds(100);
+                options.EndpointRetry.Multiplier = 1d;
+                options.EndpointRetry.JitterRatio = 0d;
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
@@ -269,8 +269,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             try
             {
                 var options = new SerilogRelayOptions();
-                options.Emergency.MaxBufferedEvents = 10;
-                options.Emergency.MaxBufferedPayloadBytes = 1;
+                options.EmergencyMemoryBuffer.MaxBufferedEvents = 10;
+                options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = 1;
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
@@ -318,7 +318,7 @@ END;";
             try
             {
                 var options = new SerilogRelayOptions();
-                options.Spool.MaxBytes = 128L * 1024L;
+                options.LocalStorage.MaxBytes = 128L * 1024L;
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
@@ -355,7 +355,7 @@ WHERE Sent = 0;";
                     selfLog.ToString(),
                     "spool reached its 131072-byte budget");
                 Assert.IsLessThanOrEqualTo(
-                    options.Spool.MaxBytes,
+                    options.LocalStorage.MaxBytes,
                     new FileInfo(databasePath).Length);
             }
             finally
@@ -384,7 +384,7 @@ WHERE Sent = 0;";
                 options.Delivery.MaximumBatchEvents = 100;
                 options.Delivery.PollInterval = TimeSpan.FromSeconds(5);
                 options.Delivery.MaximumBatchWait = TimeSpan.FromSeconds(10);
-                options.Retry.JitterRatio = 0d;
+                options.EndpointRetry.JitterRatio = 0d;
 
                 var sink = new SerilogRelaySink(
                     connectionString,
@@ -414,14 +414,14 @@ WHERE Sent = 0;";
         }
 
         [TestMethod]
-        public async Task CompatibilityConstructorCopiesEmergencyOptions()
+        public async Task CompatibilityConstructorCopiesEmergencyMemoryBufferOptions()
         {
             string directory = CreateTemporaryDirectory();
             string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
 
             try
             {
-                var emergency = new EmergencyOptions
+                var emergency = new EmergencyMemoryBufferOptions
                 {
                     MaxBufferedEvents = 7,
                     MaxBufferedPayloadBytes = 1234,
@@ -457,7 +457,7 @@ WHERE Sent = 0;";
             try
             {
                 var options = new SerilogRelayOptions();
-                options.Spool.MaxBytes = 64L * 1024L;
+                options.LocalStorage.MaxBytes = 64L * 1024L;
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
@@ -480,6 +480,111 @@ WHERE Sent = 0;";
             finally
             {
                 SelfLog.Disable();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task OversizedEventDoesNotEvictExistingUnsentBacklog()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                var options = new SerilogRelayOptions();
+                options.LocalStorage.MaxBytes = 64L * 1024L;
+
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    options);
+
+                sink.Emit(CreateLogEvent("backlog 0"));
+                sink.Emit(CreateLogEvent("backlog 1"));
+                sink.Emit(CreateLogEvent("backlog 2"));
+
+                Assert.AreEqual(3L, GetUnsentCount(connectionString));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_spoolDroppedCount"));
+
+                sink.Emit(CreateLogEvent(new string('x', 256 * 1024)));
+
+                Assert.AreEqual(3L, GetUnsentCount(connectionString));
+                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_spoolDroppedCount"));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+SELECT COUNT(*)
+  FROM SerilogRelayEvents
+ WHERE Sent = 0
+   AND RenderMessage LIKE 'backlog %';";
+                Assert.AreEqual(
+                    3L,
+                    Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task SpoolCapacityRejectsWhenBudgetIsConsumedWithoutRelayRows()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                var options = new SerilogRelayOptions();
+                options.LocalStorage.MaxBytes = 64L * 1024L;
+
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    options);
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    int sequence = 0;
+
+                    foreach (int payloadSize in new[] { 4096, 512, 64, 1 })
+                    {
+                        while (true)
+                        {
+                            try
+                            {
+                                using var fill = connection.CreateCommand();
+                                fill.CommandText = @"
+INSERT INTO SerilogRelayEvents
+    (EventId, ApplicationId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, Sent)
+VALUES
+    ($eventId, 'capacity-filler', 0, '2026-01-01T00:00:00.0000000Z', 'Information', $payload, $payload, 2);";
+                                fill.Parameters.AddWithValue("$eventId", $"capacity-filler-{sequence++}");
+                                fill.Parameters.AddWithValue("$payload", new string('f', payloadSize));
+                                fill.ExecuteNonQuery();
+                            }
+                            catch (SqliteException ex) when (ex.SqliteErrorCode == SQLitePCL.raw.SQLITE_FULL)
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                sink.Emit(CreateLogEvent("small event still fits an empty spool"));
+
+                Assert.AreEqual(0L, GetUnsentCount(connectionString));
+                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_spoolDroppedCount"));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.AreEqual(0, GetPrivateField<int>(sink, "_spoolUnavailable"));
+            }
+            finally
+            {
                 DeleteTemporaryDirectory(directory);
             }
         }
@@ -578,9 +683,9 @@ UPDATE SerilogRelayEvents
             try
             {
                 var options = new SerilogRelayOptions();
-                options.Spool.MaxBytes = 64L * 1024L;
-                options.Emergency.MaxBufferedEvents = 10;
-                options.Emergency.MaxBufferedPayloadBytes = 1024L * 1024L;
+                options.LocalStorage.MaxBytes = 64L * 1024L;
+                options.EmergencyMemoryBuffer.MaxBufferedEvents = 10;
+                options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = 1024L * 1024L;
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
@@ -638,7 +743,7 @@ END;";
             try
             {
                 var initialOptions = new SerilogRelayOptions();
-                initialOptions.Spool.MaxBytes = 2L * 1024L * 1024L;
+                initialOptions.LocalStorage.MaxBytes = 2L * 1024L * 1024L;
 
                 await using (var writer = new SerilogRelaySink(
                     connectionString,
@@ -666,7 +771,7 @@ END;";
                 }
 
                 var reducedOptions = new SerilogRelayOptions();
-                reducedOptions.Spool.MaxBytes = 64L * 1024L;
+                reducedOptions.LocalStorage.MaxBytes = 64L * 1024L;
 
                 await using (var reader = new SerilogRelaySink(
                     connectionString,
