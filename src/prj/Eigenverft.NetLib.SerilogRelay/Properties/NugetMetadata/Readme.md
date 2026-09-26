@@ -12,6 +12,16 @@ Current minimal Serilog configuration:
 .WriteTo.SerilogRelay("https://logging.example/api/v1/logs")
 ```
 
+TLS uses normal .NET/platform certificate validation by default. Trusted private CAs therefore work normally when installed in the operating-system trust store. For deliberately untrusted/self-signed development or private infrastructure, certificate validation can be bypassed explicitly:
+
+```csharp
+.WriteTo.SerilogRelay(
+    endpoint: "https://logging.example/api/v1/logs",
+    dangerousAcceptAnyServerCertificate: true)
+```
+
+`dangerousAcceptAnyServerCertificate: true` disables all server-certificate validation for relay HTTP requests and should only be enabled deliberately.
+
 With no spool overrides, the relay resolves its persistent SQLite spool automatically from `Environment.SpecialFolder.LocalApplicationData`:
 
 ```text
@@ -49,6 +59,7 @@ The migrated relay currently provides:
 - SQLite WAL mode, `synchronous=FULL`, busy timeout, and busy/locked retry handling;
 - explicit SQLite corruption handling for `SQLITE_CORRUPT` / `SQLITE_NOTADB`: the file-backed spool is quarantined under `corrupted/<quarantine-id>/`, any DB/WAL/SHM files still present are moved together, `corruption.json` is written best-effort, a fresh spool is created, and a durable `spool_corrupted` event is inserted before normal logging resumes;
 - adaptive sender delay and HTTP `429 Retry-After` handling;
+- normal platform TLS certificate validation by default, with explicit `dangerousAcceptAnyServerCertificate: true` opt-in for deliberately untrusted/private development infrastructure;
 - a shutdown flush that attempts to send remaining pending rows;
 - idempotent shared sync/async disposal: concurrent/repeated disposal joins one shutdown operation and new events are rejected once shutdown begins;
 - Serilog `SelfLog` diagnostics for local persistence and sender-loop failures.
@@ -75,7 +86,6 @@ The matching receiver is being revived separately as:
 
 The current implementation intentionally defers the remaining security/operations redesign items. In particular:
 
-- TLS certificate validation still uses the inherited unrestricted certificate callback;
 - bearer-token authentication is not implemented yet;
 - each HTTP attempt receives a newly generated `BatchId`; this is intentional correlation metadata, while stable `EventId` values provide retry idempotency;
 - operational diagnostics remain primarily Serilog `SelfLog` rather than a dedicated relay health surface.

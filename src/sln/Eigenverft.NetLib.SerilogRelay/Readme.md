@@ -42,7 +42,7 @@ After a test run, the links below point to generated reports. Each selected targ
 [Test results (html)](../../prj/Eigenverft.NetLib.SerilogRelay.Tests/MSTestResults/result-net10.0.html)
 [Coverlet output](../../prj/Eigenverft.NetLib.SerilogRelay.Tests/CoverletOutput/coverage.net10.0.opencover.xml)
 
-Coverlet measures only the authored class-library code (`[Eigenverft.NetLib.SerilogRelay]*`) and fails `dotnet test` if line, branch, or method coverage is under 100%. Compiler-generated `System.Text.Json` source-generator files under `obj/` are excluded from coverage measurement. The copied `PhysicalMachineBinding` platform helper is also excluded via `[ExcludeFromCodeCoverage]` because its original project has dedicated platform-binding tests; the relay-specific identity persistence and wire integration remain inside the 100% threshold. The migrated sink regression suite currently contains 27 tests; all 27 pass on `net10.0`, where authored library code reaches 100% line, branch, and method coverage.
+Coverlet measures only the authored class-library code (`[Eigenverft.NetLib.SerilogRelay]*`) and fails `dotnet test` if line, branch, or method coverage is under 100%. Compiler-generated `System.Text.Json` source-generator files under `obj/` are excluded from coverage measurement. The copied `PhysicalMachineBinding` platform helper is also excluded via `[ExcludeFromCodeCoverage]` because its original project has dedicated platform-binding tests; the relay-specific identity persistence and wire integration remain inside the 100% threshold. The migrated sink regression suite currently contains 28 tests; all 28 pass on `net10.0`, where authored library code reaches 100% line, branch, and method coverage.
 
 ## Pack
 

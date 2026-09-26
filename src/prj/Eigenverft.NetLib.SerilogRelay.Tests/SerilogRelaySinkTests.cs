@@ -51,6 +51,19 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         }
 
         [TestMethod]
+        public void TlsValidationIsSafeByDefaultAndDangerousModeIsExplicit()
+        {
+            System.Net.Http.HttpClientHandler defaultHandler = SerilogRelaySink.GetHttpClientHandler(false);
+            System.Net.Http.HttpClientHandler dangerousHandler = SerilogRelaySink.GetHttpClientHandler(true);
+
+            Assert.IsNull(defaultHandler.ServerCertificateCustomValidationCallback);
+            Assert.AreEqual(
+                System.Net.Http.HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+                dangerousHandler.ServerCertificateCustomValidationCallback);
+            Assert.AreNotSame(defaultHandler, dangerousHandler);
+        }
+
+        [TestMethod]
         [DoNotParallelize]
         public void CorruptedSpoolIsQuarantinedRecreatedAndReported()
         {

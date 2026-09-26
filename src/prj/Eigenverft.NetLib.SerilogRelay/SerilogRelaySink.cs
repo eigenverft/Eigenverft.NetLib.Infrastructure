@@ -36,6 +36,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <param name="spoolDirectory">Optional spool directory. Relative paths are resolved below the application-specific default directory.</param>
         /// <param name="spoolFileName">Optional spool filename. Defaults to <c>SerilogRelay.db</c>.</param>
         /// <param name="applicationId">Optional application identity used by the default spool directory. Defaults to the entry-assembly name.</param>
+        /// <param name="dangerousAcceptAnyServerCertificate">When <see langword="true"/>, disables server-certificate validation for relay HTTP requests. Defaults to <see langword="false"/> and should only be enabled deliberately for trusted private/development infrastructure.</param>
         /// <param name="minimumBatchSize">The minimum pending-event count required before normal background delivery starts.</param>
         /// <param name="maximumBatchSize">The maximum number of events included in one HTTP batch.</param>
         /// <param name="baseInterval">The normal delay between background delivery attempts.</param>
@@ -49,6 +50,7 @@ namespace Eigenverft.NetLib.SerilogRelay
             string? spoolDirectory = null,
             string spoolFileName = DefaultSpoolFileName,
             string? applicationId = null,
+            bool dangerousAcceptAnyServerCertificate = false,
             int minimumBatchSize = 20,
             int maximumBatchSize = 100,
             TimeSpan? baseInterval = null,
@@ -74,7 +76,8 @@ namespace Eigenverft.NetLib.SerilogRelay
                 baseInterval ?? TimeSpan.FromSeconds(5),
                 sentRetention ?? TimeSpan.FromDays(1),
                 unsentRetention ?? TimeSpan.FromDays(3),
-                applicationId);
+                applicationId,
+                dangerousAcceptAnyServerCertificate);
             return loggerConfiguration.Sink(sink, restrictedToMinimumLevel);
         }
 
@@ -143,13 +146,11 @@ namespace Eigenverft.NetLib.SerilogRelay
     public class SerilogRelaySink : ILogEventSink, IAsyncDisposable, IDisposable
     {
 
-        private static readonly HttpClientHandler _handler = new HttpClientHandler
-        {
-            // .NET Core / .NET 5+ shortcut
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        private static readonly HttpClientHandler _defaultHttpHandler = new HttpClientHandler();
 
-            // Or, for full control:
-            // ServerCertificateCustomValidationCallback = (request, cert, chain, errors) => true
+        private static readonly HttpClientHandler _dangerousHttpHandler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
         };
 
         private const int MaxBusyRetries = 5;
@@ -214,6 +215,7 @@ CREATE TABLE IF NOT EXISTS {0} (
         /// <param name="sentRetention">How long successfully sent entries remain in the local spool.</param>
         /// <param name="unsentRetention">How long unsent entries remain in the local spool.</param>
         /// <param name="applicationId">Optional logical application identity stored with newly persisted events.</param>
+        /// <param name="dangerousAcceptAnyServerCertificate">Whether relay HTTP requests should bypass all server-certificate validation.</param>
         /// <remarks>
         /// Ensures <paramref name="minBatchItems"/> is at least 1 and not greater than <paramref name="maxBatchItems"/>.
         /// </remarks>
@@ -225,7 +227,8 @@ CREATE TABLE IF NOT EXISTS {0} (
             TimeSpan baseInterval,
             TimeSpan sentRetention,
             TimeSpan unsentRetention,
-            string? applicationId = null
+            string? applicationId = null,
+            bool dangerousAcceptAnyServerCertificate = false
             )
         {
             if (minBatchItems < 1)
@@ -253,7 +256,12 @@ CREATE TABLE IF NOT EXISTS {0} (
             _pendingCount = ExecuteDatabaseWithRecovery(GetPendingCountCore);
 
 
-            _httpClient = new HttpClient(_handler, disposeHandler: false) { Timeout = TimeSpan.FromSeconds(2) };
+            _httpClient = new HttpClient(
+                GetHttpClientHandler(dangerousAcceptAnyServerCertificate),
+                disposeHandler: false)
+            {
+                Timeout = TimeSpan.FromSeconds(2),
+            };
             _cts = new CancellationTokenSource();
 
             // only start sender if endpoint provided
@@ -261,6 +269,9 @@ CREATE TABLE IF NOT EXISTS {0} (
                 ? Task.Run(SenderLoopAsync, _cts.Token)
                 : Task.CompletedTask;
         }
+
+        internal static HttpClientHandler GetHttpClientHandler(bool dangerousAcceptAnyServerCertificate)
+            => dangerousAcceptAnyServerCertificate ? _dangerousHttpHandler : _defaultHttpHandler;
 
         [ExcludeFromCodeCoverage]
         private static string? ResolveMachineId()
