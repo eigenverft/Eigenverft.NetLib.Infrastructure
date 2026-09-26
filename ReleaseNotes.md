@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `e39f1a5` — Clarify SerilogRelay configuration naming (`LocalStorage`, `Delivery`, `EndpointRetry`, `EmergencyMemoryBuffer`), split the sink into responsibility-based partial files/folders without adding backend/provider abstractions, and prevent an individually oversized event from evicting existing unsent backlog by proving it can fit an otherwise empty configured spool before reclamation. Add regression coverage for backlog preservation and no-reclaimable capacity paths; net10 passes 55/55 tests at 100% line/branch/method coverage.
+
 - `8410f3c` — Implement the first bounded SerilogRelay outage-handling base: preserve unsent backlog by default, deliver low-volume/startup backlog without waiting indefinitely for minimum batch size, share one exponential RetryGate across normal and Emergency HTTP delivery, bound Emergency by event count and 64 MiB payload bytes, enforce a 64 MiB durable spool budget with sent-first/oldest-unsent reclamation and explicit capacity loss instead of Emergency spillover, and make shutdown delivery obey a real deadline. Preserve the simple API while adding grouped options; net10 tests pass at 100% line/branch/method coverage.
 
 - `0b40f00` — Make the SerilogRelay limits/outage policy design storage-engine-neutral after responsibility-boundary, independent-change-boundary, concept-model, and usability review: remove SQLite-specific policy mechanics, use a generic retained-spool budget and persistence timeout, keep recovery/representation details internal, avoid speculative backend/provider abstractions, and preserve one-line default Serilog configuration.
