@@ -73,34 +73,32 @@ The current regression suite contains 27 tests. On `net10.0`, all 27 pass and au
 
 The inherited analyzer cleanup is now complete for the current relay source. The Release pack for both `net8.0` and `net10.0` completes with 0 warnings and 0 errors. Persisted rendered messages use `CultureInfo.InvariantCulture` so their text is stable across host/thread locales; the remaining analyzer fixes were private parameter ordering and format/conversion cleanup without behavioral redesign.
 
-## Deferred follow-up
+## Release blockers
 
-The following review items are intentionally deferred rather than missing from the current baseline:
+The following items should be resolved before the first package release unless the release scope explicitly excludes the affected deployment mode:
 
-- **TLS policy (F1):** replace the inherited unrestricted certificate acceptance with normal platform certificate validation by default, plus an explicit opt-in mechanism for private/self-signed infrastructure when that deployment model is designed.
-- **Authentication (U1):** add an explicit sender-authentication mechanism such as bearer tokens when the CentralLogging deployment/authentication model is defined. Event/application fields must not be treated as authenticated identity merely because they appear in the payload.
-- **Operational health/status (U2):** consider a small observable relay status surface for values such as pending count, last successful delivery, and last delivery failure. `SelfLog` remains the current diagnostic path; a larger health API is intentionally deferred.
+- **TLS policy (F1):** remove inherited unrestricted certificate acceptance. Normal platform certificate validation should be the default. Private/self-signed infrastructure must require an explicit opt-in policy such as trusted private CAs, pinned certificates, or another deliberately configured mechanism.
+- **Non-corruption SQLite failure behavior:** define and test the relay behavior for storage failures that are not database corruption, especially full disk, open failures, and I/O errors. These states must remain distinguishable from `SQLITE_CORRUPT` / `SQLITE_NOTADB` and must have an observable failure path such as Serilog `SelfLog`.
+- **Multi-process shared-spool coordination:** the application-level default spool can be opened by multiple same-application processes, and receiver-side `EventId` idempotency prevents duplicate stored events. However, parallel sender loops can currently race on the same unsent rows, and corruption recovery is only coordinated inside one process. Before release, either add cross-process row claiming/leases plus a recovery lock, or explicitly narrow the supported v1 contract so one application spool has only one active sender process.
+- **Authentication (U1, deployment-dependent):** explicit sender authentication such as bearer tokens is a release blocker if v1 officially supports direct remote/external ingestion. If the first supported deployment scope is limited to loopback/private infrastructure behind a separately trusted proxy boundary, authentication can remain deferred. Event/application identity fields must never be treated as authenticated identity merely because they appear in the payload.
 
-### Protocol / client identity ideas for later
+## Deferred
 
-These are recorded design directions, not current wire requirements:
+These items are useful follow-up work but are not currently required for the first package release:
+
+- **Operational health/status (U2):** consider a small observable relay status surface for values such as pending count, last successful delivery, and last delivery failure. `SelfLog` remains the current diagnostic path.
+- **Retry/backoff refinement:** the relay already has restart-safe persistence, adaptive delay, cancellation, busy/locked retry handling, and HTTP `429 Retry-After` support. Further bounded retry/backoff tuning can be revisited after real deployment behavior is known.
+- **Packaging/publication refinement:** broader package publication requirements can be finalized when the sender/receiver contract and deployment scope are frozen.
+- **Architecture constraints to preserve:** keep SQLite as the durable spool rather than adding a lossy in-memory queue in front of persistence, and keep the CentralLogging protocol implementation inside this package so sender applications do not depend on the service project.
+
+## Future protocol ideas
+
+These are recorded design directions, not current v1 wire requirements:
 
 - Treat the configured endpoint as the **logging API base**, e.g. `https://host/api/v1/logs`. Normal application batches continue to POST directly to that base; future relay-operational traffic can derive a child route such as `/api/v1/logs/relay-events`, avoiding an artificial `/default` route.
-- A future server-preference handshake/config route can live below the same base (for example `/api/v1/logs/config`). Client-side defaults remain authoritative unless an explicit `allowServerConfiguration`-style opt-in is enabled; server values should be bounded hints (batch size, interval, etc.), cached with a TTL, and fall back to local defaults when unavailable.
-- The standard producer identity is now `ApplicationId` + `MachineId` + `ProcessId`. `MachineName` remains opt-in Serilog enrichment rather than relay metadata. A separate `ProcessInstanceId` or `InstallationId` should only be introduced later if a concrete historical-run or installation-lifetime use case requires it.
+- A future server-preference handshake/config route can live below the same base, for example `/api/v1/logs/config`. Client-side defaults remain authoritative unless an explicit `allowServerConfiguration`-style opt-in is enabled. Server values should be bounded hints such as batch size or interval, cached with a TTL, and fall back to local defaults when unavailable.
+- The standard producer identity is now `ApplicationId` + `MachineId` + `ProcessId`. `MachineName` remains opt-in Serilog enrichment rather than relay metadata. A separate `ProcessInstanceId` or `InstallationId` should only be introduced if a concrete historical-run or installation-lifetime use case requires it.
 - The archived AxonInsight setup already reflected this separation imperfectly: applications explicitly enriched logs with machine name, while a persisted setup GUID was used in the logging URL and behaved more like an installation/client identifier than a physical-machine identity.
-- With the current application-level default spool, multiple same-application processes can share SQLite safely for writes, and F7 receiver idempotency prevents duplicate stored events. However, two sender loops can still race on the same unsent rows. A future multi-process improvement should prefer row claiming/leases (and a cross-process recovery lock) over making the default spool process-ID-specific, because process-specific files would weaken restart backlog recovery.
+- If multi-process support is implemented rather than excluded from the first release contract, prefer row claiming/leases and a cross-process recovery lock over process-ID-specific spool files because process-specific files would weaken restart backlog recovery.
 
-## Bring back better
-
-The following remain redesign goals rather than part of the initial functional migration:
-
-- Keep SQLite as the durable spool initially; avoid putting a lossy in-memory queue in front of persistence.
-- Continue defining explicit behavior for non-corruption SQLite failure states such as full disk, open failures, and I/O errors, and expose those failures through Serilog SelfLog or another observable diagnostic path.
-- Support bearer tokens without making authentication mandatory for loopback/private deployments.
-- Replace unrestricted TLS bypass with explicit options suitable for self-signed/private infrastructure, such as opt-in self-signed acceptance or certificate pinning.
-- Use bounded retry/backoff with cancellation and reliable restart recovery.
-- Keep the protocol implementation inside this package so sender applications only depend on the relay, not on the CentralLogging service project.
-- Consider broader packaging/publication requirements when the implementation and receiver contract stabilize.
-
-The archived sink remains the behavioral reference for the migrated baseline. Future work can now improve its weak edges from a tested, working starting point rather than reconstructing the behavior from scratch.
+The archived sink remains the behavioral reference for the migrated baseline. Future work can improve its weak edges from a tested, working starting point rather than reconstructing the behavior from scratch.
