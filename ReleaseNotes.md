@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `c75086c` — Simplify and harden the SerilogRelay limits/outage design after source review: use SQLite-native page limits instead of low-watermark/VACUUM management, distinguish policy rejection from actual storage failure, share one RetryGate with Emergency HTTP rescue, avoid speculative per-event attempt/migration machinery, grandfather oversized existing spools safely, bound corruption archives, and define only a small first set of implementation components.
+
 - `ec6b0e6` — Remove the proposed post-recovery throttle from the SerilogRelay outage design: a successful endpoint response now resets retry backoff immediately and backlog draining resumes at the normal DeliveryPolicy rate, bounded by the existing batch/cycle/inter-batch controls rather than a second token bucket.
 
 - `d2bb2bb` — Refine the SerilogRelay outage design into explicit behavioral policies: reduce the proposed balanced durable-spool ceiling to 64 MiB, remove the arbitrary per-event size cap, separate retry gating from recovery catch-up rate limiting, define 5s→10s→20s→40s exponential backoff with jitter/reset semantics, and set the emergency byte budget default to 64 MiB.
