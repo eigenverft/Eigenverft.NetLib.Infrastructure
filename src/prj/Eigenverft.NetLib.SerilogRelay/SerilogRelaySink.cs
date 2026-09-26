@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -44,7 +45,6 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <param name="sentRetention">How long successfully sent events are retained locally.</param>
         /// <param name="unsentRetention">How long unsent events are retained locally.</param>
         /// <param name="restrictedToMinimumLevel">The minimum Serilog event level accepted by the sink.</param>
-        /// <returns>The original Serilog logger configuration.</returns>
         public static LoggerConfiguration SerilogRelay(
             this LoggerSinkConfiguration loggerConfiguration,
             string? endpoint = null,
@@ -59,6 +59,48 @@ namespace Eigenverft.NetLib.SerilogRelay
             TimeSpan? unsentRetention = null,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum)
         {
+            var options = new SerilogRelayOptions();
+            options.Delivery.MinimumBatchEvents = minimumBatchSize;
+            options.Delivery.MaximumBatchEvents = maximumBatchSize;
+            options.Delivery.PollInterval = baseInterval ?? TimeSpan.FromSeconds(5);
+            options.Spool.SentRetention = sentRetention ?? TimeSpan.FromDays(1);
+            options.Spool.UnsentMaxAge = unsentRetention;
+
+            return SerilogRelay(
+                loggerConfiguration,
+                endpoint,
+                options,
+                spoolDirectory,
+                spoolFileName,
+                applicationId,
+                dangerousAcceptAnyServerCertificate,
+                restrictedToMinimumLevel);
+        }
+
+        /// <summary>
+        /// Configures SerilogRelay with grouped reliability options while preserving the simple default overload.
+        /// </summary>
+        /// <param name="loggerConfiguration">The Serilog sink configuration.</param>
+        /// <param name="endpoint">The optional HTTP endpoint that receives batched log events.</param>
+        /// <param name="options">Relay behavior options. All nested option groups have complete defaults.</param>
+        /// <param name="spoolDirectory">Optional spool directory.</param>
+        /// <param name="spoolFileName">Optional spool filename.</param>
+        /// <param name="applicationId">Optional logical application identity.</param>
+        /// <param name="dangerousAcceptAnyServerCertificate">Whether relay HTTP requests should bypass server-certificate validation.</param>
+        /// <param name="restrictedToMinimumLevel">The minimum Serilog event level accepted by the sink.</param>
+        /// <returns>The original Serilog logger configuration.</returns>
+        public static LoggerConfiguration SerilogRelay(
+            this LoggerSinkConfiguration loggerConfiguration,
+            string? endpoint,
+            SerilogRelayOptions options,
+            string? spoolDirectory = null,
+            string spoolFileName = DefaultSpoolFileName,
+            string? applicationId = null,
+            bool dangerousAcceptAnyServerCertificate = false,
+            LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum)
+        {
+            ArgumentNullException.ThrowIfNull(options);
+
             string spoolPath = ResolveSpoolPath(spoolDirectory, spoolFileName, applicationId);
             try
             {
@@ -81,11 +123,7 @@ namespace Eigenverft.NetLib.SerilogRelay
             var sink = new SerilogRelaySink(
                 connectionString,
                 endpoint,
-                minimumBatchSize,
-                maximumBatchSize,
-                baseInterval ?? TimeSpan.FromSeconds(5),
-                sentRetention ?? TimeSpan.FromDays(1),
-                unsentRetention ?? TimeSpan.FromDays(3),
+                options,
                 applicationId,
                 dangerousAcceptAnyServerCertificate);
             return loggerConfiguration.Sink(sink, restrictedToMinimumLevel);
@@ -165,7 +203,6 @@ namespace Eigenverft.NetLib.SerilogRelay
 
         private const int MaxBusyRetries = 5;
         private const int BusyRetryDelayMs = 100;
-        private const int EmergencyBufferCapacity = 16384;
         private const int EmergencyRetryDelayMs = 250;
         private const string TableName = "SerilogRelayEvents";
         private const string CorruptionDirectoryName = "corrupted";
@@ -200,43 +237,43 @@ CREATE TABLE IF NOT EXISTS {0} (
         private readonly int _minBatchSize;
         private readonly int _maxBatchSize;
         private readonly TimeSpan _baseInterval;
-        private readonly TimeSpan _minInterval = TimeSpan.FromSeconds(1);
-        private readonly TimeSpan _maxInterval = TimeSpan.FromMinutes(5);
-        private TimeSpan _currentInterval;
+        private readonly TimeSpan _maximumBatchWait;
+        private readonly TimeSpan _sentRetention;
+        private readonly TimeSpan? _unsentRetention;
+        private readonly long _maxSpoolBytes;
+        private readonly TimeSpan _minimumCatchUpInterval = TimeSpan.FromSeconds(1);
+        private readonly RetryGate _retryGate;
 
         private readonly CancellationTokenSource _cts;
         private readonly Task _senderTask;
-        private readonly Channel<LogEntry> _emergencyChannel;
+        private readonly Channel<EmergencyEntry> _emergencyChannel;
         private readonly Task _emergencyTask;
         private readonly HttpClient _httpClient;
+        private readonly int _emergencyBufferCapacity;
+        private readonly long _maxEmergencyBufferedPayloadBytes;
 
         private long _pendingCount;
         private long _emergencyBufferedCount;
+        private long _emergencyBufferedPayloadBytes;
         private long _emergencyDroppedCount;
+        private long _spoolDroppedCount;
         private int _emergencyOverflowReported;
         private int _spoolUnavailable;
+        private int _pendingCountNeedsRefresh;
+        private int _spoolOverflowReported;
+        private int _startupBacklogPending;
+        private int _startupUnsentCleanupPending;
         private readonly object _signalLock = new object();
         private bool _hasNewLogs;
+        private DateTimeOffset? _pendingSinceUtc;
 
         private readonly object _disposeLock = new object();
         private Task? _disposeTask;
         private int _disposeStarted;
 
         /// <summary>
-        /// Initializes a new instance of <see cref="SerilogRelaySink"/>.
+        /// Initializes a new instance using the compatibility constructor used by existing tests and callers.
         /// </summary>
-        /// <param name="connectionString">The SQLite connection string.</param>
-        /// <param name="endpoint">The HTTP endpoint to send batched logs.</param>
-        /// <param name="minBatchItems">Minimum number of items before sending a batch.</param>
-        /// <param name="maxBatchItems">Maximum number of items per batch.</param>
-        /// <param name="baseInterval">Base delay interval between send attempts.</param>
-        /// <param name="sentRetention">How long successfully sent entries remain in the local spool.</param>
-        /// <param name="unsentRetention">How long unsent entries remain in the local spool.</param>
-        /// <param name="applicationId">Optional logical application identity stored with newly persisted events.</param>
-        /// <param name="dangerousAcceptAnyServerCertificate">Whether relay HTTP requests should bypass all server-certificate validation.</param>
-        /// <remarks>
-        /// Ensures <paramref name="minBatchItems"/> is at least 1 and not greater than <paramref name="maxBatchItems"/>.
-        /// </remarks>
         internal SerilogRelaySink(
             string connectionString,
             string? endpoint,
@@ -244,15 +281,38 @@ CREATE TABLE IF NOT EXISTS {0} (
             int maxBatchItems,
             TimeSpan baseInterval,
             TimeSpan sentRetention,
-            TimeSpan unsentRetention,
+            TimeSpan? unsentRetention,
             string? applicationId = null,
-            bool dangerousAcceptAnyServerCertificate = false
-            )
+            bool dangerousAcceptAnyServerCertificate = false,
+            TimeSpan? maximumBatchWait = null,
+            RetryOptions? retryOptions = null,
+            EmergencyOptions? emergencyOptions = null)
+            : this(
+                connectionString,
+                endpoint,
+                CreateCompatibilityOptions(
+                    minBatchItems,
+                    maxBatchItems,
+                    baseInterval,
+                    sentRetention,
+                    unsentRetention,
+                    maximumBatchWait,
+                    retryOptions,
+                    emergencyOptions),
+                applicationId,
+                dangerousAcceptAnyServerCertificate)
         {
-            if (minBatchItems < 1)
-                throw new ArgumentOutOfRangeException(nameof(minBatchItems), "Minimum batch size must be at least 1.");
-            if (minBatchItems > maxBatchItems)
-                throw new ArgumentException("Minimum batch size must be less than or equal to maximum batch size.", nameof(minBatchItems));
+        }
+
+        internal SerilogRelaySink(
+            string connectionString,
+            string? endpoint,
+            SerilogRelayOptions options,
+            string? applicationId = null,
+            bool dangerousAcceptAnyServerCertificate = false)
+        {
+            ArgumentNullException.ThrowIfNull(options);
+            ValidateOptions(options);
 
             _connectionString = connectionString;
             _databasePath = ResolveDatabasePath(connectionString);
@@ -260,10 +320,16 @@ CREATE TABLE IF NOT EXISTS {0} (
             _applicationId = LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(applicationId);
             _machineId = ResolveMachineId();
             _processId = Environment.ProcessId;
-            _minBatchSize = minBatchItems;
-            _maxBatchSize = maxBatchItems;
-            _baseInterval = baseInterval;
-            _currentInterval = baseInterval;
+            _minBatchSize = options.Delivery.MinimumBatchEvents;
+            _maxBatchSize = options.Delivery.MaximumBatchEvents;
+            _baseInterval = options.Delivery.PollInterval;
+            _maximumBatchWait = options.Delivery.MaximumBatchWait;
+            _sentRetention = options.Spool.SentRetention;
+            _unsentRetention = options.Spool.UnsentMaxAge;
+            _maxSpoolBytes = options.Spool.MaxBytes;
+            _retryGate = new RetryGate(options.Retry);
+            _emergencyBufferCapacity = options.Emergency.MaxBufferedEvents;
+            _maxEmergencyBufferedPayloadBytes = options.Emergency.MaxBufferedPayloadBytes;
 
             _httpClient = new HttpClient(
                 GetHttpClientHandler(dangerousAcceptAnyServerCertificate),
@@ -272,8 +338,8 @@ CREATE TABLE IF NOT EXISTS {0} (
                 Timeout = TimeSpan.FromSeconds(2),
             };
             _cts = new CancellationTokenSource();
-            _emergencyChannel = Channel.CreateBounded<LogEntry>(
-                new BoundedChannelOptions(EmergencyBufferCapacity)
+            _emergencyChannel = Channel.CreateBounded<EmergencyEntry>(
+                new BoundedChannelOptions(_emergencyBufferCapacity)
                 {
                     SingleReader = true,
                     SingleWriter = false,
@@ -286,10 +352,23 @@ CREATE TABLE IF NOT EXISTS {0} (
                 ExecuteDatabaseWithRecovery(() =>
                 {
                     EnsureTableCreatedCore();
-                    CleanupOldLogsCore(sentRetention, unsentRetention);
+                    CleanupOldLogsCore(
+                        _sentRetention,
+                        string.IsNullOrEmpty(_endpoint) ? _unsentRetention : null);
                 });
 
                 _pendingCount = ExecuteDatabaseWithRecovery(GetPendingCountCore);
+                if (_pendingCount > 0)
+                {
+                    _startupBacklogPending = string.IsNullOrEmpty(_endpoint) ? 0 : 1;
+                    lock (_signalLock)
+                    {
+                        _pendingSinceUtc = DateTimeOffset.UtcNow - _maximumBatchWait;
+                    }
+                }
+
+                _startupUnsentCleanupPending =
+                    !string.IsNullOrEmpty(_endpoint) && _unsentRetention.HasValue ? 1 : 0;
             }
             catch (Exception ex)
             {
@@ -299,10 +378,67 @@ CREATE TABLE IF NOT EXISTS {0} (
 
             _emergencyTask = Task.Run(EmergencyLoopAsync, _cts.Token);
 
-            // only start sender if endpoint provided
             _senderTask = !string.IsNullOrEmpty(_endpoint)
                 ? Task.Run(SenderLoopAsync, _cts.Token)
                 : Task.CompletedTask;
+        }
+
+        private static SerilogRelayOptions CreateCompatibilityOptions(
+            int minBatchItems,
+            int maxBatchItems,
+            TimeSpan baseInterval,
+            TimeSpan sentRetention,
+            TimeSpan? unsentRetention,
+            TimeSpan? maximumBatchWait,
+            RetryOptions? retryOptions,
+            EmergencyOptions? emergencyOptions)
+        {
+            var options = new SerilogRelayOptions();
+            options.Delivery.MinimumBatchEvents = minBatchItems;
+            options.Delivery.MaximumBatchEvents = maxBatchItems;
+            options.Delivery.PollInterval = baseInterval;
+            options.Delivery.MaximumBatchWait = maximumBatchWait ?? TimeSpan.FromSeconds(5);
+            options.Spool.SentRetention = sentRetention;
+            options.Spool.UnsentMaxAge = unsentRetention;
+
+            if (retryOptions is not null)
+            {
+                options.Retry.InitialDelay = retryOptions.InitialDelay;
+                options.Retry.Multiplier = retryOptions.Multiplier;
+                options.Retry.MaximumDelay = retryOptions.MaximumDelay;
+                options.Retry.JitterRatio = retryOptions.JitterRatio;
+                options.Retry.RespectRetryAfter = retryOptions.RespectRetryAfter;
+            }
+
+            if (emergencyOptions is not null)
+            {
+                options.Emergency.MaxBufferedEvents = emergencyOptions.MaxBufferedEvents;
+                options.Emergency.MaxBufferedPayloadBytes = emergencyOptions.MaxBufferedPayloadBytes;
+            }
+
+            return options;
+        }
+
+        private static void ValidateOptions(SerilogRelayOptions options)
+        {
+            if (options.Delivery.MinimumBatchEvents < 1)
+                throw new ArgumentOutOfRangeException(nameof(options), "Minimum batch size must be at least 1.");
+            if (options.Delivery.MaximumBatchEvents < options.Delivery.MinimumBatchEvents)
+                throw new ArgumentException("Minimum batch size must be less than or equal to maximum batch size.", nameof(options));
+            if (options.Delivery.PollInterval <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(options), "Delivery poll interval must be greater than zero.");
+            if (options.Delivery.MaximumBatchWait <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(options), "Maximum batch wait must be greater than zero.");
+            if (options.Spool.SentRetention < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(options), "Sent retention must not be negative.");
+            if (options.Spool.UnsentMaxAge.HasValue && options.Spool.UnsentMaxAge.Value < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(options), "Unsent retention must not be negative.");
+            if (options.Spool.MaxBytes < 4096)
+                throw new ArgumentOutOfRangeException(nameof(options), "Spool byte budget must be at least one SQLite page (4096 bytes).");
+            if (options.Emergency.MaxBufferedEvents < 1)
+                throw new ArgumentOutOfRangeException(nameof(options), "Emergency event capacity must be at least 1.");
+            if (options.Emergency.MaxBufferedPayloadBytes < 1)
+                throw new ArgumentOutOfRangeException(nameof(options), "Emergency payload-byte capacity must be at least 1.");
         }
 
         internal static HttpClientHandler GetHttpClientHandler(bool dangerousAcceptAnyServerCertificate)
@@ -313,28 +449,34 @@ CREATE TABLE IF NOT EXISTS {0} (
             => PhysicalMachineBinding.TryGetFingerprint(out string machineId) ? machineId : null;
 
         /// <summary>
-        /// Deletes log entries older than the specified retention periods.
+        /// Deletes sent entries older than the configured retention and optionally expires unsent entries.
         /// </summary>
-        /// <param name="sentRetention">How long to keep logs that have been sent (e.g. TimeSpan.FromDays(1)).</param>
-        /// <param name="unsentRetention">How long to keep logs not yet sent (e.g. TimeSpan.FromDays(7)).</param>
-        private void CleanupOldLogsCore(TimeSpan sentRetention, TimeSpan unsentRetention)
+        private void CleanupOldLogsCore(TimeSpan sentRetention, TimeSpan? unsentRetention)
         {
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
             ConfigurePragmas(conn);
 
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = $@"
+            using (var sentCommand = conn.CreateCommand())
+            {
+                sentCommand.CommandText = $@"
 DELETE FROM {TableName}
  WHERE Sent = 1
-   AND datetime(CreatedAt) <= datetime('now', $sentOffset);
+   AND datetime(CreatedAt) <= datetime('now', $sentOffset);";
+                sentCommand.Parameters.AddWithValue("$sentOffset", BuildSqliteOffset(sentRetention));
+                sentCommand.ExecuteNonQuery();
+            }
+
+            if (!unsentRetention.HasValue)
+                return;
+
+            using var unsentCommand = conn.CreateCommand();
+            unsentCommand.CommandText = $@"
 DELETE FROM {TableName}
  WHERE Sent = 0
    AND datetime(CreatedAt) <= datetime('now', $unsentOffset);";
-
-            cmd.Parameters.AddWithValue("$sentOffset", BuildSqliteOffset(sentRetention));
-            cmd.Parameters.AddWithValue("$unsentOffset", BuildSqliteOffset(unsentRetention));
-            cmd.ExecuteNonQuery();
+            unsentCommand.Parameters.AddWithValue("$unsentOffset", BuildSqliteOffset(unsentRetention.Value));
+            unsentCommand.ExecuteNonQuery();
         }
 
         /// <summary>
@@ -371,7 +513,13 @@ DELETE FROM {TableName}
             {
                 try
                 {
-                    ExecuteDatabaseWithRecovery(() => PersistLogEntryCore(entry));
+                    bool persisted = ExecuteDatabaseWithRecovery(() => PersistLogEntryCore(entry));
+                    if (!persisted)
+                    {
+                        RecordSpoolRejected();
+                        return;
+                    }
+
                     OnPersistedToSpool();
                     return;
                 }
@@ -406,7 +554,25 @@ DELETE FROM {TableName}
             };
         }
 
-        private void PersistLogEntryCore(LogEntry entry)
+        private bool PersistLogEntryCore(LogEntry entry)
+        {
+            int reclaimAttempts = 0;
+            while (true)
+            {
+                try
+                {
+                    PersistLogEntryOnceCore(entry);
+                    return true;
+                }
+                catch (SqliteException ex) when (IsFullError(ex) && reclaimAttempts++ < 8)
+                {
+                    if (!TryReclaimSpoolSpaceCore())
+                        return false;
+                }
+            }
+        }
+
+        private void PersistLogEntryOnceCore(LogEntry entry)
         {
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
@@ -437,6 +603,57 @@ VALUES
             tx.Commit();
         }
 
+        private bool TryReclaimSpoolSpaceCore()
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            conn.Open();
+            ConfigurePragmas(conn);
+            using var tx = conn.BeginTransaction();
+
+            int deletedSent = DeleteOldestSpoolRowsCore(conn, tx, sent: true, limit: 256);
+            int deletedUnsent = deletedSent == 0
+                ? DeleteOldestSpoolRowsCore(conn, tx, sent: false, limit: 64)
+                : 0;
+            tx.Commit();
+
+            if (deletedUnsent > 0)
+            {
+                Interlocked.Add(ref _spoolDroppedCount, deletedUnsent);
+                Volatile.Write(ref _pendingCountNeedsRefresh, 1);
+                if (Interlocked.Exchange(ref _spoolOverflowReported, 1) == 0)
+                {
+                    SelfLog.WriteLine(
+                        "SerilogRelay spool reached its {0}-byte budget; {1} oldest unsent events were evicted to keep disk usage bounded.",
+                        _maxSpoolBytes,
+                        deletedUnsent);
+                }
+            }
+
+            return deletedSent + deletedUnsent > 0;
+        }
+
+        private static int DeleteOldestSpoolRowsCore(
+            SqliteConnection connection,
+            SqliteTransaction transaction,
+            bool sent,
+            int limit)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = $@"
+DELETE FROM {TableName}
+ WHERE Id IN (
+     SELECT Id
+       FROM {TableName}
+      WHERE Sent = $sent
+      ORDER BY Id
+      LIMIT $limit
+ );";
+            command.Parameters.AddWithValue("$sent", sent ? 1 : 0);
+            command.Parameters.AddWithValue("$limit", limit);
+            return command.ExecuteNonQuery();
+        }
+
         private bool EventExistsCore(string eventId)
         {
             using var conn = new SqliteConnection(_connectionString);
@@ -450,33 +667,95 @@ VALUES
 
         private void OnPersistedToSpool()
         {
-            Interlocked.Increment(ref _pendingCount);
+            long pending = Interlocked.Exchange(ref _pendingCountNeedsRefresh, 0) != 0
+                ? ExecuteDatabaseWithRecovery(GetPendingCountCore)
+                : Interlocked.Increment(ref _pendingCount);
+
             lock (_signalLock)
             {
+                if (pending == 1)
+                    _pendingSinceUtc = DateTimeOffset.UtcNow;
+
                 _hasNewLogs = true;
             }
 
             MarkSpoolRecovered();
         }
 
+        private void RecordSpoolRejected()
+        {
+            long dropped = Interlocked.Increment(ref _spoolDroppedCount);
+            if (Interlocked.Exchange(ref _spoolOverflowReported, 1) != 0)
+                return;
+
+            SelfLog.WriteLine(
+                "SerilogRelay spool reached its {0}-byte budget; incoming events are being dropped because no retained rows can be reclaimed. Total spool-capacity loss: {1}.",
+                _maxSpoolBytes,
+                dropped);
+        }
+
         private void EnqueueEmergency(LogEntry entry, Exception exception)
         {
             MarkSpoolUnavailable(exception);
 
+            long payloadBytes = GetEmergencyPayloadBytes(entry);
+            if (!TryReserveEmergencyPayloadBytes(payloadBytes))
+            {
+                RecordEmergencyDrop();
+                return;
+            }
+
             Interlocked.Increment(ref _emergencyBufferedCount);
-            if (_emergencyChannel.Writer.TryWrite(entry))
+            if (_emergencyChannel.Writer.TryWrite(new EmergencyEntry(entry, payloadBytes)))
                 return;
 
             Interlocked.Decrement(ref _emergencyBufferedCount);
-            long dropped = Interlocked.Increment(ref _emergencyDroppedCount);
-            if (Interlocked.Exchange(ref _emergencyOverflowReported, 1) == 0)
-            {
-                SelfLog.WriteLine(
-                    "SerilogRelay emergency buffer is full ({0} events). Events are now being dropped; total dropped: {1}.",
-                    EmergencyBufferCapacity,
-                    dropped);
-            }
+            Interlocked.Add(ref _emergencyBufferedPayloadBytes, -payloadBytes);
+            RecordEmergencyDrop();
         }
+
+        private bool TryReserveEmergencyPayloadBytes(long payloadBytes)
+        {
+            long updated = Interlocked.Add(ref _emergencyBufferedPayloadBytes, payloadBytes);
+            if (updated <= _maxEmergencyBufferedPayloadBytes)
+                return true;
+
+            Interlocked.Add(ref _emergencyBufferedPayloadBytes, -payloadBytes);
+            return false;
+        }
+
+        private void RecordEmergencyDrop()
+        {
+            long dropped = Interlocked.Increment(ref _emergencyDroppedCount);
+            if (Interlocked.Exchange(ref _emergencyOverflowReported, 1) != 0)
+                return;
+
+            SelfLog.WriteLine(
+                "SerilogRelay emergency buffer limit reached ({0} events / {1} payload bytes). Events are now being dropped; total dropped: {2}.",
+                _emergencyBufferCapacity,
+                _maxEmergencyBufferedPayloadBytes,
+                dropped);
+        }
+
+        private static long GetEmergencyPayloadBytes(LogEntry entry)
+        {
+            return sizeof(long)
+                + sizeof(int)
+                + GetUtf8ByteCount(entry.EventId)
+                + GetUtf8ByteCount(entry.ApplicationId)
+                + GetUtf8ByteCount(entry.MachineId)
+                + GetUtf8ByteCount(entry.Timestamp)
+                + GetUtf8ByteCount(entry.Level)
+                + GetUtf8ByteCount(entry.RenderMessage)
+                + GetUtf8ByteCount(entry.MessageTemplate)
+                + GetUtf8ByteCount(entry.TraceId)
+                + GetUtf8ByteCount(entry.SpanId)
+                + GetUtf8ByteCount(entry.Exception)
+                + GetUtf8ByteCount(entry.Properties);
+        }
+
+        private static int GetUtf8ByteCount(string? value)
+            => value is null ? 0 : Encoding.UTF8.GetByteCount(value);
 
         private async Task EmergencyLoopAsync()
         {
@@ -486,8 +765,9 @@ VALUES
             {
                 while (await _emergencyChannel.Reader.WaitToReadAsync(token).ConfigureAwait(false))
                 {
-                    while (_emergencyChannel.Reader.TryRead(out LogEntry? entry))
+                    while (_emergencyChannel.Reader.TryRead(out EmergencyEntry? bufferedEntry))
                     {
+                        LogEntry entry = bufferedEntry.Entry;
                         bool completed = false;
                         while (!completed)
                         {
@@ -495,9 +775,18 @@ VALUES
 
                             try
                             {
-                                ExecuteDatabaseWithRecovery(() => PersistLogEntryCore(entry));
+                                bool persisted = ExecuteDatabaseWithRecovery(() => PersistLogEntryCore(entry));
+                                if (!persisted)
+                                {
+                                    MarkSpoolRecovered();
+                                    RecordSpoolRejected();
+                                    CompleteEmergencyEntry(bufferedEntry);
+                                    completed = true;
+                                    continue;
+                                }
+
                                 OnPersistedToSpool();
-                                CompleteEmergencyEntry();
+                                CompleteEmergencyEntry(bufferedEntry);
                                 completed = true;
                                 continue;
                             }
@@ -510,7 +799,7 @@ VALUES
                                     if (ExecuteDatabaseWithRecovery(() => EventExistsCore(entry.EventId)))
                                     {
                                         OnPersistedToSpool();
-                                        CompleteEmergencyEntry();
+                                        CompleteEmergencyEntry(bufferedEntry);
                                         completed = true;
                                         continue;
                                     }
@@ -526,14 +815,13 @@ VALUES
                                     new List<LogEntry> { entry },
                                     token).ConfigureAwait(false))
                             {
-                                CompleteEmergencyEntry();
+                                CompleteEmergencyEntry(bufferedEntry);
                                 completed = true;
                                 continue;
                             }
 
                             await Task.Delay(EmergencyRetryDelayMs, token).ConfigureAwait(false);
                         }
-
                     }
                 }
             }
@@ -542,9 +830,10 @@ VALUES
             }
         }
 
-        private void CompleteEmergencyEntry()
+        private void CompleteEmergencyEntry(EmergencyEntry entry)
         {
             Interlocked.Decrement(ref _emergencyBufferedCount);
+            Interlocked.Add(ref _emergencyBufferedPayloadBytes, -entry.PayloadBytes);
         }
 
         private void MarkSpoolUnavailable(Exception exception)
@@ -566,47 +855,132 @@ VALUES
             SelfLog.WriteLine("SerilogRelay local spool recovered; durable persistence resumed.");
         }
 
-        // Continuously send stored logs to the HTTP endpoint
+        // Continuously send stored logs to the HTTP endpoint.
         private async Task SenderLoopAsync()
         {
-            var token = _cts.Token;
+            CancellationToken token = _cts.Token;
             while (!token.IsCancellationRequested)
             {
                 try
                 {
                     long pending = Interlocked.Read(ref _pendingCount);
+                    bool startupDrain = pending > 0 && Volatile.Read(ref _startupBacklogPending) != 0;
+                    bool partialBatchDue = pending > 0
+                        && (startupDrain || IsMaximumBatchWaitElapsed(DateTimeOffset.UtcNow));
+                    bool shouldAttempt = pending >= _minBatchSize || partialBatchDue;
+                    bool deliveryOpportunityCompleted = pending == 0;
                     bool didWork = false;
 
-                    // only send when we've hit the minimum threshold
-                    if (pending >= _minBatchSize)
-                        didWork = await ProcessPendingAsync(ignoreMinBatch: false, token);
-
-                    // backoff or reset interval
-                    if (!didWork)
-                        _currentInterval = TimeSpan.FromMilliseconds(
-                            Math.Min(_currentInterval.TotalMilliseconds * 2, _maxInterval.TotalMilliseconds));
-                    else if (pending > _maxBatchSize * 5)
-                        _currentInterval = _minInterval;
-                    else
-                        _currentInterval = _baseInterval;
-
-                    // wait or break early on new logs
-                    var delay = Task.Delay(_currentInterval, token);
-                    while (!token.IsCancellationRequested)
+                    if (shouldAttempt)
                     {
-                        lock (_signalLock)
-                        {
-                            if (_hasNewLogs) { _hasNewLogs = false; break; }
-                        }
-                        if (await Task.WhenAny(delay, Task.Delay(100, token)) == delay)
-                            break;
+                        didWork = await ProcessPendingAsync(
+                            ignoreMinBatch: partialBatchDue,
+                            token).ConfigureAwait(false);
+                        deliveryOpportunityCompleted = true;
+
+                        if (startupDrain)
+                            Volatile.Write(ref _startupBacklogPending, 0);
                     }
+
+                    if (deliveryOpportunityCompleted)
+                        ApplyDeferredUnsentCleanup();
+
+                    pending = Interlocked.Read(ref _pendingCount);
+                    TimeSpan retryDelay = _retryGate.GetDelay(DateTimeOffset.UtcNow);
+                    if (retryDelay > TimeSpan.Zero)
+                    {
+                        await Task.Delay(retryDelay, token).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    TimeSpan delay = GetSenderDelay(pending, didWork, DateTimeOffset.UtcNow);
+                    await WaitForSenderDelayAsync(delay, token).ConfigureAwait(false);
                 }
-                catch (OperationCanceledException) { break; }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    break;
+                }
                 catch (Exception ex)
                 {
                     SelfLog.WriteLine("Error in sender loop: {0}", ex.Message);
-                    await Task.Delay(_baseInterval, token);
+                    await Task.Delay(_baseInterval, token).ConfigureAwait(false);
+                }
+            }
+        }
+
+        private bool IsMaximumBatchWaitElapsed(DateTimeOffset now)
+        {
+            lock (_signalLock)
+            {
+                if (!_pendingSinceUtc.HasValue)
+                {
+                    _pendingSinceUtc = now;
+                    return false;
+                }
+
+                return now - _pendingSinceUtc.Value >= _maximumBatchWait;
+            }
+        }
+
+        private TimeSpan GetSenderDelay(long pending, bool didWork, DateTimeOffset now)
+        {
+            if (pending > 0 && pending < _minBatchSize)
+            {
+                lock (_signalLock)
+                {
+                    if (_pendingSinceUtc.HasValue)
+                    {
+                        TimeSpan remaining = _maximumBatchWait - (now - _pendingSinceUtc.Value);
+                        if (remaining <= TimeSpan.Zero)
+                            return TimeSpan.FromMilliseconds(1);
+                        if (remaining < _baseInterval)
+                            return remaining;
+                    }
+                }
+            }
+
+            if (didWork && pending > _maxBatchSize * 5)
+                return _minimumCatchUpInterval;
+
+            return _baseInterval;
+        }
+
+        private async Task WaitForSenderDelayAsync(TimeSpan delay, CancellationToken token)
+        {
+            Task deadline = Task.Delay(delay, token);
+            while (!token.IsCancellationRequested)
+            {
+                lock (_signalLock)
+                {
+                    if (_hasNewLogs)
+                    {
+                        _hasNewLogs = false;
+                        return;
+                    }
+                }
+
+                if (await Task.WhenAny(deadline, Task.Delay(100, token)).ConfigureAwait(false) == deadline)
+                    return;
+            }
+        }
+
+        private void ApplyDeferredUnsentCleanup()
+        {
+            if (Interlocked.Exchange(ref _startupUnsentCleanupPending, 0) == 0
+                || !_unsentRetention.HasValue)
+            {
+                return;
+            }
+
+            ExecuteDatabaseWithRecovery(() =>
+                CleanupOldLogsCore(_sentRetention, _unsentRetention));
+            Interlocked.Exchange(ref _pendingCount, ExecuteDatabaseWithRecovery(GetPendingCountCore));
+
+            if (Interlocked.Read(ref _pendingCount) == 0)
+            {
+                lock (_signalLock)
+                {
+                    _pendingSinceUtc = null;
                 }
             }
         }
@@ -628,26 +1002,41 @@ VALUES
             int sentCount = 0, batches = 0;
             while (Interlocked.Read(ref _pendingCount) > 0 && batches++ < 20 && !token.IsCancellationRequested)
             {
-                var entries = await LoadUnsentAsync(_maxBatchSize, token);
-                if (entries.Count == 0) break;
+                var entries = await LoadUnsentAsync(_maxBatchSize, token).ConfigureAwait(false);
+                if (entries.Count == 0)
+                    break;
 
-                // only dispatch batches meeting the minimum size unless forced
                 if (!ignoreMinBatch && entries.Count < _minBatchSize)
                     break;
 
-                if (!await SendBatchAsync(entries, token)) break;
-                await MarkAsSentAsync(entries, token);
+                if (!await SendBatchAsync(entries, token).ConfigureAwait(false))
+                    break;
 
-                Interlocked.Exchange(ref _pendingCount, ExecuteDatabaseWithRecovery(GetPendingCountCore));
+                await MarkAsSentAsync(entries, token).ConfigureAwait(false);
+
+                long remaining = ExecuteDatabaseWithRecovery(GetPendingCountCore);
+                Interlocked.Exchange(ref _pendingCount, remaining);
+                if (remaining == 0)
+                {
+                    lock (_signalLock)
+                    {
+                        _pendingSinceUtc = null;
+                    }
+                }
+
                 sentCount += entries.Count;
-                await Task.Delay(100, token);
+                await Task.Delay(100, token).ConfigureAwait(false);
             }
+
             return sentCount > 0;
         }
 
-        // Send one batch of logs over HTTP using AOT-compatible source-gen context
+        // Send one batch of logs over HTTP using AOT-compatible source-gen context.
         private async Task<bool> SendBatchAsync(List<LogEntry> entries, CancellationToken token)
         {
+            if (!_retryGate.TryAcquire(DateTimeOffset.UtcNow))
+                return false;
+
             var payload = new LogBatchPayload
             {
                 ProtocolVersion = 1,
@@ -657,22 +1046,38 @@ VALUES
                 Logs = entries
             };
             var json = JsonSerializer.Serialize(payload, LogBatchJsonContext.Default.LogBatchPayload);
-            using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
             try
             {
-                using var resp = await _httpClient.PostAsync(_endpoint, content, token);
-                if (resp.IsSuccessStatusCode) return true;
-                if ((int)resp.StatusCode == 429 && resp.Headers.RetryAfter?.Delta != null)
-                    _currentInterval = resp.Headers.RetryAfter.Delta.Value;
+                using var resp = await _httpClient.PostAsync(_endpoint, content, token).ConfigureAwait(false);
+                if (resp.IsSuccessStatusCode)
+                {
+                    _retryGate.RecordSuccess();
+                    return true;
+                }
+
+                DateTimeOffset? retryAfter = null;
+                if ((int)resp.StatusCode == 429 && resp.Headers.RetryAfter is not null)
+                {
+                    if (resp.Headers.RetryAfter.Delta.HasValue)
+                        retryAfter = DateTimeOffset.UtcNow + resp.Headers.RetryAfter.Delta.Value;
+                    else if (resp.Headers.RetryAfter.Date.HasValue)
+                        retryAfter = resp.Headers.RetryAfter.Date.Value;
+                }
+
+                _retryGate.RecordFailure(DateTimeOffset.UtcNow, retryAfter);
                 SelfLog.WriteLine("HTTP relay returned status code {0}.", (int)resp.StatusCode);
                 return false;
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
+                _retryGate.CancelAttempt();
                 throw;
             }
             catch (Exception ex)
             {
+                _retryGate.RecordFailure(DateTimeOffset.UtcNow, retryAfter: null);
                 SelfLog.WriteLine("HTTP relay request failed: {0}", ex.Message);
                 return false;
             }
@@ -759,15 +1164,38 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             cmd.ExecuteNonQuery();
         }
 
-        // Apply durable settings to SQLite connection
-        private static void ConfigurePragmas(SqliteConnection conn)
+        // Apply durable settings and the configured page budget to each SQLite connection.
+        private void ConfigurePragmas(SqliteConnection conn)
         {
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
 PRAGMA journal_mode = WAL;
 PRAGMA synchronous = FULL;
-PRAGMA busy_timeout = 5000;";
-            cmd.ExecuteNonQuery();
+PRAGMA busy_timeout = 5000;
+PRAGMA wal_autocheckpoint = 16;";
+                cmd.ExecuteNonQuery();
+            }
+
+            long pageSize;
+            using (var pageSizeCommand = conn.CreateCommand())
+            {
+                pageSizeCommand.CommandText = "PRAGMA page_size;";
+                pageSize = Convert.ToInt64(
+                    pageSizeCommand.ExecuteScalar(),
+                    CultureInfo.InvariantCulture);
+            }
+
+            long maxPages = Math.Max(1L, _maxSpoolBytes / pageSize);
+            long journalSizeLimit = Math.Max(
+                pageSize * 8L,
+                Math.Min(_maxSpoolBytes / 32L, 8L * 1024L * 1024L));
+
+            using var budgetCommand = conn.CreateCommand();
+            budgetCommand.CommandText = FormattableString.Invariant($@"
+PRAGMA max_page_count = {maxPages};
+PRAGMA journal_size_limit = {journalSizeLimit};");
+            budgetCommand.ExecuteNonQuery();
         }
 
         private T ExecuteDatabaseWithRecovery<T>(Func<T> operation)
@@ -1020,6 +1448,9 @@ VALUES
             => ex.SqliteErrorCode == SQLitePCL.raw.SQLITE_CORRUPT
                || ex.SqliteErrorCode == SQLitePCL.raw.SQLITE_NOTADB;
 
+        private static bool IsFullError(SqliteException ex)
+            => ex.SqliteErrorCode == SQLitePCL.raw.SQLITE_FULL;
+
         // Detect SQLite busy or locked errors
         private static bool IsBusyError(SqliteException ex)
             => ex.SqliteErrorCode == SQLitePCL.raw.SQLITE_BUSY
@@ -1087,10 +1518,11 @@ VALUES
 
                 if (!string.IsNullOrEmpty(_endpoint))
                 {
+                    using var shutdownCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                    CancellationToken shutdownToken = shutdownCts.Token;
                     try
                     {
-                        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(3);
-                        while (DateTime.UtcNow < deadline)
+                        while (!shutdownToken.IsCancellationRequested)
                         {
                             long count = ExecuteDatabaseWithRecovery(GetPendingCountCore);
                             if (count == 0)
@@ -1098,10 +1530,13 @@ VALUES
 
                             bool didWork = await ProcessPendingAsync(
                                 ignoreMinBatch: true,
-                                CancellationToken.None).ConfigureAwait(false);
+                                shutdownToken).ConfigureAwait(false);
                             if (!didWork)
-                                await Task.Delay(100).ConfigureAwait(false);
+                                await Task.Delay(100, shutdownToken).ConfigureAwait(false);
                         }
+                    }
+                    catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested)
+                    {
                     }
                     catch (Exception ex)
                     {
@@ -1117,6 +1552,19 @@ VALUES
                 _cts.Dispose();
                 _databaseGate.Dispose();
             }
+        }
+
+        private sealed class EmergencyEntry
+        {
+            internal EmergencyEntry(LogEntry entry, long payloadBytes)
+            {
+                Entry = entry;
+                PayloadBytes = payloadBytes;
+            }
+
+            internal LogEntry Entry { get; }
+
+            internal long PayloadBytes { get; }
         }
 
         private static string SerializeProperties(LogEvent logEvent)

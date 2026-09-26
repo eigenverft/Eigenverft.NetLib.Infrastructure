@@ -859,7 +859,7 @@ LIMIT 1;";
 
         [TestMethod]
         [DoNotParallelize]
-        public async Task SendBatchHandlesServerErrorsRetryAfterAndConnectionFailure()
+        public async Task SendBatchUsesSharedRetryGateAndHandlesHttpFailures()
         {
             string directory = CreateTemporaryDirectory();
             string databasePath = Path.Combine(directory, "relay.db");
@@ -873,6 +873,13 @@ LIMIT 1;";
             {
                 listener.Start();
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+                var retryOptions = new RetryOptions
+                {
+                    InitialDelay = TimeSpan.FromMilliseconds(200),
+                    Multiplier = 1d,
+                    MaximumDelay = TimeSpan.FromMilliseconds(200),
+                    JitterRatio = 0d,
+                };
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
@@ -881,12 +888,26 @@ LIMIT 1;";
                     maxBatchItems: 10,
                     TimeSpan.FromMilliseconds(20),
                     TimeSpan.FromDays(1),
-                    TimeSpan.FromDays(3));
+                    TimeSpan.FromDays(3),
+                    retryOptions: retryOptions);
+
+                RetryGate gate = GetPrivateField<RetryGate>(sink, "_retryGate");
 
                 Task<string> serverErrorRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.InternalServerError);
                 Assert.IsFalse(await InvokeSendBatchAsync(sink, entries, CancellationToken.None));
                 string firstAttemptBody = await serverErrorRequest.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.AreEqual(1, gate.ConsecutiveFailures);
                 StringAssert.Contains(selfLog.ToString(), "HTTP relay returned status code 500.");
+
+                Assert.IsFalse(await InvokeSendBatchAsync(sink, entries, CancellationToken.None));
+                Assert.IsFalse(listener.Pending());
+
+                await Task.Delay(250);
+                Task<string> successRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
+                Assert.IsTrue(await InvokeSendBatchAsync(sink, entries, CancellationToken.None));
+                _ = await successRequest.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.AreEqual(0, gate.ConsecutiveFailures);
+                Assert.IsNull(gate.NextAttemptAt);
 
                 using (var cancellation = new CancellationTokenSource())
                 {
@@ -904,17 +925,37 @@ LIMIT 1;";
                     Assert.IsNotNull(cancellationException);
                 }
 
-                Task<string> throttledWithoutRetryAfter = ReceiveSingleRequestAsync(listener, HttpStatusCode.TooManyRequests);
+                Task<string> throttledWithoutRetryAfter =
+                    ReceiveSingleRequestAsync(listener, HttpStatusCode.TooManyRequests);
                 Assert.IsFalse(await InvokeSendBatchAsync(sink, entries, CancellationToken.None));
                 _ = await throttledWithoutRetryAfter.WaitAsync(TimeSpan.FromSeconds(5));
 
+                await Task.Delay(250);
+                DateTimeOffset retryAfterStarted = DateTimeOffset.UtcNow;
                 Task<string> retryRequest = ReceiveSingleRequestAsync(
                     listener,
                     HttpStatusCode.TooManyRequests,
                     "Retry-After: 1\r\n");
                 Assert.IsFalse(await InvokeSendBatchAsync(sink, entries, CancellationToken.None));
                 string retryAttemptBody = await retryRequest.WaitAsync(TimeSpan.FromSeconds(5));
-                Assert.AreEqual(TimeSpan.FromSeconds(1), GetPrivateField<TimeSpan>(sink, "_currentInterval"));
+                Assert.IsNotNull(gate.NextAttemptAt);
+                Assert.IsTrue(gate.NextAttemptAt.Value >= retryAfterStarted.AddMilliseconds(900));
+
+                gate.RecordSuccess();
+                DateTimeOffset retryAfterDate = DateTimeOffset.UtcNow.AddSeconds(2);
+                string retryAfterDateHeader = retryAfterDate.ToString("R", CultureInfo.InvariantCulture);
+                DateTimeOffset expectedRetryAfterDate = DateTimeOffset.ParseExact(
+                    retryAfterDateHeader,
+                    "R",
+                    CultureInfo.InvariantCulture);
+                Task<string> dateRetryRequest = ReceiveSingleRequestAsync(
+                    listener,
+                    HttpStatusCode.TooManyRequests,
+                    $"Retry-After: {retryAfterDateHeader}\r\n");
+                Assert.IsFalse(await InvokeSendBatchAsync(sink, entries, CancellationToken.None));
+                _ = await dateRetryRequest.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.IsNotNull(gate.NextAttemptAt);
+                Assert.IsTrue(gate.NextAttemptAt.Value >= expectedRetryAfterDate);
 
                 using JsonDocument firstAttempt = JsonDocument.Parse(firstAttemptBody);
                 using JsonDocument retryAttempt = JsonDocument.Parse(retryAttemptBody);
@@ -1208,7 +1249,7 @@ END;";
                     GetPrivateField<long>(sink, "_emergencyDroppedCount"));
                 StringAssert.Contains(
                     selfLog.ToString(),
-                    "emergency buffer is full (16384 events)");
+                    "emergency buffer limit reached (16384 events / 67108864 payload bytes)");
             }
             finally
             {
