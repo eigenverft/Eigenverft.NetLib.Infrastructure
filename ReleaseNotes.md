@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `147b839`, `9ff5db1`, `5d8d9e3` — Harden and finalize the pre-release SerilogRelay surface: correct retention/SelfLog/property JSON behavior, rename the public API to `SerilogRelaySink` / `.WriteTo.SerilogRelay(...)`, make disposal idempotent across sync/async callers, and add protocol-v1 stable `EventId` delivery with legacy-spool migration and retry-safe identity.
+
 - `7f99054`, `310ce0b`, `5fe100a` — Add the `Eigenverft.NetLib.SerilogRelay` library scaffold in the current multi-library layout, migrate the prior SerilogCentralLoggingSink revival intent and placeholder stubs, use the current Eigenverft NuGet icon/metadata, and keep `REVIVAL.md` as solution-level repository documentation rather than NuGet package content.
 
 - `b4327db` — WP2 adds host-agnostic IP normalization and CIDR matching with parsed-network/list-match caches, plus one shared configuration-binding primitive for collection defaults. The legacy RequestFilters project remains unchanged.
