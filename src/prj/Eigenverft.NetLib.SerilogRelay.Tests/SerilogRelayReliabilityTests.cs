@@ -735,6 +735,60 @@ END;";
         }
 
         [TestMethod]
+        public async Task InMemorySpoolDoesNotAcquireFileBackedLease()
+        {
+            await using var sink = new SerilogRelaySink(
+                "Data Source=:memory:",
+                endpoint: null,
+                new SerilogRelayOptions());
+
+            Assert.IsNull(GetPrivateField<FileStream?>(sink, "_spoolLease"));
+        }
+
+        [TestMethod]
+        public async Task FileBackedSpoolAllowsOnlyOneActiveSinkAndReleasesLeaseOnDispose()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                var first = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                try
+                {
+                    InvalidOperationException conflict = Assert.ThrowsExactly<InvalidOperationException>(
+                        () => new SerilogRelaySink(
+                            connectionString,
+                            endpoint: null,
+                            new SerilogRelayOptions()));
+
+                    StringAssert.Contains(
+                        conflict.Message,
+                        "exactly one active SerilogRelay sink per spool path");
+                }
+                finally
+                {
+                    await first.DisposeAsync();
+                }
+
+                await using var reopened = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                Assert.AreEqual(0L, GetUnsentCount(connectionString));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
         public async Task ExistingSpoolAboveNewBudgetIsNotPurgedAtStartup()
         {
             string directory = CreateTemporaryDirectory();

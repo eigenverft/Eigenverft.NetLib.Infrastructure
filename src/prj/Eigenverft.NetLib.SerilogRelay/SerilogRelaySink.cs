@@ -225,6 +225,7 @@ CREATE TABLE IF NOT EXISTS {0} (
 
         private readonly string _connectionString;
         private readonly string? _databasePath;
+        private readonly FileStream? _spoolLease;
         private readonly SemaphoreSlim _databaseGate = new SemaphoreSlim(1, 1);
         private readonly string? _endpoint;
         private readonly string _applicationId;
@@ -312,6 +313,7 @@ CREATE TABLE IF NOT EXISTS {0} (
 
             _connectionString = connectionString;
             _databasePath = ResolveDatabasePath(connectionString);
+            _spoolLease = AcquireSpoolLease(_databasePath);
             _endpoint = endpoint;
             _applicationId = LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(applicationId);
             _machineId = ResolveMachineId();
@@ -625,6 +627,7 @@ CREATE TABLE IF NOT EXISTS {0} (
             }
             finally
             {
+                _spoolLease?.Dispose();
                 _httpClient.Dispose();
                 _cts.Dispose();
                 _databaseGate.Dispose();

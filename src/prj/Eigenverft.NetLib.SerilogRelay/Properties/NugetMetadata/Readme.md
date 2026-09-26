@@ -1,18 +1,19 @@
 # Eigenverft.NetLib.SerilogRelay
 
-Durable Serilog relay for forwarding application logs over HTTP while keeping a local persistent SQLite spool.
+Durable Serilog relay for forwarding application logs over HTTP while keeping a bounded local
+persistent spool.
 
-## Current implementation
+## Quick start
 
-The package contains `SerilogRelaySink`, functionally migrated from the AxonInsight `SQLiteSinkHttp` implementation while retaining the durable sender behavior. Before the first package release, the public API was renamed to match the package purpose.
-
-Current minimal Serilog configuration:
+The normal configuration remains intentionally small:
 
 ```csharp
 .WriteTo.SerilogRelay("https://logging.example/api/v1/logs")
 ```
 
-TLS uses normal .NET/platform certificate validation by default. Trusted private CAs therefore work normally when installed in the operating-system trust store. For deliberately untrusted/self-signed development or private infrastructure, certificate validation can be bypassed explicitly:
+The relay uses normal .NET/platform TLS certificate validation by default.
+
+For deliberately untrusted/self-signed development infrastructure only:
 
 ```csharp
 .WriteTo.SerilogRelay(
@@ -20,17 +21,46 @@ TLS uses normal .NET/platform certificate validation by default. Trusted private
     dangerousAcceptAnyServerCertificate: true)
 ```
 
-`dangerousAcceptAnyServerCertificate: true` disables all server-certificate validation for relay HTTP requests and should only be enabled deliberately.
+`dangerousAcceptAnyServerCertificate: true` disables server-certificate validation. It does
+not authenticate the receiver and should not be used as a production trust mechanism.
 
-With no spool overrides, the relay resolves its persistent SQLite spool automatically from `Environment.SpecialFolder.LocalApplicationData`:
+## Supported v1 deployment scope
+
+Version 1 supports exactly **one active SerilogRelay sink per file-backed spool path**.
+
+The sink holds an exclusive lease for the lifetime of the spool. A second active sink/process
+using the same path is rejected immediately. Multiple processes are supported when they use
+distinct spool paths; shared-spool multi-process sender coordination is not a v1 feature.
+
+Bearer authentication is not implemented yet. Until it is added, use the receiver only inside
+a trusted boundary:
+
+- loopback/local-machine;
+- a private/trusted network;
+- or behind a trusted reverse proxy/gateway that controls external access.
+
+Do not expose an unauthenticated CentralLogging ingestion endpoint directly to an untrusted or
+public network.
+
+`ApplicationId`, `MachineId`, `ProcessId`, and other payload identity fields are
+diagnostic/protocol metadata, not authenticated sender identity.
+
+See repository-level `RELEASE-READINESS.md` for the current release gates and operating
+contract.
+
+## Local storage
+
+Without spool overrides, the relay resolves its persistent local spool below
+`Environment.SpecialFolder.LocalApplicationData`:
 
 ```text
 <Eigenverft local application data>/Eigenverft/SerilogRelay/<ApplicationId>/SerilogRelay.db
 ```
 
-`ApplicationId` defaults to the entry-assembly name (falling back to the current AppDomain friendly name) and is normalized for safe directory use. The SQLite table is internal and fixed as `SerilogRelayEvents`.
+`ApplicationId` defaults to the entry-assembly name, falling back to the current AppDomain
+friendly name, and is normalized for safe directory use.
 
-Applications that need storage control can override the directory, filename, and application identity independently:
+Storage location and application identity can be overridden:
 
 ```csharp
 .WriteTo.SerilogRelay(
@@ -40,60 +70,112 @@ Applications that need storage control can override the directory, filename, and
     applicationId: "MyWorker")
 ```
 
-A relative `spoolDirectory` is resolved below the application-specific default relay directory; an absolute directory is used as supplied. `spoolFileName` is filename-only. Calling `.WriteTo.SerilogRelay()` with no endpoint keeps the same durable local spool without starting the HTTP sender.
+A relative `spoolDirectory` is resolved below the application-specific default relay
+directory; an absolute directory is used as supplied. `spoolFileName` is filename-only.
 
-The migrated relay currently provides:
+Calling `.WriteTo.SerilogRelay()` with no endpoint keeps durable local storage enabled without
+starting the HTTP sender.
 
-- durable SQLite persistence before any network delivery attempt in normal operation;
-- bounded emergency fallback when the local spool cannot accept an event: an internal 16384-event `System.Threading.Channels` buffer retains already-materialized events in memory, retries SQLite first, and can rescue them directly to the configured HTTP endpoint while local persistence remains unavailable;
-- fire-and-forget client defaults that automatically choose the application identity, spool directory, spool filename, and internal table name;
-- automatic per-event producer identity: `ApplicationId`, `MachineId`, and `ProcessId` are persisted with each new spool row before delivery so shared-spool multi-process producers remain distinguishable after retries or sender handoff;
-- `MachineId` is a stable SHA-256 platform fingerprint derived locally from the system/platform UUID (SMBIOS on Windows, DMI on Linux, IOPlatformUUID on macOS). The raw platform UUID and `MachineName` are not transmitted by the relay;
-- `Sent = 0` pending rows that survive process restarts and network outages;
-- a stable per-event `EventId` persisted in the local spool before delivery and reused across retries/restarts;
-- the first supported spool schema requires `EventId`, `ApplicationId`, and `ProcessId` on every new row; `MachineId` remains optional when the platform fingerprint is unavailable;
-- an independent background sender that loads and posts pending rows in batches;
-- protocol version `1` batches for `Eigenverft.Service.CentralLogging`, with `BatchId` used as per-attempt correlation and `EventId` as the idempotency key;
-- successful-delivery marking with `Sent = 1`;
-- configurable minimum and maximum batch sizes;
-- retention cleanup for sent and unsent rows;
-- SQLite WAL mode, `synchronous=FULL`, busy timeout, and busy/locked retry handling;
-- explicit SQLite corruption handling for `SQLITE_CORRUPT` / `SQLITE_NOTADB`: the file-backed spool is quarantined under `corrupted/<quarantine-id>/`, any DB/WAL/SHM files still present are moved together, `corruption.json` is written best-effort, a fresh spool is created, and a durable `spool_corrupted` event is inserted before normal logging resumes;
-- non-corruption spool failures (for example full/open/I/O/storage failures) enter a volatile degraded mode instead of immediately dropping the event; the Channel is bounded so a sustained storage failure cannot grow RAM without limit, and overflow/unresolved shutdown loss is reported through Serilog `SelfLog`;
-- adaptive sender delay and HTTP `429 Retry-After` handling;
-- normal platform TLS certificate validation by default, with explicit `dangerousAcceptAnyServerCertificate: true` opt-in for deliberately untrusted/private development infrastructure;
-- a shutdown flush that attempts to send remaining pending rows;
-- idempotent shared sync/async disposal: concurrent/repeated disposal joins one shutdown operation and new events are rejected once shutdown begins;
-- Serilog `SelfLog` diagnostics for local persistence and sender-loop failures.
+## Reliability options
+
+Most applications should use defaults. Advanced callers can use `SerilogRelayOptions`:
+
+```csharp
+var options = new SerilogRelayOptions
+{
+    LocalStorage =
+    {
+        MaxBytes = 64L * 1024L * 1024L,
+        SentRetention = TimeSpan.FromDays(1),
+        UnsentMaxAge = null
+    },
+    Delivery =
+    {
+        MinimumBatchEvents = 20,
+        MaximumBatchEvents = 100,
+        PollInterval = TimeSpan.FromSeconds(5),
+        MaximumBatchWait = TimeSpan.FromSeconds(5)
+    },
+    EndpointRetry =
+    {
+        InitialDelay = TimeSpan.FromSeconds(5),
+        Multiplier = 2,
+        MaximumDelay = TimeSpan.FromMinutes(5),
+        JitterRatio = 0.20,
+        RespectRetryAfter = true
+    },
+    EmergencyMemoryBuffer =
+    {
+        MaxBufferedEvents = 16_384,
+        MaxBufferedPayloadBytes = 64L * 1024L * 1024L
+    }
+};
+
+.WriteTo.SerilogRelay(
+    endpoint: "https://logging.example/api/v1/logs",
+    options: options)
+```
+
+## Current behavior
+
+The relay currently provides:
+
+- durable local persistence before normal network delivery;
+- a 64 MiB default local-storage budget;
+- sent-row retention of one day by default;
+- no default age expiry for unsent backlog;
+- low-volume delivery after `MaximumBatchWait`, even below the preferred minimum batch size;
+- immediate startup delivery opportunity for existing backlog;
+- stable per-event `EventId` values reused across retries/restarts;
+- protocol version `1` batches for `Eigenverft.Service.CentralLogging`;
+- producer metadata `ApplicationId`, pseudonymous `MachineId`, and `ProcessId`;
+- one shared exponential endpoint `RetryGate` with jitter and HTTP `Retry-After`;
+- immediate retry-state reset after successful delivery;
+- a bounded Emergency memory fallback for local-persistence failure only;
+- Emergency bounds of 16384 events and 64 MiB serialized payload bytes by default;
+- direct Emergency HTTP rescue using the same endpoint RetryGate;
+- explicit local-spool capacity loss diagnostics rather than spilling capacity rejection into
+  Emergency RAM;
+- protection against one individually oversized event evicting existing unsent backlog;
+- restart-safe durable backlog;
+- contained corruption recovery for the current SQLite storage implementation;
+- a real bounded shutdown delivery deadline;
+- idempotent sync/async disposal;
+- Serilog `SelfLog` diagnostics for persistence/delivery failures.
+
+A normal endpoint outage with healthy local storage does not consume Emergency memory.
 
 The implementation targets `net8.0` and `net10.0`.
 
-## Migration origin
+## Receiver contract
 
-This package continues the sender-side logging revival originally scaffolded as `Eigenverft.NetLib.SerilogCentralLoggingSink`.
+The matched receiver is `Eigenverft.Service.CentralLogging` at:
 
-The functional implementation was migrated from the discontinued AxonInsight infrastructure. The archived source remains the behavioral reference:
+```text
+POST /api/v1/logs
+```
 
-`personal-archive-issues/Discontinued/AxonInsight/src/AxonInsight.Client/AxonInsight.Installer/AxonInsight.Installer.Projects/AxonInsight.Library/Extensions/LoggerSinkConfigurationExtensions/SQLiteSinkHttp.cs`
+The relay/receiver pair provides at-least-once transport with idempotent receiver storage:
 
-Historical application call sites include:
+- `EventId` is the stable idempotency key;
+- `BatchId` is per-attempt correlation metadata;
+- retries with the same event identity/content do not create duplicate stored events.
 
-`personal-archive-issues/Discontinued/AxonInsight/src/AxonInsight.Client/AxonInsight.Installer/AxonInsight.Installer.Projects/AxonInsight.Initializer/Program.cs`
+## Known follow-up
 
-The matching receiver is being revived separately as:
+The remaining intentional follow-up areas are:
 
-`Eigenverft.Service.CentralLogging`
+- bearer authentication for direct remote/external ingestion;
+- permanent receiver-rejection isolation/dead-letter behavior;
+- a richer health/status surface beyond `SelfLog`;
+- optional broader multi-process coordination only if shared-spool operation becomes a real
+  requirement.
 
-## Current inherited limitations
+These are not implied capabilities of the current v1 contract.
 
-The current implementation intentionally defers the remaining security/operations redesign items. In particular:
+## Historical origin
 
-- bearer-token authentication is not implemented yet;
-- each HTTP attempt receives a newly generated `BatchId`; this is intentional correlation metadata, while stable `EventId` values provide retry idempotency;
-- operational diagnostics remain primarily Serilog `SelfLog` rather than a dedicated relay health surface.
-- the default application-level spool can be shared by parallel processes. SQLite and receiver-side `EventId` idempotency preserve correctness, but sender claiming is not yet coordinated across processes, so parallel senders may temporarily issue duplicate HTTP attempts; corruption quarantine is also best-effort if another process still holds the spool files open.
-
-- the emergency buffer's fixed 16384-event capacity is a technical safety limit, not the final limits model. File-spool byte/event caps, memory byte/age budgets, oversized individual events, and behavior for prolonged endpoint outages (for example 1h/12h/1d/7d) remain a separate design pass. A healthy local spool continues to absorb normal endpoint outages without using emergency memory.
-These are known follow-up areas, not accidental omissions from the migration.
-
-The longer-term preservation and redesign notes are maintained in the repository at `src/sln/Eigenverft.NetLib.SerilogRelay/REVIVAL.md`.
+The package preserves the useful durable-first behavior of the discontinued AxonInsight
+`SQLiteSinkHttp` implementation. Historical code is background/reference material; current
+behavior is defined by the package tests and the repository-level `RELIABILITY.md` and
+`RELEASE-READINESS.md` documents.

@@ -581,6 +581,32 @@ VALUES
             File.Move(sourcePath, targetPath);
         }
 
+        private static FileStream? AcquireSpoolLease(string? databasePath)
+        {
+            if (string.IsNullOrWhiteSpace(databasePath))
+                return null;
+
+            string directory = Path.GetDirectoryName(databasePath)!;
+            if (!Directory.Exists(directory))
+                return null;
+
+            string leasePath = databasePath + ".lock";
+            try
+            {
+                return new FileStream(
+                    leasePath,
+                    FileMode.OpenOrCreate,
+                    FileAccess.ReadWrite,
+                    FileShare.None);
+            }
+            catch (IOException ex) when (File.Exists(leasePath))
+            {
+                throw new InvalidOperationException(
+                    $"SerilogRelay spool '{databasePath}' is already in use. Version 1 supports exactly one active SerilogRelay sink per spool path. Configure a distinct spool path for another process or sink.",
+                    ex);
+            }
+        }
+
         private static string? ResolveDatabasePath(string connectionString)
         {
             var builder = new SqliteConnectionStringBuilder(connectionString);
