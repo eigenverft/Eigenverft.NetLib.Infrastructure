@@ -213,16 +213,18 @@ This is particularly important for clients that run only occasionally.
 
 ## Recovery catch-up
 
-After the endpoint recovers, avoid an uncontrolled request stampede.
+After the endpoint recovers, reset retry state immediately and use the normal
+`DeliveryPolicy` at its full configured throughput.
 
-Delivery may use a simple recovery-rate limiter/token bucket, for example:
+Do **not** add a second recovery-specific token bucket or cooldown. The existing delivery
+bounds such as `MaximumBatchEvents`, `MaxBatchesPerCycle`, and `InterBatchDelay` already
+limit how much work is sent in one delivery cycle. Retry jitter protects the unhealthy probe
+phase; once the endpoint has successfully responded, deliberately waiting longer only extends
+the backlog unnecessarily.
 
-- small burst allowance immediately after recovery;
-- then a bounded sustained batch rate;
-- normal current `MaxBatchesPerCycle` remains a safety bound.
-
-This rate limiter controls **successful catch-up throughput**. It is different from retry
-backoff, which controls how often a dead endpoint is probed.
+If real deployments later show that successful catch-up can overload CentralLogging, that
+should be addressed by tuning the normal `DeliveryPolicy` limits rather than by introducing a
+special post-recovery throttle.
 
 ---
 
@@ -245,11 +247,9 @@ It does not need to increment every event in SQLite whenever the whole server is
 
 ## Backoff model
 
-The desired behavior is effectively a one-permit retry gate/token bucket with a changing refill
-time.
+The desired behavior is an exponential **retry gate**.
 
-After a failed endpoint attempt, no new attempt token becomes available until
-`NextAttemptAt`.
+After a failed endpoint attempt, no new probe is allowed until `NextAttemptAt`.
 
 Recommended sequence:
 
