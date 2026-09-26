@@ -6,18 +6,36 @@ Durable Serilog relay for forwarding application logs over HTTP while keeping a 
 
 The package contains `SerilogRelaySink`, functionally migrated from the AxonInsight `SQLiteSinkHttp` implementation while retaining the durable sender behavior. Before the first package release, the public API was renamed to match the package purpose.
 
-Current Serilog configuration:
+Current minimal Serilog configuration:
+
+```csharp
+.WriteTo.SerilogRelay("https://logging.example/api/v1/logs")
+```
+
+With no spool overrides, the relay resolves its persistent SQLite spool automatically from `Environment.SpecialFolder.LocalApplicationData`:
+
+```text
+<Eigenverft local application data>/Eigenverft/SerilogRelay/<ApplicationId>/SerilogRelay.db
+```
+
+`ApplicationId` defaults to the entry-assembly name (falling back to the current AppDomain friendly name) and is normalized for safe directory use. The SQLite table is internal and fixed as `SerilogRelayEvents`.
+
+Applications that need storage control can override the directory, filename, and application identity independently:
 
 ```csharp
 .WriteTo.SerilogRelay(
-    connectionString,
-    "logs",
-    endpoint: "https://logging.example/api/v1/logs")
+    endpoint: "https://logging.example/api/v1/logs",
+    spoolDirectory: @"D:\AppData\Logging",
+    spoolFileName: "MyWorker.db",
+    applicationId: "MyWorker")
 ```
+
+A relative `spoolDirectory` is resolved below the application-specific default relay directory; an absolute directory is used as supplied. `spoolFileName` is filename-only. Calling `.WriteTo.SerilogRelay()` with no endpoint keeps the same durable local spool without starting the HTTP sender.
 
 The migrated relay currently provides:
 
 - durable SQLite persistence before any network delivery attempt;
+- fire-and-forget client defaults that automatically choose the application identity, spool directory, spool filename, and internal table name;
 - `Sent = 0` pending rows that survive process restarts and network outages;
 - a stable per-event `EventId` persisted in the local spool before delivery and reused across retries/restarts;
 - automatic one-time `EventId` backfill for pre-F7 spool databases, followed by a unique local index;
@@ -52,7 +70,7 @@ The matching receiver is being revived separately as:
 
 ## Current inherited limitations
 
-This first functional migration deliberately does not redesign the historical protocol or security model. In particular:
+The current implementation intentionally defers the remaining security/operations redesign items. In particular:
 
 - TLS certificate validation still uses the inherited unrestricted certificate callback;
 - bearer-token authentication is not implemented yet;

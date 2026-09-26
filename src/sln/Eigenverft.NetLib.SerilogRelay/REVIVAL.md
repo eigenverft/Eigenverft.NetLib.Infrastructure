@@ -45,6 +45,7 @@ Only small compatibility and correctness adaptations were made while bringing th
 - each event receives a stable GUID `EventId` before its first local insert; the ID is persisted with the spool row and reused across HTTP retries and process restarts;
 - old spool schemas are upgraded in place by adding/backfilling `EventId` and creating a unique local index without discarding pending rows;
 - protocol version `1` is sent to `Eigenverft.Service.CentralLogging` `/api/v1/logs`; `BatchId` remains a new per-attempt correlation ID while `EventId` is the idempotency key;
+- the client API now treats the relay as fire-and-forget infrastructure: endpoint is the only normal remote-delivery input, while application identity, LocalApplicationData-based spool directory, `SerilogRelay.db` filename, and internal `SerilogRelayEvents` table are automatic; `spoolDirectory`, `spoolFileName`, and `applicationId` remain optional overrides;
 - compiler-generated `System.Text.Json` source-generator files are excluded from Coverlet measurement while the authored library code remains subject to the unchanged 100% line/branch/method threshold.
 - direct package references were refreshed to the current stable versions used by the repository: `Microsoft.Data.Sqlite 10.0.12`, `Serilog 4.4.0`, `Microsoft.NET.Test.Sdk 18.10.1`, `MSTest 4.4.1`, and `coverlet.msbuild 10.0.1`; `Nerdbank.GitVersioning 3.10.94` was already current.
 
@@ -63,7 +64,7 @@ The regression suite characterizes the migrated behavior, including:
 - historical nullable database columns;
 - sender-loop failure and cancellation paths.
 
-The current regression suite contains 18 tests. On `net10.0`, all 18 pass and authored library code reaches 100% line, branch, and method coverage. The solution also builds successfully for `net8.0` and `net10.0`. A real temporary end-to-end run against the current `Eigenverft.Service.CentralLogging` receiver confirmed that `.WriteTo.SerilogRelay(...)` reaches `/api/v1/logs` and persists the same canonical `EventId` on the receiver.
+The current regression suite contains 22 tests. On `net10.0`, all 22 pass and authored library code reaches 100% line, branch, and method coverage. The solution also builds successfully for `net8.0` and `net10.0`. A real temporary end-to-end run against the current `Eigenverft.Service.CentralLogging` receiver confirmed that `.WriteTo.SerilogRelay(...)` reaches `/api/v1/logs` and persists the same canonical `EventId` on the receiver.
 
 The inherited analyzer cleanup is now complete for the current relay source. The Release pack for both `net8.0` and `net10.0` completes with 0 warnings and 0 errors. Persisted rendered messages use `CultureInfo.InvariantCulture` so their text is stable across host/thread locales; the remaining analyzer fixes were private parameter ordering and format/conversion cleanup without behavioral redesign.
 
@@ -79,8 +80,6 @@ The following review items are intentionally deferred rather than missing from t
 
 The following remain redesign goals rather than part of the initial functional migration:
 
-- Keep target endpoint as the only essential sender configuration for the normal case.
-- Infer sensible application/instance identity and spool location by default, while allowing overrides.
 - Keep SQLite as the durable spool initially; avoid putting a lossy in-memory queue in front of persistence.
 - Define explicit behavior for SQLite busy/full/failure states and expose those failures through Serilog SelfLog or another observable diagnostic path.
 - Support bearer tokens without making authentication mandatory for loopback/private deployments.

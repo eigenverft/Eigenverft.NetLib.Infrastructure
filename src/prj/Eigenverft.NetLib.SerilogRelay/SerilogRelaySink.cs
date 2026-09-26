@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO;
+using System.Reflection;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -23,13 +26,16 @@ namespace Eigenverft.NetLib.SerilogRelay
     /// </summary>
     public static class LoggerConfigurationSerilogRelayExtensions
     {
+        private const string DefaultSpoolFileName = "SerilogRelay.db";
+
         /// <summary>
-        /// Configures Serilog to persist events to SQLite and optionally relay pending events to an HTTP endpoint.
+        /// Configures Serilog to persist events to a durable local spool and optionally relay pending events to an HTTP endpoint.
         /// </summary>
         /// <param name="loggerConfiguration">The Serilog sink configuration.</param>
-        /// <param name="connectionString">The SQLite connection string used for the durable local spool.</param>
-        /// <param name="tableName">The SQLite table name used to store log events.</param>
         /// <param name="endpoint">The optional HTTP endpoint that receives batched log events.</param>
+        /// <param name="spoolDirectory">Optional spool directory. Relative paths are resolved below the application-specific default directory.</param>
+        /// <param name="spoolFileName">Optional spool filename. Defaults to <c>SerilogRelay.db</c>.</param>
+        /// <param name="applicationId">Optional application identity used by the default spool directory. Defaults to the entry-assembly name.</param>
         /// <param name="minimumBatchSize">The minimum pending-event count required before normal background delivery starts.</param>
         /// <param name="maximumBatchSize">The maximum number of events included in one HTTP batch.</param>
         /// <param name="baseInterval">The normal delay between background delivery attempts.</param>
@@ -39,9 +45,10 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <returns>The original Serilog logger configuration.</returns>
         public static LoggerConfiguration SerilogRelay(
             this LoggerSinkConfiguration loggerConfiguration,
-            string connectionString,
-            string tableName,
             string? endpoint = null,
+            string? spoolDirectory = null,
+            string spoolFileName = DefaultSpoolFileName,
+            string? applicationId = null,
             int minimumBatchSize = 20,
             int maximumBatchSize = 100,
             TimeSpan? baseInterval = null,
@@ -49,9 +56,18 @@ namespace Eigenverft.NetLib.SerilogRelay
             TimeSpan? unsentRetention = null,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum)
         {
+            string spoolPath = ResolveSpoolPath(spoolDirectory, spoolFileName, applicationId);
+            Directory.CreateDirectory(Path.GetDirectoryName(spoolPath)!);
+
+            string connectionString = new SqliteConnectionStringBuilder
+            {
+                DataSource = spoolPath,
+                Mode = SqliteOpenMode.ReadWriteCreate,
+                Cache = SqliteCacheMode.Shared,
+            }.ToString();
+
             var sink = new SerilogRelaySink(
                 connectionString,
-                tableName,
                 endpoint,
                 minimumBatchSize,
                 maximumBatchSize,
@@ -60,6 +76,63 @@ namespace Eigenverft.NetLib.SerilogRelay
                 unsentRetention ?? TimeSpan.FromDays(3));
             return loggerConfiguration.Sink(sink, restrictedToMinimumLevel);
         }
+
+        internal static string ResolveSpoolPath(
+            string? spoolDirectory,
+            string spoolFileName,
+            string? applicationId)
+            => ResolveSpoolPath(
+                spoolDirectory,
+                spoolFileName,
+                applicationId,
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+
+        internal static string ResolveSpoolPath(
+            string? spoolDirectory,
+            string spoolFileName,
+            string? applicationId,
+            string localApplicationData)
+        {
+            if (string.IsNullOrWhiteSpace(spoolFileName)
+                || Path.IsPathRooted(spoolFileName)
+                || !string.Equals(Path.GetFileName(spoolFileName), spoolFileName, StringComparison.Ordinal)
+                || spoolFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                throw new ArgumentException("Spool filename must be a valid filename without a directory component.", nameof(spoolFileName));
+            }
+
+            if (string.IsNullOrWhiteSpace(localApplicationData))
+                throw new InvalidOperationException("The operating system did not provide a LocalApplicationData directory for the SerilogRelay spool.");
+
+            string defaultDirectory = Path.Combine(
+                localApplicationData,
+                "Eigenverft",
+                "SerilogRelay",
+                ResolveApplicationId(applicationId));
+
+            string resolvedDirectory = string.IsNullOrWhiteSpace(spoolDirectory)
+                ? defaultDirectory
+                : Path.IsPathRooted(spoolDirectory)
+                    ? Path.GetFullPath(spoolDirectory)
+                    : Path.GetFullPath(Path.Combine(defaultDirectory, spoolDirectory));
+
+            return Path.Combine(resolvedDirectory, spoolFileName);
+        }
+
+        internal static string ResolveApplicationId(string? applicationId)
+        {
+            string candidate = string.IsNullOrWhiteSpace(applicationId)
+                ? GetRuntimeApplicationId()
+                : applicationId.Trim();
+
+            string normalized = Regex.Replace(candidate, "[^A-Za-z0-9._-]+", "_").Trim('.', '_');
+            return string.IsNullOrWhiteSpace(normalized) ? "Application" : normalized;
+        }
+
+        [ExcludeFromCodeCoverage]
+        private static string GetRuntimeApplicationId()
+            => Assembly.GetEntryAssembly()?.GetName().Name
+                ?? AppDomain.CurrentDomain.FriendlyName;
     }
 
     /// <summary>
@@ -80,6 +153,7 @@ namespace Eigenverft.NetLib.SerilogRelay
 
         private const int MaxBusyRetries = 5;
         private const int BusyRetryDelayMs = 100;
+        private const string TableName = "SerilogRelayEvents";
 
         private const string TableSchema = @"
 CREATE TABLE IF NOT EXISTS {0} (
@@ -98,7 +172,6 @@ CREATE TABLE IF NOT EXISTS {0} (
 );";
 
         private readonly string _connectionString;
-        private readonly string _tableName;
         private readonly string? _endpoint;
         private readonly int _minBatchSize;
         private readonly int _maxBatchSize;
@@ -123,7 +196,6 @@ CREATE TABLE IF NOT EXISTS {0} (
         /// Initializes a new instance of <see cref="SerilogRelaySink"/>.
         /// </summary>
         /// <param name="connectionString">The SQLite connection string.</param>
-        /// <param name="tableName">The table name for storing logs.</param>
         /// <param name="endpoint">The HTTP endpoint to send batched logs.</param>
         /// <param name="minBatchItems">Minimum number of items before sending a batch.</param>
         /// <param name="maxBatchItems">Maximum number of items per batch.</param>
@@ -133,9 +205,8 @@ CREATE TABLE IF NOT EXISTS {0} (
         /// <remarks>
         /// Ensures <paramref name="minBatchItems"/> is at least 1 and not greater than <paramref name="maxBatchItems"/>.
         /// </remarks>
-        public SerilogRelaySink(
+        internal SerilogRelaySink(
             string connectionString,
-            string tableName,
             string? endpoint,
             int minBatchItems,
             int maxBatchItems,
@@ -144,16 +215,12 @@ CREATE TABLE IF NOT EXISTS {0} (
             TimeSpan unsentRetention
             )
         {
-            if (string.IsNullOrEmpty(tableName) || !Regex.IsMatch(tableName, "^[A-Za-z0-9_]+$"))
-                throw new ArgumentException("Table name must be alphanumeric or underscore.", nameof(tableName));
-
             if (minBatchItems < 1)
                 throw new ArgumentOutOfRangeException(nameof(minBatchItems), "Minimum batch size must be at least 1.");
             if (minBatchItems > maxBatchItems)
                 throw new ArgumentException("Minimum batch size must be less than or equal to maximum batch size.", nameof(minBatchItems));
 
             _connectionString = connectionString;
-            _tableName = tableName;
             _endpoint = endpoint;
             _minBatchSize = minBatchItems;
             _maxBatchSize = maxBatchItems;
@@ -190,10 +257,10 @@ CREATE TABLE IF NOT EXISTS {0} (
 
             using var cmd = conn.CreateCommand();
             cmd.CommandText = $@"
-DELETE FROM {_tableName}
+DELETE FROM {TableName}
  WHERE Sent = 1
    AND datetime(CreatedAt) <= datetime('now', $sentOffset);
-DELETE FROM {_tableName}
+DELETE FROM {TableName}
  WHERE Sent = 0
    AND datetime(CreatedAt) <= datetime('now', $unsentOffset);";
 
@@ -233,7 +300,7 @@ DELETE FROM {_tableName}
                     using var cmd = conn.CreateCommand();
                     cmd.Transaction = tx;
                     cmd.CommandText = $@"
-INSERT INTO {_tableName}
+INSERT INTO {TableName}
   (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
 VALUES
   ($eventId, $ts, $lvl, $rendered, $tmpl, $tid, $sid, $ex, $props, 0);";
@@ -390,7 +457,7 @@ VALUES
             using var cmd = conn.CreateCommand();
             cmd.CommandText = $@"
 SELECT Id, EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties
-FROM {_tableName}
+FROM {TableName}
 WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             using var reader = await cmd.ExecuteReaderAsync(token);
             while (await reader.ReadAsync(token))
@@ -421,7 +488,7 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             using var tx = conn.BeginTransaction();
             using var cmd = conn.CreateCommand();
             cmd.Transaction = tx;
-            cmd.CommandText = $"UPDATE {_tableName} SET Sent = 1 WHERE Id IN ({string.Join(",", entries.ConvertAll(e => e.Id))})";
+            cmd.CommandText = $"UPDATE {TableName} SET Sent = 1 WHERE Id IN ({string.Join(",", entries.ConvertAll(e => e.Id))})";
             await cmd.ExecuteNonQueryAsync(token);
             tx.Commit();
         }
@@ -433,7 +500,7 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             conn.Open();
             ConfigurePragmas(conn);
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = $"SELECT COUNT(*) FROM {_tableName} WHERE Sent = 0";
+            cmd.CommandText = $"SELECT COUNT(*) FROM {TableName} WHERE Sent = 0";
             return Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
 
@@ -444,7 +511,7 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             conn.Open();
             ConfigurePragmas(conn);
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = TableSchema.Replace("{0}", _tableName, StringComparison.Ordinal);
+            cmd.CommandText = TableSchema.Replace("{0}", TableName, StringComparison.Ordinal);
             cmd.ExecuteNonQuery();
         }
 
@@ -457,7 +524,7 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             bool hasEventId = false;
             using (var schema = conn.CreateCommand())
             {
-                schema.CommandText = $"PRAGMA table_info({_tableName});";
+                schema.CommandText = $"PRAGMA table_info({TableName});";
                 using var reader = schema.ExecuteReader();
                 while (reader.Read())
                 {
@@ -472,14 +539,14 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             if (!hasEventId)
             {
                 using var alter = conn.CreateCommand();
-                alter.CommandText = $"ALTER TABLE {_tableName} ADD COLUMN EventId TEXT;";
+                alter.CommandText = $"ALTER TABLE {TableName} ADD COLUMN EventId TEXT;";
                 alter.ExecuteNonQuery();
             }
 
             var rowsWithoutEventId = new List<long>();
             using (var select = conn.CreateCommand())
             {
-                select.CommandText = $"SELECT Id FROM {_tableName} WHERE EventId IS NULL OR EventId = '';";
+                select.CommandText = $"SELECT Id FROM {TableName} WHERE EventId IS NULL OR EventId = '';";
                 using var reader = select.ExecuteReader();
                 while (reader.Read())
                     rowsWithoutEventId.Add(reader.GetInt64(0));
@@ -491,7 +558,7 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
                 {
                     using var update = conn.CreateCommand();
                     update.Transaction = tx;
-                    update.CommandText = $"UPDATE {_tableName} SET EventId = $eventId WHERE Id = $id;";
+                    update.CommandText = $"UPDATE {TableName} SET EventId = $eventId WHERE Id = $id;";
                     update.Parameters.AddWithValue("$eventId", Guid.NewGuid().ToString("D"));
                     update.Parameters.AddWithValue("$id", id);
                     update.ExecuteNonQuery();
@@ -501,7 +568,7 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             }
 
             using var index = conn.CreateCommand();
-            index.CommandText = $"CREATE UNIQUE INDEX IF NOT EXISTS IX_{_tableName}_EventId ON {_tableName}(EventId);";
+            index.CommandText = $"CREATE UNIQUE INDEX IF NOT EXISTS IX_{TableName}_EventId ON {TableName}(EventId);";
             index.ExecuteNonQuery();
         }
 

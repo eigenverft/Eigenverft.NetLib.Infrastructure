@@ -31,29 +31,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         {
             const string connectionString = "Data Source=:memory:";
 
-            Assert.ThrowsExactly<ArgumentException>(() => new SerilogRelaySink(
-                connectionString,
-                string.Empty,
-                endpoint: null,
-                minBatchItems: 1,
-                maxBatchItems: 10,
-                TimeSpan.FromSeconds(1),
-                TimeSpan.FromDays(1),
-                TimeSpan.FromDays(3)));
-
-            Assert.ThrowsExactly<ArgumentException>(() => new SerilogRelaySink(
-                connectionString,
-                "invalid-table",
-                endpoint: null,
-                minBatchItems: 1,
-                maxBatchItems: 10,
-                TimeSpan.FromSeconds(1),
-                TimeSpan.FromDays(1),
-                TimeSpan.FromDays(3)));
-
             Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new SerilogRelaySink(
                 connectionString,
-                "logs",
                 endpoint: null,
                 minBatchItems: 0,
                 maxBatchItems: 10,
@@ -63,13 +42,118 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
             Assert.ThrowsExactly<ArgumentException>(() => new SerilogRelaySink(
                 connectionString,
-                "logs",
                 endpoint: null,
                 minBatchItems: 11,
                 maxBatchItems: 10,
                 TimeSpan.FromSeconds(1),
                 TimeSpan.FromDays(1),
                 TimeSpan.FromDays(3)));
+        }
+
+        [TestMethod]
+        public void SpoolPathDefaultsToApplicationLocalData()
+        {
+            string applicationId = "My App/Worker";
+            string resolved = LoggerConfigurationSerilogRelayExtensions.ResolveSpoolPath(
+                spoolDirectory: null,
+                spoolFileName: "SerilogRelay.db",
+                applicationId);
+
+            string expected = Path.GetFullPath(
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Eigenverft",
+                    "SerilogRelay",
+                    "My_App_Worker",
+                    "SerilogRelay.db"));
+
+            Assert.AreEqual(expected, resolved);
+
+            Assert.ThrowsExactly<InvalidOperationException>(
+                () => LoggerConfigurationSerilogRelayExtensions.ResolveSpoolPath(
+                    spoolDirectory: null,
+                    spoolFileName: "SerilogRelay.db",
+                    applicationId: "Test.App",
+                    localApplicationData: string.Empty));
+        }
+
+        [TestMethod]
+        public void SpoolPathSupportsAbsoluteAndRelativeDirectoryOverrides()
+        {
+            string directory = CreateTemporaryDirectory();
+
+            try
+            {
+                string absolute = LoggerConfigurationSerilogRelayExtensions.ResolveSpoolPath(
+                    directory,
+                    "custom.db",
+                    "Ignored.App");
+                Assert.AreEqual(Path.Combine(directory, "custom.db"), absolute);
+
+                string relative = LoggerConfigurationSerilogRelayExtensions.ResolveSpoolPath(
+                    "nested",
+                    "custom.db",
+                    "My.App");
+
+                string expectedRelative = Path.GetFullPath(
+                    Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        "Eigenverft",
+                        "SerilogRelay",
+                        "My.App",
+                        "nested",
+                        "custom.db"));
+
+                Assert.AreEqual(expectedRelative, relative);
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public void SpoolFilenameMustBeAFileNameOnly()
+        {
+            Assert.ThrowsExactly<ArgumentException>(
+                () => LoggerConfigurationSerilogRelayExtensions.ResolveSpoolPath(
+                    null,
+                    string.Empty,
+                    "Test.App"));
+
+            string rootedFile = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory)!, "relay.db");
+            Assert.ThrowsExactly<ArgumentException>(
+                () => LoggerConfigurationSerilogRelayExtensions.ResolveSpoolPath(
+                    null,
+                    rootedFile,
+                    "Test.App"));
+
+            Assert.ThrowsExactly<ArgumentException>(
+                () => LoggerConfigurationSerilogRelayExtensions.ResolveSpoolPath(
+                    null,
+                    Path.Combine("nested", "relay.db"),
+                    "Test.App"));
+
+            Assert.ThrowsExactly<ArgumentException>(
+                () => LoggerConfigurationSerilogRelayExtensions.ResolveSpoolPath(
+                    null,
+                    "bad:name.db",
+                    "Test.App"));
+        }
+
+        [TestMethod]
+        public void ApplicationIdDefaultsAndNormalizesForDirectoryUse()
+        {
+            Assert.IsFalse(string.IsNullOrWhiteSpace(
+                LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(null)));
+
+            Assert.AreEqual(
+                "My_App_Worker",
+                LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(" My App/Worker "));
+
+            Assert.AreEqual(
+                "Application",
+                LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId("___"));
         }
 
         [TestMethod]
@@ -83,9 +167,9 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             {
                 using (Logger logger = new LoggerConfiguration()
                     .WriteTo.SerilogRelay(
-                        connectionString,
-                        "logs",
                         endpoint: null,
+                        spoolDirectory: directory,
+                        spoolFileName: "relay.db",
                         minimumBatchSize: 20,
                         maximumBatchSize: 100,
                         baseInterval: TimeSpan.FromMilliseconds(20))
@@ -98,7 +182,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 connection.Open();
 
                 using var command = connection.CreateCommand();
-                command.CommandText = "SELECT EventId, Level, RenderMessage, MessageTemplate, Properties, Sent FROM logs ORDER BY Id LIMIT 1;";
+                command.CommandText = "SELECT EventId, Level, RenderMessage, MessageTemplate, Properties, Sent FROM SerilogRelayEvents ORDER BY Id LIMIT 1;";
 
                 using SqliteDataReader reader = command.ExecuteReader();
                 Assert.IsTrue(reader.Read());
@@ -133,9 +217,9 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
                 using (Logger logger = new LoggerConfiguration()
                     .WriteTo.SerilogRelay(
-                        connectionString,
-                        "logs",
                         endpoint: null,
+                        spoolDirectory: directory,
+                        spoolFileName: "relay.db",
                         minimumBatchSize: 20,
                         maximumBatchSize: 100,
                         baseInterval: TimeSpan.FromMilliseconds(20))
@@ -148,7 +232,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 connection.Open();
 
                 using var command = connection.CreateCommand();
-                command.CommandText = "SELECT RenderMessage FROM logs ORDER BY Id LIMIT 1;";
+                command.CommandText = "SELECT RenderMessage FROM SerilogRelayEvents ORDER BY Id LIMIT 1;";
                 Assert.AreEqual("Value 1.5", Convert.ToString(command.ExecuteScalar(), CultureInfo.InvariantCulture));
             }
             finally
@@ -175,7 +259,6 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
                 var sink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     $"http://127.0.0.1:{port}/logs",
                     minBatchItems: 1,
                     maxBatchItems: 10,
@@ -219,7 +302,6 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
                 var sink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     $"http://127.0.0.1:{port}/logs",
                     minBatchItems: 20,
                     maxBatchItems: 100,
@@ -263,7 +345,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                     connection.Open();
                     using var command = connection.CreateCommand();
                     command.CommandText = @"
-CREATE TABLE logs (
+CREATE TABLE SerilogRelayEvents (
     Id              INTEGER PRIMARY KEY AUTOINCREMENT,
     Timestamp       TEXT    NOT NULL,
     Level           TEXT    NOT NULL,
@@ -276,7 +358,7 @@ CREATE TABLE logs (
     Sent            INTEGER NOT NULL DEFAULT 0,
     CreatedAt       TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-INSERT INTO logs (Timestamp, Level, RenderMessage, MessageTemplate, Sent)
+INSERT INTO SerilogRelayEvents (Timestamp, Level, RenderMessage, MessageTemplate, Sent)
 VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                     command.ExecuteNonQuery();
                 }
@@ -284,7 +366,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 string firstEventId;
                 await using (var firstSink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     endpoint: null,
                     minBatchItems: 1,
                     maxBatchItems: 10,
@@ -298,7 +379,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
 
                 await using (var secondSink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     endpoint: null,
                     minBatchItems: 1,
                     maxBatchItems: 10,
@@ -326,7 +406,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
             {
                 var sink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     endpoint: null,
                     minBatchItems: 1,
                     maxBatchItems: 10,
@@ -366,9 +445,9 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 using (Logger explicitLogger = new LoggerConfiguration()
                     .MinimumLevel.Verbose()
                     .WriteTo.SerilogRelay(
-                        $"Data Source={explicitDatabasePath}",
-                        "logs",
                         endpoint: null,
+                        spoolDirectory: directory,
+                        spoolFileName: "explicit.db",
                         minimumBatchSize: 2,
                         maximumBatchSize: 3,
                         baseInterval: TimeSpan.FromMilliseconds(17),
@@ -380,7 +459,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 }
 
                 using (Logger defaultLogger = new LoggerConfiguration()
-                    .WriteTo.SerilogRelay($"Data Source={defaultDatabasePath}", "logs")
+                    .WriteTo.SerilogRelay(endpoint: null, spoolDirectory: directory, spoolFileName: "defaults.db")
                     .CreateLogger())
                 {
                 }
@@ -415,7 +494,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
             {
                 using var sink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     endpoint: null,
                     minBatchItems: 1,
                     maxBatchItems: 10,
@@ -446,7 +524,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 using var connection = new SqliteConnection(connectionString);
                 connection.Open();
                 using var command = connection.CreateCommand();
-                command.CommandText = "SELECT TraceId, SpanId, Exception, Properties FROM logs ORDER BY Id LIMIT 1;";
+                command.CommandText = "SELECT TraceId, SpanId, Exception, Properties FROM SerilogRelayEvents ORDER BY Id LIMIT 1;";
                 using SqliteDataReader reader = command.ExecuteReader();
 
                 Assert.IsTrue(reader.Read());
@@ -486,7 +564,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
             {
                 await using (var noEndpointSink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     endpoint: null,
                     minBatchItems: 1,
                     maxBatchItems: 10,
@@ -500,7 +577,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 int closedPort = ReserveAndReleasePort();
                 await using var thresholdSink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     $"http://127.0.0.1:{closedPort}/logs",
                     minBatchItems: 2,
                     maxBatchItems: 10,
@@ -544,7 +620,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     $"http://127.0.0.1:{port}/logs",
                     minBatchItems: 1,
                     maxBatchItems: 10,
@@ -609,7 +684,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 int closedPort = ReserveAndReleasePort();
                 await using var failureSink = new SerilogRelaySink(
                     $"Data Source={Path.Combine(failureDirectory, "relay.db")}",
-                    "logs",
                     $"http://127.0.0.1:{closedPort}/logs",
                     minBatchItems: 1,
                     maxBatchItems: 10,
@@ -641,7 +715,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
             {
                 using var sink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     endpoint: null,
                     minBatchItems: 1,
                     maxBatchItems: 10,
@@ -653,7 +726,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 {
                     connection.Open();
                     using var command = connection.CreateCommand();
-                    command.CommandText = "DROP TABLE logs;";
+                    command.CommandText = "DROP TABLE SerilogRelayEvents;";
                     command.ExecuteNonQuery();
                 }
 
@@ -679,7 +752,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
             {
                 using var sink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     endpoint: null,
                     minBatchItems: 1,
                     maxBatchItems: 10,
@@ -693,7 +765,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 using (var command = blocker.CreateCommand())
                 {
                     command.Transaction = transaction;
-                    command.CommandText = "INSERT INTO logs (Timestamp, Level, RenderMessage, MessageTemplate, Sent) VALUES ('x','Information','blocker','blocker',0);";
+                    command.CommandText = "INSERT INTO SerilogRelayEvents (Timestamp, Level, RenderMessage, MessageTemplate, Sent) VALUES ('x','Information','blocker','blocker',0);";
                     command.ExecuteNonQuery();
                 }
 
@@ -705,7 +777,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 using var verifyConnection = new SqliteConnection(connectionString);
                 verifyConnection.Open();
                 using var verify = verifyConnection.CreateCommand();
-                verify.CommandText = "SELECT COUNT(*) FROM logs WHERE RenderMessage = 'after busy';";
+                verify.CommandText = "SELECT COUNT(*) FROM SerilogRelayEvents WHERE RenderMessage = 'after busy';";
                 Assert.AreEqual(1L, Convert.ToInt64(verify.ExecuteScalar(), CultureInfo.InvariantCulture));
             }
             finally
@@ -725,7 +797,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
             try
             {
                 using (Logger logger = new LoggerConfiguration()
-                    .WriteTo.SerilogRelay(connectionString, "logs", endpoint: null)
+                    .WriteTo.SerilogRelay(endpoint: null, spoolDirectory: directory, spoolFileName: "relay.db")
                     .CreateLogger())
                 {
                     for (int index = 0; index < 6; index++)
@@ -742,7 +814,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
 
                 await using var relay = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     $"http://127.0.0.1:{port}/logs",
                     minBatchItems: 1,
                     maxBatchItems: 1,
@@ -774,7 +845,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
             {
                 var sink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     $"http://127.0.0.1:{closedPort}/logs",
                     minBatchItems: 20,
                     maxBatchItems: 100,
@@ -793,7 +863,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 using var connection = new SqliteConnection(connectionString);
                 connection.Open();
                 using var command = connection.CreateCommand();
-                command.CommandText = "SELECT Sent FROM logs ORDER BY Id LIMIT 1;";
+                command.CommandText = "SELECT Sent FROM SerilogRelayEvents ORDER BY Id LIMIT 1;";
                 Assert.AreEqual(0L, Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture));
             }
             finally
@@ -816,7 +886,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
             {
                 var sink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     $"http://127.0.0.1:{closedPort}/logs",
                     minBatchItems: 1,
                     maxBatchItems: 10,
@@ -828,7 +897,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 {
                     connection.Open();
                     using var command = connection.CreateCommand();
-                    command.CommandText = "DROP TABLE logs;";
+                    command.CommandText = "DROP TABLE SerilogRelayEvents;";
                     command.ExecuteNonQuery();
                 }
 
@@ -847,7 +916,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 {
                     repairConnection.Open();
                     using var repairCommand = repairConnection.CreateCommand();
-                    repairCommand.CommandText = "CREATE TABLE logs (Sent INTEGER NOT NULL DEFAULT 0);";
+                    repairCommand.CommandText = "CREATE TABLE SerilogRelayEvents (Sent INTEGER NOT NULL DEFAULT 0);";
                     repairCommand.ExecuteNonQuery();
                 }
                 await sink.DisposeAsync();
@@ -877,7 +946,6 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
 
                 var sink = new SerilogRelaySink(
                     connectionString,
-                    "logs",
                     $"http://127.0.0.1:{port}/logs",
                     minBatchItems: 1,
                     maxBatchItems: 10,
@@ -964,7 +1032,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT EventId FROM logs ORDER BY Id LIMIT 1;";
+            command.CommandText = "SELECT EventId FROM SerilogRelayEvents ORDER BY Id LIMIT 1;";
             return Convert.ToString(command.ExecuteScalar(), CultureInfo.InvariantCulture) ?? string.Empty;
         }
 
@@ -1000,8 +1068,8 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
             using var command = connection.CreateCommand();
             string eventId = Guid.NewGuid().ToString("D");
             command.CommandText = nullOptionals
-                ? "INSERT INTO logs (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent) VALUES ($eventId,'legacy','Information','legacy nulls','legacy nulls',NULL,NULL,NULL,NULL,0);"
-                : "INSERT INTO logs (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent) VALUES ($eventId,'legacy','Information','legacy','legacy','','','','{}',0);";
+                ? "INSERT INTO SerilogRelayEvents (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent) VALUES ($eventId,'legacy','Information','legacy nulls','legacy nulls',NULL,NULL,NULL,NULL,0);"
+                : "INSERT INTO SerilogRelayEvents (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent) VALUES ($eventId,'legacy','Information','legacy','legacy','','','','{}',0);";
             command.Parameters.AddWithValue("$eventId", eventId);
             command.ExecuteNonQuery();
         }
@@ -1041,7 +1109,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 await connection.OpenAsync();
 
                 using var command = connection.CreateCommand();
-                command.CommandText = "SELECT COUNT(*) FROM logs WHERE Sent = 0;";
+                command.CommandText = "SELECT COUNT(*) FROM SerilogRelayEvents WHERE Sent = 0;";
                 long count = Convert.ToInt64(await command.ExecuteScalarAsync(), CultureInfo.InvariantCulture);
                 if (count == expectedCount)
                 {
@@ -1123,7 +1191,7 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 await connection.OpenAsync();
 
                 using var command = connection.CreateCommand();
-                command.CommandText = "SELECT Sent FROM logs ORDER BY Id LIMIT 1;";
+                command.CommandText = "SELECT Sent FROM SerilogRelayEvents ORDER BY Id LIMIT 1;";
                 object? result = await command.ExecuteScalarAsync();
                 if (result is not null && Convert.ToInt64(result, System.Globalization.CultureInfo.InvariantCulture) == expectedSent)
                 {
