@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `d2bb2bb` — Refine the SerilogRelay outage design into explicit behavioral policies: reduce the proposed balanced durable-spool ceiling to 64 MiB, remove the arbitrary per-event size cap, separate retry gating from recovery catch-up rate limiting, define 5s→10s→20s→40s exponential backoff with jitter/reset semantics, and set the emergency byte budget default to 64 MiB.
+
 - `984c9ec` — Define the SerilogRelay limits/outage policy model for durable spool capacity, intermittent clients, maximum batch wait, endpoint retry/circuit handling, poison-event isolation, bounded emergency memory, shutdown deadlines, observability, and explicit 1h/12h/1d/7d failure semantics; no runtime behavior changes yet.
 
 - `b1acfad` — Increase the SerilogRelay bounded emergency Channel from 1024 to 16384 events, keep overflow regression coverage aligned with the larger bound, and make emergency-worker cancellation deterministic so the net10.0 suite remains stable at 100% line/branch/method coverage.
