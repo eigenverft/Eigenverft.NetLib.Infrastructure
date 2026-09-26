@@ -202,10 +202,12 @@ LIMIT 1;";
                 File.Delete(databasePath + "-shm");
                 File.WriteAllBytes(databasePath, Encoding.UTF8.GetBytes("not sqlite anymore"));
 
-                List<LogEntry> entries = await InvokeLoadUnsentAsync(
+                ClaimedLogBatch claimed = await InvokeClaimPendingAsync(
                     sink,
                     limit: 10,
+                    DateTimeOffset.UtcNow,
                     CancellationToken.None);
+                List<LogEntry> entries = claimed.Entries;
 
                 Assert.HasCount(1, entries);
                 Assert.IsNull(entries[0].MachineId);
@@ -288,6 +290,11 @@ LIMIT 1;";
 
                 string corruptedPath = Path.Combine(directory, "corrupted");
                 File.WriteAllText(corruptedPath, "blocks directory creation");
+
+                SqliteConnection.ClearAllPools();
+                File.Delete(databasePath + "-wal");
+                File.Delete(databasePath + "-shm");
+                File.WriteAllBytes(databasePath, Encoding.UTF8.GetBytes("not sqlite anymore"));
 
                 Assert.IsFalse(InvokeTryRecoverCorruptedSpool(
                     sink,
@@ -1687,15 +1694,16 @@ END;";
                 new object[] { quarantineDirectory, quarantineId, exception });
         }
 
-        private static async Task<List<LogEntry>> InvokeLoadUnsentAsync(
+        private static async Task<ClaimedLogBatch> InvokeClaimPendingAsync(
             SerilogRelaySink sink,
             int limit,
+            DateTimeOffset now,
             CancellationToken cancellationToken)
         {
-            MethodInfo method = GetPrivateMethod("LoadUnsentAsync", isStatic: false);
-            var task = (Task<List<LogEntry>>)method.Invoke(
+            MethodInfo method = GetPrivateMethod("ClaimPendingAsync", isStatic: false);
+            var task = (Task<ClaimedLogBatch>)method.Invoke(
                 sink,
-                new object[] { limit, cancellationToken })!;
+                new object[] { limit, now, cancellationToken })!;
             return await task;
         }
 

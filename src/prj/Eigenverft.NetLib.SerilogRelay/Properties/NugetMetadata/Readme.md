@@ -99,12 +99,12 @@ The relay currently provides:
 
 The implementation targets `net8.0` and `net10.0`.
 
-## Multi-process coordination target
+## Multi-process coordination
 
-Before release, shared-spool senders will use atomic short-lived claims/leases so two processes
-do not intentionally send the same pending rows at the same time.
+Shared-spool senders use atomic short-lived claims/leases so two processes do not intentionally
+send the same pending rows at the same time. The internal default lease is 30 seconds.
 
-The shaped behavior is:
+Current behavior:
 
 - `ProcessId` remains row-origin metadata;
 - any process of the same application spool may send old rows from another process;
@@ -114,7 +114,10 @@ The shaped behavior is:
 - the spool is periodically checked for work created by other processes;
 - physical corruption recovery receives separate short-lived cross-process coordination.
 
-This is still pre-release work, not yet implemented behavior.
+Existing spools are upgraded in place with the claim columns/indexes. Graceful shutdown releases
+owned claims immediately; after an ungraceful process exit, expired claims become available to
+another sender. A stale sender cannot mark a row sent after another sender has taken over its
+expired claim.
 
 ## Receiver/security scope
 
@@ -132,10 +135,10 @@ identity, not authenticated sender identity.
 
 ## Current pre-release blockers
 
-See repository `RELEASE-READINESS.md`. The remaining functional work is primarily:
+See repository `RELEASE-READINESS.md`. The remaining pre-release work is primarily:
 
-- shared-spool multi-process sender claiming/recovery/visibility;
-- final semantics for the shared physical spool limit;
+- final semantics for shared `ApplicationSpool` settings and the physical spool limit;
+- final separate-OS-process smoke validation of the implemented coordination;
 - bearer authentication last.
 
 Historical code is background/reference material; current behavior is defined by tests,

@@ -20,7 +20,7 @@ namespace Eigenverft.NetLib.SerilogRelay
             {
                 try
                 {
-                    long pending = Interlocked.Read(ref _pendingCount);
+                    long pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
                     bool startupDrain = pending > 0 && Volatile.Read(ref _startupBacklogPending) != 0;
                     bool partialBatchDue = pending > 0
                         && (startupDrain || IsMaximumBatchWaitElapsed(DateTimeOffset.UtcNow));
@@ -63,6 +63,26 @@ namespace Eigenverft.NetLib.SerilogRelay
                     await Task.Delay(_baseInterval, token).ConfigureAwait(false);
                 }
             }
+        }
+
+        private long RefreshClaimablePendingState(DateTimeOffset now)
+        {
+            long pending = ExecuteDatabaseWithRecovery(() => GetClaimablePendingCountCore(now));
+            long previous = Interlocked.Exchange(ref _pendingCount, pending);
+
+            lock (_signalLock)
+            {
+                if (pending == 0)
+                {
+                    _pendingSinceUtc = null;
+                }
+                else if (previous == 0 || !_pendingSinceUtc.HasValue)
+                {
+                    _pendingSinceUtc = now;
+                }
+            }
+
+            return pending;
         }
 
         private bool IsMaximumBatchWaitElapsed(DateTimeOffset now)
@@ -130,57 +150,57 @@ namespace Eigenverft.NetLib.SerilogRelay
             }
 
             ExecuteDatabaseWithRecovery(() =>
-                CleanupApplicationSpoolRetentionCore(_applicationSpoolSentEventRetention, _applicationSpoolUnsentEventMaxAge));
-            Interlocked.Exchange(ref _pendingCount, ExecuteDatabaseWithRecovery(GetPendingCountCore));
-
-            if (Interlocked.Read(ref _pendingCount) == 0)
-            {
-                lock (_signalLock)
-                {
-                    _pendingSinceUtc = null;
-                }
-            }
+                CleanupApplicationSpoolRetentionCore(
+                    _applicationSpoolSentEventRetention,
+                    _applicationSpoolUnsentEventMaxAge));
+            RefreshClaimablePendingState(DateTimeOffset.UtcNow);
         }
 
         /// <summary>
-        /// Processes and sends pending logs in batches, with optional bypass of the minimum threshold.
+        /// Processes and sends claimable logs in batches, with optional bypass of the minimum threshold.
         /// </summary>
         /// <param name="token">Cancellation token.</param>
         /// <param name="ignoreMinBatch">If true, skips the minimum batch-size check.</param>
         /// <returns>True if any logs were successfully sent.</returns>
         private async Task<bool> ProcessPendingAsync(bool ignoreMinBatch, CancellationToken token)
         {
-            long pending = Interlocked.Read(ref _pendingCount);
+            long pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
             if (!ignoreMinBatch && pending < _minBatchSize)
                 return false;
             if (string.IsNullOrEmpty(_endpoint))
                 return false;
 
             int sentCount = 0, batches = 0;
-            while (Interlocked.Read(ref _pendingCount) > 0 && batches++ < 20 && !token.IsCancellationRequested)
+            while (pending > 0 && batches++ < 20 && !token.IsCancellationRequested)
             {
-                var entries = await LoadUnsentAsync(_maxBatchSize, token).ConfigureAwait(false);
+                ClaimedLogBatch claimed = await ClaimPendingAsync(
+                    _maxBatchSize,
+                    DateTimeOffset.UtcNow,
+                    token).ConfigureAwait(false);
+                List<LogEntry> entries = claimed.Entries;
+
                 if (entries.Count == 0)
-                    break;
-
-                if (!ignoreMinBatch && entries.Count < _minBatchSize)
-                    break;
-
-                if (!await SendBatchAsync(entries, token).ConfigureAwait(false))
-                    break;
-
-                await MarkAsSentAsync(entries, token).ConfigureAwait(false);
-
-                long remaining = ExecuteDatabaseWithRecovery(GetPendingCountCore);
-                Interlocked.Exchange(ref _pendingCount, remaining);
-                if (remaining == 0)
                 {
-                    lock (_signalLock)
-                    {
-                        _pendingSinceUtc = null;
-                    }
+                    pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
+                    break;
                 }
 
+                if (!ignoreMinBatch && entries.Count < _minBatchSize)
+                {
+                    await ReleaseClaimAsync(claimed, token).ConfigureAwait(false);
+                    pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
+                    break;
+                }
+
+                if (!await SendBatchAsync(entries, token).ConfigureAwait(false))
+                {
+                    pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
+                    break;
+                }
+
+                await MarkClaimedAsSentAsync(claimed, token).ConfigureAwait(false);
+
+                pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
                 sentCount += entries.Count;
                 await Task.Delay(100, token).ConfigureAwait(false);
             }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -763,6 +764,694 @@ END;";
         }
 
         [TestMethod]
+        public async Task ConcurrentSendersClaimDisjointRowsFromSharedSpool()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                await using var first = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+                await using var second = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                for (int index = 0; index < 10; index++)
+                    first.Emit(CreateLogEvent($"claim {index:D2}"));
+
+                DateTimeOffset now = DateTimeOffset.UtcNow;
+                Task<ClaimedLogBatch> firstClaimTask = InvokePrivateTaskMethod<ClaimedLogBatch>(
+                    first,
+                    "ClaimPendingAsync",
+                    5,
+                    now,
+                    CancellationToken.None);
+                Task<ClaimedLogBatch> secondClaimTask = InvokePrivateTaskMethod<ClaimedLogBatch>(
+                    second,
+                    "ClaimPendingAsync",
+                    5,
+                    now,
+                    CancellationToken.None);
+
+                await Task.WhenAll(firstClaimTask, secondClaimTask);
+
+                ClaimedLogBatch firstClaim = await firstClaimTask;
+                ClaimedLogBatch secondClaim = await secondClaimTask;
+                Assert.AreEqual(5, firstClaim.Entries.Count);
+                Assert.AreEqual(5, secondClaim.Entries.Count);
+
+                var eventIds = new HashSet<string>(StringComparer.Ordinal);
+                foreach (LogEntry entry in firstClaim.Entries)
+                    Assert.IsTrue(eventIds.Add(entry.EventId));
+                foreach (LogEntry entry in secondClaim.Entries)
+                    Assert.IsTrue(eventIds.Add(entry.EventId));
+
+                Assert.AreEqual(10, eventIds.Count);
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task ExpiredClaimCanBeTakenOverByAnotherSender()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                await using var first = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+                await using var second = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                first.Emit(CreateLogEvent("claim takeover"));
+                DateTimeOffset now = DateTimeOffset.UtcNow;
+
+                ClaimedLogBatch original = await InvokePrivateTaskMethod<ClaimedLogBatch>(
+                    first,
+                    "ClaimPendingAsync",
+                    1,
+                    now,
+                    CancellationToken.None);
+                Assert.AreEqual(1, original.Entries.Count);
+
+                ClaimedLogBatch blocked = await InvokePrivateTaskMethod<ClaimedLogBatch>(
+                    second,
+                    "ClaimPendingAsync",
+                    1,
+                    now.AddSeconds(1),
+                    CancellationToken.None);
+                Assert.AreEqual(0, blocked.Entries.Count);
+
+                ClaimedLogBatch takeover = await InvokePrivateTaskMethod<ClaimedLogBatch>(
+                    second,
+                    "ClaimPendingAsync",
+                    1,
+                    now.AddSeconds(31),
+                    CancellationToken.None);
+                Assert.AreEqual(1, takeover.Entries.Count);
+                Assert.AreEqual(original.Entries[0].EventId, takeover.Entries[0].EventId);
+
+                await InvokePrivateTaskMethod(
+                    first,
+                    "MarkClaimedAsSentAsync",
+                    original,
+                    CancellationToken.None);
+                Assert.AreEqual(1L, GetUnsentCount(connectionString));
+
+                await InvokePrivateTaskMethod(
+                    second,
+                    "MarkClaimedAsSentAsync",
+                    takeover,
+                    CancellationToken.None);
+                Assert.AreEqual(0L, GetUnsentCount(connectionString));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task SameSenderCanRefreshItsOwnUnexpiredClaim()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                sink.Emit(CreateLogEvent("claim retry"));
+                DateTimeOffset now = DateTimeOffset.UtcNow;
+
+                ClaimedLogBatch first = await InvokePrivateTaskMethod<ClaimedLogBatch>(
+                    sink,
+                    "ClaimPendingAsync",
+                    1,
+                    now,
+                    CancellationToken.None);
+                ClaimedLogBatch refreshed = await InvokePrivateTaskMethod<ClaimedLogBatch>(
+                    sink,
+                    "ClaimPendingAsync",
+                    1,
+                    now.AddSeconds(1),
+                    CancellationToken.None);
+
+                Assert.AreEqual(1, first.Entries.Count);
+                Assert.AreEqual(1, refreshed.Entries.Count);
+                Assert.AreEqual(first.Entries[0].EventId, refreshed.Entries[0].EventId);
+                Assert.AreNotEqual(first.ClaimBatchId, refreshed.ClaimBatchId);
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task GracefulDisposeReleasesOwnedClaimsImmediately()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            SerilogRelaySink? first = null;
+
+            try
+            {
+                first = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+                await using var second = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                first.Emit(CreateLogEvent("release on dispose"));
+                DateTimeOffset now = DateTimeOffset.UtcNow;
+                ClaimedLogBatch claimed = await InvokePrivateTaskMethod<ClaimedLogBatch>(
+                    first,
+                    "ClaimPendingAsync",
+                    1,
+                    now,
+                    CancellationToken.None);
+                Assert.AreEqual(1, claimed.Entries.Count);
+
+                await first.DisposeAsync();
+                first = null;
+
+                ClaimedLogBatch takeover = await InvokePrivateTaskMethod<ClaimedLogBatch>(
+                    second,
+                    "ClaimPendingAsync",
+                    1,
+                    now.AddSeconds(1),
+                    CancellationToken.None);
+                Assert.AreEqual(1, takeover.Entries.Count);
+                Assert.AreEqual(claimed.Entries[0].EventId, takeover.Entries[0].EventId);
+            }
+            finally
+            {
+                if (first is not null)
+                    await first.DisposeAsync();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task RunningSenderDiscoversAndDeliversRowsWrittenByAnotherSink()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            int port = ReserveAndReleasePort();
+            var listener = new TcpListener(IPAddress.Loopback, port);
+            listener.Start();
+
+            try
+            {
+                var senderOptions = new SerilogRelayOptions();
+                senderOptions.Delivery.MinimumBatchEvents = 20;
+                senderOptions.Delivery.MaximumBatchEvents = 100;
+                senderOptions.Delivery.PollInterval = TimeSpan.FromMilliseconds(25);
+                senderOptions.Delivery.MaximumBatchWait = TimeSpan.FromMilliseconds(50);
+
+                await using var sender = new SerilogRelaySink(
+                    connectionString,
+                    $"http://127.0.0.1:{port}/logs",
+                    senderOptions);
+                await using var producer = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                Task<string> received = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
+                producer.Emit(CreateLogEvent("cross process discovery"));
+
+                string body = await received.WaitAsync(TimeSpan.FromSeconds(5));
+                StringAssert.Contains(body, "cross process discovery");
+
+                await WaitUntilAsync(
+                    () => GetUnsentCount(connectionString) == 0,
+                    TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task ExistingSpoolSchemaIsUpgradedWithClaimColumns()
+        {
+            string directory = CreateTemporaryDirectory();
+            string databasePath = Path.Combine(directory, "relay.db");
+            string connectionString = $"Data Source={databasePath}";
+
+            try
+            {
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using var create = connection.CreateCommand();
+                    create.CommandText = @"
+CREATE TABLE SerilogRelayEvents (
+    Id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    EventId         TEXT    NOT NULL UNIQUE,
+    ApplicationId   TEXT    NOT NULL,
+    MachineId       TEXT,
+    ProcessId       INTEGER NOT NULL,
+    Timestamp       TEXT    NOT NULL,
+    Level           TEXT    NOT NULL,
+    RenderMessage   TEXT    NOT NULL,
+    MessageTemplate TEXT    NOT NULL,
+    TraceId         TEXT,
+    SpanId          TEXT,
+    Exception       TEXT,
+    Properties      TEXT,
+    Sent            INTEGER NOT NULL DEFAULT 0,
+    CreatedAt       TEXT    NOT NULL DEFAULT (datetime('now'))
+);";
+                    create.ExecuteNonQuery();
+                }
+
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                using var verify = new SqliteConnection(connectionString);
+                verify.Open();
+                using var info = verify.CreateCommand();
+                info.CommandText = "PRAGMA table_info(SerilogRelayEvents);";
+                using var reader = info.ExecuteReader();
+                var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                while (reader.Read())
+                    columns.Add(reader.GetString(1));
+
+                Assert.IsTrue(columns.Contains("ClaimOwnerId"));
+                Assert.IsTrue(columns.Contains("ClaimBatchId"));
+                Assert.IsTrue(columns.Contains("ClaimUntilUnixMs"));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task MaximumBatchWaitInitializesWhenPendingAgeIsUnknown()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                DateTimeOffset now = DateTimeOffset.UtcNow;
+                SetPrivateField<DateTimeOffset?>(sink, "_pendingSinceUtc", null);
+
+                Assert.IsFalse(InvokePrivateMethod<bool>(
+                    sink,
+                    "IsMaximumBatchWaitElapsed",
+                    now));
+                Assert.AreEqual(
+                    now,
+                    GetPrivateField<DateTimeOffset?>(sink, "_pendingSinceUtc"));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task SenderHandlesClaimRaceThatLeavesNoRows()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                var options = new SerilogRelayOptions();
+                options.Delivery.MinimumBatchEvents = 1;
+
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    "http://127.0.0.1:1/logs",
+                    options);
+
+                sink.Emit(CreateLogEvent("claim race empty"));
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using var trigger = connection.CreateCommand();
+                    trigger.CommandText = @"
+CREATE TRIGGER ignore_all_claims
+BEFORE UPDATE OF ClaimOwnerId ON SerilogRelayEvents
+WHEN NEW.ClaimOwnerId IS NOT NULL
+BEGIN
+    SELECT RAISE(IGNORE);
+END;";
+                    trigger.ExecuteNonQuery();
+                }
+
+                bool didWork = await InvokePrivateTaskMethod<bool>(
+                    sink,
+                    "ProcessPendingAsync",
+                    true,
+                    CancellationToken.None);
+
+                Assert.IsFalse(didWork);
+                Assert.AreEqual(1L, GetUnsentCount(connectionString));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task SenderReleasesClaimWhenConcurrentRaceLeavesUndersizedBatch()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                var options = new SerilogRelayOptions();
+                options.Delivery.MinimumBatchEvents = 2;
+                options.Delivery.MaximumBatchEvents = 10;
+
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    "http://127.0.0.1:1/logs",
+                    options);
+
+                sink.Emit(CreateLogEvent("claim race first"));
+                sink.Emit(CreateLogEvent("claim race second"));
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using var trigger = connection.CreateCommand();
+                    trigger.CommandText = @"
+CREATE TRIGGER ignore_even_claims
+BEFORE UPDATE OF ClaimOwnerId ON SerilogRelayEvents
+WHEN NEW.ClaimOwnerId IS NOT NULL AND (OLD.Id % 2) = 0
+BEGIN
+    SELECT RAISE(IGNORE);
+END;";
+                    trigger.ExecuteNonQuery();
+                }
+
+                bool didWork = await InvokePrivateTaskMethod<bool>(
+                    sink,
+                    "ProcessPendingAsync",
+                    false,
+                    CancellationToken.None);
+
+                Assert.IsFalse(didWork);
+
+                using var verify = new SqliteConnection(connectionString);
+                verify.Open();
+                using var command = verify.CreateCommand();
+                command.CommandText = @"
+SELECT COUNT(*)
+  FROM SerilogRelayEvents
+ WHERE Sent = 0
+   AND ClaimOwnerId IS NOT NULL;";
+                Assert.AreEqual(
+                    0L,
+                    Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task EmptyClaimBatchCanBeMarkedSentWithoutDatabaseWork()
+        {
+            await using var sink = new SerilogRelaySink(
+                "Data Source=:memory:",
+                endpoint: null,
+                new SerilogRelayOptions());
+
+            var empty = new ClaimedLogBatch("empty", new List<LogEntry>());
+            await InvokePrivateTaskMethod(
+                sink,
+                "MarkClaimedAsSentAsync",
+                empty,
+                CancellationToken.None);
+        }
+
+        [TestMethod]
+        public async Task RecoveryLockSupportsNonFileSpoolsAndTimesOutWhenHeld()
+        {
+            await using (var memorySink = new SerilogRelaySink(
+                "Data Source=:memory:",
+                endpoint: null,
+                new SerilogRelayOptions()))
+            {
+                Assert.IsNull(InvokePrivateMethod<FileStream?>(
+                    memorySink,
+                    "TryAcquireRecoveryLock",
+                    TimeSpan.Zero));
+            }
+
+            string directory = CreateTemporaryDirectory();
+            string databasePath = Path.Combine(directory, "relay.db");
+            string connectionString = $"Data Source={databasePath}";
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                string lockPath = databasePath + ".recovery.lock";
+                using var held = new FileStream(
+                    lockPath,
+                    FileMode.OpenOrCreate,
+                    FileAccess.ReadWrite,
+                    FileShare.None);
+
+                FileStream? acquired = InvokePrivateMethod<FileStream?>(
+                    sink,
+                    "TryAcquireRecoveryLock",
+                    TimeSpan.FromMilliseconds(75));
+                Assert.IsNull(acquired);
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task HealthySpoolShortCircuitsRedundantCorruptionRecovery()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                Assert.IsTrue(InvokePrivateMethod<bool>(
+                    sink,
+                    "IsCurrentSpoolHealthyCore"));
+                Assert.IsTrue(InvokePrivateMethod<bool>(
+                    sink,
+                    "TryRecoverCorruptedSpool",
+                    new SqliteException("stale corruption observation", SQLitePCL.raw.SQLITE_CORRUPT)));
+                Assert.AreEqual(0L, GetUnsentCount(connectionString));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task CorruptionRecoveryReturnsFalseWhenAnotherProcessHoldsRecoveryLock()
+        {
+            string directory = CreateTemporaryDirectory();
+            string databasePath = Path.Combine(directory, "relay.db");
+            string connectionString = $"Data Source={databasePath}";
+            using var selfLog = new StringWriter(CultureInfo.InvariantCulture);
+            SelfLog.Enable(selfLog);
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                string lockPath = databasePath + ".recovery.lock";
+                using var held = new FileStream(
+                    lockPath,
+                    FileMode.OpenOrCreate,
+                    FileAccess.ReadWrite,
+                    FileShare.None);
+
+                Assert.IsFalse(InvokePrivateMethod<bool>(
+                    sink,
+                    "TryRecoverCorruptedSpool",
+                    new SqliteException("corrupt", SQLitePCL.raw.SQLITE_CORRUPT)));
+                StringAssert.Contains(
+                    selfLog.ToString(),
+                    "could not acquire cross-process corruption-recovery coordination");
+            }
+            finally
+            {
+                SelfLog.Disable();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task ShutdownClaimReleaseFailureIsDiagnosed()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            using var selfLog = new StringWriter(CultureInfo.InvariantCulture);
+            SelfLog.Enable(selfLog);
+
+            try
+            {
+                var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                GetPrivateField<SemaphoreSlim>(sink, "_databaseGate").Dispose();
+                await sink.DisposeAsync();
+
+                StringAssert.Contains(
+                    selfLog.ToString(),
+                    "could not release owned delivery claims during shutdown");
+            }
+            finally
+            {
+                SelfLog.Disable();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task ConcurrentStartupCanUpgradeOneLegacySpool()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using var create = connection.CreateCommand();
+                    create.CommandText = @"
+CREATE TABLE SerilogRelayEvents (
+    Id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    EventId         TEXT    NOT NULL UNIQUE,
+    ApplicationId   TEXT    NOT NULL,
+    MachineId       TEXT,
+    ProcessId       INTEGER NOT NULL,
+    Timestamp       TEXT    NOT NULL,
+    Level           TEXT    NOT NULL,
+    RenderMessage   TEXT    NOT NULL,
+    MessageTemplate TEXT    NOT NULL,
+    TraceId         TEXT,
+    SpanId          TEXT,
+    Exception       TEXT,
+    Properties      TEXT,
+    Sent            INTEGER NOT NULL DEFAULT 0,
+    CreatedAt       TEXT    NOT NULL DEFAULT (datetime('now'))
+);";
+                    create.ExecuteNonQuery();
+                }
+
+                Task<SerilogRelaySink> firstTask = Task.Run(() =>
+                    new SerilogRelaySink(
+                        connectionString,
+                        endpoint: null,
+                        new SerilogRelayOptions()));
+                Task<SerilogRelaySink> secondTask = Task.Run(() =>
+                    new SerilogRelaySink(
+                        connectionString,
+                        endpoint: null,
+                        new SerilogRelayOptions()));
+
+                SerilogRelaySink[] sinks = await Task.WhenAll(firstTask, secondTask);
+                try
+                {
+                    sinks[0].Emit(CreateLogEvent("parallel migration first"));
+                    sinks[1].Emit(CreateLogEvent("parallel migration second"));
+                    Assert.AreEqual(2L, GetUnsentCount(connectionString));
+                }
+                finally
+                {
+                    await sinks[0].DisposeAsync();
+                    await sinks[1].DisposeAsync();
+                }
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task ShutdownFinallyRunsWhenCancellationSourceIsAlreadyDisposed()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                GetPrivateField<CancellationTokenSource>(sink, "_cts").Dispose();
+
+                await Assert.ThrowsExactlyAsync<ObjectDisposedException>(
+                    async () => await sink.DisposeAsync());
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
         public async Task ExistingSpoolAboveNewBudgetIsNotPurgedAtStartup()
         {
             string directory = CreateTemporaryDirectory();
@@ -856,6 +1545,32 @@ END;";
                 BindingFlags.Instance | BindingFlags.NonPublic)
                 ?? throw new MissingMethodException(typeof(SerilogRelaySink).FullName, name);
             return (T)method.Invoke(sink, arguments)!;
+        }
+
+        private static async Task<T> InvokePrivateTaskMethod<T>(
+            SerilogRelaySink sink,
+            string name,
+            params object?[] arguments)
+        {
+            MethodInfo method = typeof(SerilogRelaySink).GetMethod(
+                name,
+                BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new MissingMethodException(typeof(SerilogRelaySink).FullName, name);
+            var task = (Task<T>)method.Invoke(sink, arguments)!;
+            return await task.ConfigureAwait(false);
+        }
+
+        private static async Task InvokePrivateTaskMethod(
+            SerilogRelaySink sink,
+            string name,
+            params object?[] arguments)
+        {
+            MethodInfo method = typeof(SerilogRelaySink).GetMethod(
+                name,
+                BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new MissingMethodException(typeof(SerilogRelaySink).FullName, name);
+            var task = (Task)method.Invoke(sink, arguments)!;
+            await task.ConfigureAwait(false);
         }
 
         private static void SetPrivateField<T>(SerilogRelaySink sink, string name, T value)

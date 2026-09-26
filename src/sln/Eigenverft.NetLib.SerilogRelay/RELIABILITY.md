@@ -127,33 +127,24 @@ The following settings belong to the running sink/process:
 - all `EmergencyMemoryBuffer` limits;
 - shutdown timing.
 
-A sender currently loads unsent rows from the shared spool without filtering on `ProcessId`.
-Therefore a process may deliver rows originally produced by another process of the same
-application. This is useful for draining older backlog.
+A sender may deliver rows originally produced by another process of the same application.
+This is intentional and allows a surviving/new process to drain older backlog.
 
-The receiver deduplicates by stable `EventId`, but the sender currently has no row-claim state.
-Two processes can therefore select the same unsent row concurrently. Proper multi-process
-claiming/lease semantics are still a release blocker.
+## Implemented multi-process claim/lease mechanics
 
-The in-memory pending counter is also process-local. A process does not currently receive an
-automatic signal when another process adds rows to the shared spool. This matters for failover:
-if the producing process exits, another already-running process may not immediately discover the
-orphaned backlog without additional shared-spool polling/claim logic.
-
-## Target multi-process claim/lease mechanics
-
-The target direction for closing the shared-spool sender race is deliberately small and does
-not introduce a leader process or application-wide runtime policy state.
+Shared-spool delivery now uses row claims rather than uncoordinated reads. No leader process,
+application-wide RetryGate, application-wide delivery budget, or lifetime-exclusive spool owner
+is introduced.
 
 ### Row identity versus claim identity
 
-`ProcessId` remains the origin of an event: it tells which OS process created the row.
+`ProcessId` remains event-origin metadata: it records which OS process created a row.
 
-Claim ownership is a different concept. A claim should identify the currently sending runtime
-instance, for example through an internal claim-owner id that may include/process-correlate with
-`ProcessId` but is safe against PID reuse.
+Claim ownership is independent. Each sink instance creates an internal claim-owner id composed
+from its current process id plus a new random instance component, so PID reuse does not make a
+later sink look like the old claim owner.
 
-Conceptually each pending row needs enough state for:
+Pending rows carry:
 
 ```text
 Origin:
@@ -161,66 +152,69 @@ Origin:
 
 Delivery coordination:
   ClaimOwnerId
-  ClaimUntilUtc
+  ClaimBatchId
+  ClaimUntilUnixMs
 ```
 
-The exact column names/representation may be chosen during implementation; the behavioral
-contract matters more than the storage spelling.
+Existing spool schemas are upgraded in place. Claim-column migration is serialized through an
+immediate SQLite transaction, and claim lookup/ownership indexes are created idempotently.
 
-### Claim behavior
+### Atomic claim behavior
 
-A sender should atomically claim up to its normal `Delivery.MaximumBatchEvents` from rows that
-are:
+A sender atomically claims up to `Delivery.MaximumBatchEvents` from rows that are:
 
-- unsent and unclaimed; or
-- unsent with an expired claim.
+- unsent and unclaimed;
+- unsent and already owned by the same sender instance; or
+- unsent with an expired/missing lease timestamp.
 
-Only the process that successfully acquires that claim sends that batch.
+The default internal claim lease is 30 seconds.
 
-A process may claim rows created by another process of the same application spool. This is
-intentional: a surviving/new process can drain backlog left behind by an older/dead process.
+A process may claim rows created by another process of the same application spool. Only rows
+matching the current `ClaimOwnerId` and `ClaimBatchId` are marked sent after HTTP success.
+If another process has already taken over an expired claim, the stale sender can no longer mark
+that row sent.
 
 Claims are leases, not permanent ownership:
 
-- a successful send marks the claimed rows sent;
-- a failed/transient delivery releases the claim or allows it to expire according to the
-  implementation chosen;
-- if a process dies, `ClaimUntilUtc` eventually makes those rows claimable again;
-- no row is permanently tied to the process that originally created it.
+- successful delivery marks the still-owned claim sent and clears claim metadata;
+- an undersized batch that cannot yet satisfy the sender's minimum batch policy releases its
+  claim immediately;
+- a transient HTTP failure keeps the claim so the same process can retry without immediately
+  bouncing the row between processes;
+- the same sender may refresh its own unexpired claim on retry;
+- after the lease expires, another sender may take over;
+- graceful shutdown releases all claims owned by that sink immediately.
+
+Receiver-side `EventId` idempotency remains the final protection for unavoidable at-least-once
+duplicates, for example if a sender response races with lease expiry.
 
 ### Runtime-policy scope during takeover
 
-The process that currently sends a claimed row uses **its own** runtime configuration:
+The process currently sending a claimed row uses its own runtime configuration:
 
 - its `Delivery` batch/cycle settings;
 - its `EndpointRetry` state;
 - its shutdown deadline.
 
-There is no shared application-level RetryGate or shared delivery-rate state.
+The shared spool coordinates row ownership only; process-local runtime policies are not merged.
 
-The shared spool coordinates which rows are being delivered; it does not merge process-local
-runtime policies.
+### Shared-spool backlog discovery
 
-### Backlog discovery
+Every sender cycle refreshes the count of rows that are claimable by that sender from the shared
+spool. The existing fast in-process signal remains for rows written by the same sink, while the
+normal `Delivery.PollInterval` provides bounded discovery of rows written by other processes.
 
-Claiming also needs a cross-process discovery path.
-
-A sender cannot rely only on its in-memory `_pendingCount`, because another process may add
-rows after this process last inspected the spool. The final implementation should therefore
-periodically consult the shared spool for claimable work, while retaining the current fast local
-signal for rows written by the same process.
-
-The polling/discovery mechanism should remain bounded and simple; it does not need a separate
-cross-process notification service.
+A running sender can therefore discover and deliver backlog inserted later by another sink
+without a separate cross-process notification subsystem.
 
 ### Recovery coordination
 
-Corruption recovery is different from normal row claiming because it mutates/replaces the
-physical spool itself.
+Physical corruption quarantine/recreate is coordinated separately from row claims. A short-lived
+file-backed recovery lock serializes recovery for a shared spool. After acquiring the lock, the
+process runs a SQLite quick check first; if another process already recovered the spool, no
+second quarantine is performed.
 
-The target is a short-lived cross-process recovery lock used only around quarantine/recreate
-operations. Normal persistence, claiming, and sending should not be serialized behind a
-lifetime/global file lock.
+Normal persistence, claiming, and sending are not serialized behind that recovery lock.
 
 ## Endpoint outage and RetryGate
 
@@ -257,9 +251,10 @@ process.
 
 The current SQLite implementation can quarantine a corrupted spool and create a replacement.
 
-That recovery path is coordinated only inside one process today. Concurrent corruption
-recovery against one shared application spool is therefore still part of the multi-process
-release blocker.
+Concurrent recovery of one shared application spool is coordinated by the short-lived recovery
+lock described above. The lock is used only for quarantine/recreate and is automatically
+released when its file handle closes; a dead process therefore does not leave a lifetime spool
+owner behind.
 
 ## Shutdown
 
@@ -268,23 +263,23 @@ Shutdown is process-local and bounded by a real cancellation deadline.
 Durable rows not sent before shutdown remain in the shared application spool. A later process
 may send them.
 
-## Current multi-process release gaps
+## Remaining multi-process release questions
 
-Shared-spool multi-process support is not considered finished yet. The remaining concrete gaps
-are:
+The functional shared-spool coordination layer is implemented: atomic claims, lease expiry and
+takeover, cross-sink backlog discovery, concurrent legacy-schema migration, graceful claim
+release, and cross-process corruption-recovery coordination are covered by regression tests.
 
-1. atomic batch/event claiming so concurrent senders do not select the same rows;
-2. claim expiry/recovery behavior after a process dies;
-3. timely discovery of backlog written by another process;
-4. cross-process corruption-recovery coordination;
-5. explicit semantics when processes sharing a spool configure different
+The remaining questions are policy/contract questions rather than missing sender coordination:
+
+1. explicit semantics when processes sharing one spool configure different
    `ApplicationSpool` settings;
-6. final decision for `ApplicationSpool.MaxPhysicalBytes` versus any optional per-process
-   logical quota.
+2. final decision for `ApplicationSpool.MaxPhysicalBytes` versus any optional per-process
+   logical quota;
+3. final release validation should include a smoke test using separate OS processes in addition
+   to the in-process multi-sink concurrency regression suite.
 
-`ProcessId` is already persisted and can be used to distinguish row origin where useful.
-No owner-only delivery rule is implied: another process may legitimately send older rows from
-the same application spool.
+`ProcessId` remains available to distinguish row origin where useful. It is not an ownership
+barrier: another process may legitimately send older rows from the same application spool.
 
 ## Receiver semantics
 

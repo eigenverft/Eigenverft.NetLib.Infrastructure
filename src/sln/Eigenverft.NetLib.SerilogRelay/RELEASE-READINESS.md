@@ -11,51 +11,38 @@ narrower v1 promise merely to remove it from the blocker list.
 
 ### Gate A - Shared application-spool multi-process support
 
-**Open release blocker.**
+**Core coordination implemented; policy semantics still open.**
 
-Multiple processes of the same application resolve to the same default spool path. Multiple
-active sinks can open and write that spool; SerilogRelay must therefore support this as a normal
-operating mode rather than requiring distinct spool files.
+Multiple processes of the same application can open/write the same default spool and now
+coordinate delivery through atomic row claims with a 30-second lease.
 
-Current useful behavior already exists:
+Implemented behavior includes:
 
-- each row contains `ApplicationId`, `MachineId`, and `ProcessId`;
-- multiple active sinks can persist into the same file-backed spool;
-- any sender may currently load/send unsent rows from that spool;
-- receiver idempotency is based on stable `EventId`.
+- stable `ProcessId` row-origin metadata without owner-only delivery restrictions;
+- per-sink claim-owner identity that is not ambiguous under PID reuse;
+- atomic claims with per-batch claim ids;
+- lease expiry and takeover by another sender;
+- stale claims cannot mark rows sent after takeover;
+- graceful shutdown releases owned claims immediately;
+- process-local `Delivery` and `EndpointRetry` behavior remains independent;
+- each sender periodically discovers claimable rows written by other processes;
+- existing spools are migrated to claim columns/indexes under serialized schema migration;
+- physical corruption quarantine/recreate uses a short-lived cross-process recovery lock and
+  rechecks whether another process already recovered the spool.
 
-The remaining work is coordination/correctness, not a single-owner restriction:
+No leader process, application-wide RetryGate, application-wide delivery budget, or
+lifetime-exclusive spool owner is used.
 
-- atomic claims/leases for concurrent senders;
-- expired-claim recovery after process death;
-- discovery of rows added by other processes;
-- cross-process corruption-recovery coordination;
-- clear semantics for differing `ApplicationSpool` settings across processes.
+The remaining Gate A work is the application-spool policy contract, not claim mechanics:
+
+- define semantics when processes sharing a spool configure different `ApplicationSpool`
+  settings;
+- decide whether `ApplicationSpool.MaxPhysicalBytes` remains only one shared physical ceiling,
+  whether an additional per-process logical quota is required, or both;
+- run the final release smoke test with separate OS processes as process-boundary validation.
 
 A process is not required to send only rows it originally created. Draining backlog from an
-older/dead process of the same logical application is useful behavior.
-
-#### Shaped implementation direction
-
-The current target for Gate A is:
-
-1. add atomic claim/lease state to pending rows;
-2. let any process sharing the application spool claim unclaimed or expired rows;
-3. keep `ProcessId` as event-origin metadata rather than an ownership restriction;
-4. identify the current claim owner independently enough to avoid PID-reuse ambiguity;
-5. let claims expire after process death so another process can continue the backlog;
-6. keep `Delivery` and `EndpointRetry` process-local to the sender that currently owns the
-   claim;
-7. periodically inspect the shared spool for claimable work so one process can discover backlog
-   produced by another;
-8. coordinate physical corruption quarantine/recreate with a short-lived cross-process recovery
-   lock only.
-
-This deliberately avoids a leader process, application-wide RetryGate, application-wide
-delivery budget, or a lifetime-exclusive spool owner.
-
-The exact claim columns/SQL transaction shape remain implementation details to be finalized
-when Gate A is implemented and tested.
+older/dead process of the same logical application is supported behavior.
 
 #### Application-spool limit scope
 
@@ -82,7 +69,7 @@ This decision must be explicit in API naming and documentation.
 
 ### Gate B - Operating-contract/documentation consistency
 
-**Open until Gate A semantics are settled.**
+**Open until the remaining ApplicationSpool policy semantics are settled.**
 
 README, XML docs, tests, and `RELIABILITY.md` must use the same scope vocabulary:
 

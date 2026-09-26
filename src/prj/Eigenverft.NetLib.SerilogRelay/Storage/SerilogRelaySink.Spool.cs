@@ -235,24 +235,73 @@ DELETE FROM {TableName}
             SelfLog.WriteLine("SerilogRelay local spool recovered; durable persistence resumed.");
         }
 
-        private async Task<List<LogEntry>> LoadUnsentAsync(int limit, CancellationToken token)
+        private async Task<ClaimedLogBatch> ClaimPendingAsync(
+            int limit,
+            DateTimeOffset now,
+            CancellationToken token)
         {
+            string claimBatchId = Guid.NewGuid().ToString("N");
+            long nowUnixMs = now.ToUnixTimeMilliseconds();
+            long claimUntilUnixMs = now.Add(ClaimLeaseDuration).ToUnixTimeMilliseconds();
+
             return await ExecuteDatabaseWithRecoveryAsync(
                 async () =>
                 {
-                    var list = new List<LogEntry>();
                     using var conn = new SqliteConnection(_connectionString);
                     await conn.OpenAsync(token).ConfigureAwait(false);
                     ConfigurePragmas(conn);
-                    using var cmd = conn.CreateCommand();
-                    cmd.CommandText = $@"
+
+                    using (var claim = conn.CreateCommand())
+                    {
+                        claim.CommandText = $@"
+UPDATE {TableName}
+   SET ClaimOwnerId = $owner,
+       ClaimBatchId = $claimBatchId,
+       ClaimUntilUnixMs = $claimUntil
+ WHERE Id IN (
+       SELECT Id
+         FROM {TableName}
+        WHERE Sent = 0
+          AND (
+                ClaimOwnerId IS NULL
+                OR ClaimOwnerId = $owner
+                OR ClaimUntilUnixMs IS NULL
+                OR ClaimUntilUnixMs <= $now
+              )
+        ORDER BY Id
+        LIMIT $limit
+ )
+   AND Sent = 0
+   AND (
+         ClaimOwnerId IS NULL
+         OR ClaimOwnerId = $owner
+         OR ClaimUntilUnixMs IS NULL
+         OR ClaimUntilUnixMs <= $now
+       );";
+                        claim.Parameters.AddWithValue("$owner", _claimOwnerId);
+                        claim.Parameters.AddWithValue("$claimBatchId", claimBatchId);
+                        claim.Parameters.AddWithValue("$claimUntil", claimUntilUnixMs);
+                        claim.Parameters.AddWithValue("$now", nowUnixMs);
+                        claim.Parameters.AddWithValue("$limit", limit);
+                        await claim.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+                    }
+
+                    var entries = new List<LogEntry>();
+                    using var select = conn.CreateCommand();
+                    select.CommandText = $@"
 SELECT Id, EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties
-FROM {TableName}
-WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
-                    using var reader = await cmd.ExecuteReaderAsync(token).ConfigureAwait(false);
+  FROM {TableName}
+ WHERE Sent = 0
+   AND ClaimOwnerId = $owner
+   AND ClaimBatchId = $claimBatchId
+ ORDER BY Id ASC;";
+                    select.Parameters.AddWithValue("$owner", _claimOwnerId);
+                    select.Parameters.AddWithValue("$claimBatchId", claimBatchId);
+
+                    using var reader = await select.ExecuteReaderAsync(token).ConfigureAwait(false);
                     while (await reader.ReadAsync(token).ConfigureAwait(false))
                     {
-                        list.Add(new LogEntry
+                        entries.Add(new LogEntry
                         {
                             Id = reader.GetInt64(0),
                             EventId = reader.GetString(1),
@@ -270,12 +319,50 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
                         });
                     }
 
-                    return list;
+                    return new ClaimedLogBatch(claimBatchId, entries);
                 },
                 token).ConfigureAwait(false);
         }
 
-        private async Task MarkAsSentAsync(List<LogEntry> entries, CancellationToken token)
+        private async Task MarkClaimedAsSentAsync(ClaimedLogBatch batch, CancellationToken token)
+        {
+            if (batch.Entries.Count == 0)
+                return;
+
+            await ExecuteDatabaseWithRecoveryAsync(
+                async () =>
+                {
+                    using var conn = new SqliteConnection(_connectionString);
+                    await conn.OpenAsync(token).ConfigureAwait(false);
+                    ConfigurePragmas(conn);
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = $@"
+UPDATE {TableName}
+   SET Sent = 1,
+       ClaimOwnerId = NULL,
+       ClaimBatchId = NULL,
+       ClaimUntilUnixMs = NULL
+ WHERE Sent = 0
+   AND ClaimOwnerId = $owner
+   AND ClaimBatchId = $claimBatchId;";
+                    cmd.Parameters.AddWithValue("$owner", _claimOwnerId);
+                    cmd.Parameters.AddWithValue("$claimBatchId", batch.ClaimBatchId);
+                    await cmd.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+                },
+                token).ConfigureAwait(false);
+        }
+
+        private async Task ReleaseClaimAsync(ClaimedLogBatch batch, CancellationToken token)
+        {
+            await ReleaseClaimsCoreAsync(batch.ClaimBatchId, token).ConfigureAwait(false);
+        }
+
+        private async Task ReleaseAllOwnedClaimsAsync(CancellationToken token)
+        {
+            await ReleaseClaimsCoreAsync(claimBatchId: null, token).ConfigureAwait(false);
+        }
+
+        private async Task ReleaseClaimsCoreAsync(string? claimBatchId, CancellationToken token)
         {
             await ExecuteDatabaseWithRecoveryAsync(
                 async () =>
@@ -283,17 +370,54 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
                     using var conn = new SqliteConnection(_connectionString);
                     await conn.OpenAsync(token).ConfigureAwait(false);
                     ConfigurePragmas(conn);
-                    using var tx = conn.BeginTransaction();
                     using var cmd = conn.CreateCommand();
-                    cmd.Transaction = tx;
-                    cmd.CommandText = $"UPDATE {TableName} SET Sent = 1 WHERE Id IN ({string.Join(",", entries.ConvertAll(e => e.Id))})";
+                    cmd.CommandText = claimBatchId is null
+                        ? $@"
+UPDATE {TableName}
+   SET ClaimOwnerId = NULL,
+       ClaimBatchId = NULL,
+       ClaimUntilUnixMs = NULL
+ WHERE Sent = 0
+   AND ClaimOwnerId = $owner;"
+                        : $@"
+UPDATE {TableName}
+   SET ClaimOwnerId = NULL,
+       ClaimBatchId = NULL,
+       ClaimUntilUnixMs = NULL
+ WHERE Sent = 0
+   AND ClaimOwnerId = $owner
+   AND ClaimBatchId = $claimBatchId;";
+                    cmd.Parameters.AddWithValue("$owner", _claimOwnerId);
+                    if (claimBatchId is not null)
+                        cmd.Parameters.AddWithValue("$claimBatchId", claimBatchId);
+
                     await cmd.ExecuteNonQueryAsync(token).ConfigureAwait(false);
-                    tx.Commit();
                 },
                 token).ConfigureAwait(false);
         }
 
-        // Retrieve the total number of unsent logs
+        private long GetClaimablePendingCountCore(DateTimeOffset now)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            conn.Open();
+            ConfigurePragmas(conn);
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = $@"
+SELECT COUNT(*)
+  FROM {TableName}
+ WHERE Sent = 0
+   AND (
+         ClaimOwnerId IS NULL
+         OR ClaimOwnerId = $owner
+         OR ClaimUntilUnixMs IS NULL
+         OR ClaimUntilUnixMs <= $now
+       );";
+            cmd.Parameters.AddWithValue("$owner", _claimOwnerId);
+            cmd.Parameters.AddWithValue("$now", now.ToUnixTimeMilliseconds());
+            return Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
+        }
+
+        // Retrieve the total number of unsent logs, regardless of active claims.
         private long GetPendingCountCore()
         {
             using var conn = new SqliteConnection(_connectionString);
@@ -304,15 +428,56 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             return Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
 
-        // Ensure the logs table exists in SQLite
+        // Ensure the logs table and multi-process claim columns/indexes exist.
         private void EnsureTableCreatedCore()
         {
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
             ConfigurePragmas(conn);
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = TableSchema.Replace("{0}", TableName, StringComparison.Ordinal);
-            cmd.ExecuteNonQuery();
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = TableSchema.Replace("{0}", TableName, StringComparison.Ordinal);
+                cmd.ExecuteNonQuery();
+            }
+
+            using var migration = conn.BeginTransaction(deferred: false);
+            EnsureColumnExistsCore(conn, migration, "ClaimOwnerId", "TEXT");
+            EnsureColumnExistsCore(conn, migration, "ClaimBatchId", "TEXT");
+            EnsureColumnExistsCore(conn, migration, "ClaimUntilUnixMs", "INTEGER");
+
+            using var index = conn.CreateCommand();
+            index.Transaction = migration;
+            index.CommandText = $@"
+CREATE INDEX IF NOT EXISTS IX_{TableName}_Claimable
+    ON {TableName}(Sent, ClaimUntilUnixMs, Id);
+CREATE INDEX IF NOT EXISTS IX_{TableName}_ClaimOwner
+    ON {TableName}(ClaimOwnerId, ClaimBatchId);";
+            index.ExecuteNonQuery();
+            migration.Commit();
+        }
+
+        private static void EnsureColumnExistsCore(
+            SqliteConnection connection,
+            SqliteTransaction transaction,
+            string columnName,
+            string columnDefinition)
+        {
+            using (var info = connection.CreateCommand())
+            {
+                info.Transaction = transaction;
+                info.CommandText = $"PRAGMA table_info({TableName});";
+                using var reader = info.ExecuteReader();
+                while (reader.Read())
+                {
+                    if (string.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase))
+                        return;
+                }
+            }
+
+            using var alter = connection.CreateCommand();
+            alter.Transaction = transaction;
+            alter.CommandText = $"ALTER TABLE {TableName} ADD COLUMN {columnName} {columnDefinition};";
+            alter.ExecuteNonQuery();
         }
 
         // Apply durable settings and the configured page budget to each SQLite connection.
@@ -432,6 +597,18 @@ PRAGMA journal_size_limit = {journalSizeLimit};");
                 return false;
             }
 
+            using FileStream? recoveryLock = TryAcquireRecoveryLock(RecoveryLockTimeout);
+            if (recoveryLock is null)
+            {
+                SelfLog.WriteLine(
+                    "SerilogRelay could not acquire cross-process corruption-recovery coordination for spool '{0}'.",
+                    _databasePath);
+                return false;
+            }
+
+            if (IsCurrentSpoolHealthyCore())
+                return true;
+
             string quarantineId =
                 DateTimeOffset.UtcNow.ToString("yyyyMMddTHHmmss.fffffff'Z'", CultureInfo.InvariantCulture)
                 + "-"
@@ -457,7 +634,9 @@ PRAGMA journal_size_limit = {journalSizeLimit};");
                 EnsureTableCreatedCore();
                 InsertCorruptionEventCore(quarantineId, exception);
 
-                Interlocked.Exchange(ref _pendingCount, GetPendingCountCore());
+                Interlocked.Exchange(
+                    ref _pendingCount,
+                    GetClaimablePendingCountCore(DateTimeOffset.UtcNow));
                 lock (_signalLock)
                 {
                     _hasNewLogs = true;
@@ -477,6 +656,53 @@ PRAGMA journal_size_limit = {journalSizeLimit};");
                     exception.SqliteErrorCode,
                     exception.SqliteExtendedErrorCode,
                     recoveryException.Message);
+                return false;
+            }
+        }
+
+        private FileStream? TryAcquireRecoveryLock(TimeSpan timeout)
+        {
+            if (_databasePath is null)
+                return null;
+
+            string lockPath = _databasePath + ".recovery.lock";
+            DateTimeOffset deadline = DateTimeOffset.UtcNow + timeout;
+            while (true)
+            {
+                try
+                {
+                    return new FileStream(
+                        lockPath,
+                        FileMode.OpenOrCreate,
+                        FileAccess.ReadWrite,
+                        FileShare.None);
+                }
+                catch (IOException)
+                {
+                    if (DateTimeOffset.UtcNow >= deadline)
+                        return null;
+
+                    Thread.Sleep(50);
+                }
+            }
+        }
+
+        private bool IsCurrentSpoolHealthyCore()
+        {
+            try
+            {
+                using var conn = new SqliteConnection(_connectionString);
+                conn.Open();
+                ConfigurePragmas(conn);
+                using var command = conn.CreateCommand();
+                command.CommandText = "PRAGMA quick_check(1);";
+                return string.Equals(
+                    Convert.ToString(command.ExecuteScalar(), CultureInfo.InvariantCulture),
+                    "ok",
+                    StringComparison.OrdinalIgnoreCase);
+            }
+            catch (SqliteException ex) when (IsCorruptionError(ex))
+            {
                 return false;
             }
         }

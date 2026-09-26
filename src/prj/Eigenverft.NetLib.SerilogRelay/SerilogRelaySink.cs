@@ -200,6 +200,8 @@ namespace Eigenverft.NetLib.SerilogRelay
         private const int MaxBusyRetries = 5;
         private const int BusyRetryDelayMs = 100;
         private const int EmergencyRetryDelayMs = 250;
+        private static readonly TimeSpan ClaimLeaseDuration = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan RecoveryLockTimeout = TimeSpan.FromSeconds(5);
         private const string TableName = "SerilogRelayEvents";
         private const string CorruptionDirectoryName = "corrupted";
         private const string CorruptionEventType = "spool_corrupted";
@@ -219,8 +221,11 @@ CREATE TABLE IF NOT EXISTS {0} (
     SpanId          TEXT,
     Exception       TEXT,
     Properties      TEXT,
-    Sent            INTEGER NOT NULL DEFAULT 0,
-    CreatedAt       TEXT    NOT NULL DEFAULT (datetime('now'))
+    Sent             INTEGER NOT NULL DEFAULT 0,
+    ClaimOwnerId     TEXT,
+    ClaimBatchId     TEXT,
+    ClaimUntilUnixMs INTEGER,
+    CreatedAt        TEXT    NOT NULL DEFAULT (datetime('now'))
 );";
 
         private readonly string _connectionString;
@@ -230,6 +235,7 @@ CREATE TABLE IF NOT EXISTS {0} (
         private readonly string _applicationId;
         private readonly string? _machineId;
         private readonly int _processId;
+        private readonly string _claimOwnerId;
         private readonly int _minBatchSize;
         private readonly int _maxBatchSize;
         private readonly TimeSpan _baseInterval;
@@ -316,6 +322,7 @@ CREATE TABLE IF NOT EXISTS {0} (
             _applicationId = LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(applicationId);
             _machineId = ResolveMachineId();
             _processId = Environment.ProcessId;
+            _claimOwnerId = FormattableString.Invariant($"{_processId}:{Guid.NewGuid():N}");
             _minBatchSize = options.Delivery.MinimumBatchEvents;
             _maxBatchSize = options.Delivery.MaximumBatchEvents;
             _baseInterval = options.Delivery.PollInterval;
@@ -353,7 +360,7 @@ CREATE TABLE IF NOT EXISTS {0} (
                         string.IsNullOrEmpty(_endpoint) ? _applicationSpoolUnsentEventMaxAge : null);
                 });
 
-                _pendingCount = ExecuteDatabaseWithRecovery(GetPendingCountCore);
+                _pendingCount = ExecuteDatabaseWithRecovery(() => GetClaimablePendingCountCore(DateTimeOffset.UtcNow));
                 if (_pendingCount > 0)
                 {
                     _startupBacklogPending = string.IsNullOrEmpty(_endpoint) ? 0 : 1;
@@ -513,7 +520,7 @@ CREATE TABLE IF NOT EXISTS {0} (
         private void OnPersistedToSpool()
         {
             long pending = Interlocked.Exchange(ref _pendingCountNeedsRefresh, 0) != 0
-                ? ExecuteDatabaseWithRecovery(GetPendingCountCore)
+                ? ExecuteDatabaseWithRecovery(() => GetClaimablePendingCountCore(DateTimeOffset.UtcNow))
                 : Interlocked.Increment(ref _pendingCount);
 
             lock (_signalLock)
@@ -625,6 +632,17 @@ CREATE TABLE IF NOT EXISTS {0} (
             }
             finally
             {
+                try
+                {
+                    await ReleaseAllOwnedClaimsAsync(CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    SelfLog.WriteLine(
+                        "SerilogRelay could not release owned delivery claims during shutdown: {0}",
+                        ex.Message);
+                }
+
                 _httpClient.Dispose();
                 _cts.Dispose();
                 _databaseGate.Dispose();
