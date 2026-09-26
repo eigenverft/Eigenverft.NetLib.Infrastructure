@@ -76,11 +76,19 @@ The inherited analyzer cleanup is now complete for the current relay source. The
 
 ## Release blockers
 
-The following items should be resolved before the first package release unless the release scope explicitly excludes the affected deployment mode:
+The blockers are intentionally split by failure domain so they can be solved and validated independently. Current implementation focus should start with Blocker 1; Blocker 2 is a separate multi-process concern and should not be mixed into the same change.
 
-- **Non-corruption SQLite failure behavior:** define and test the relay behavior for storage failures that are not database corruption, especially full disk, open failures, and I/O errors. These states must remain distinguishable from `SQLITE_CORRUPT` / `SQLITE_NOTADB` and must have an observable failure path such as Serilog `SelfLog`.
-- **Multi-process shared-spool coordination:** the application-level default spool can be opened by multiple same-application processes, and receiver-side `EventId` idempotency prevents duplicate stored events. However, parallel sender loops can currently race on the same unsent rows, and corruption recovery is only coordinated inside one process. Before release, either add cross-process row claiming/leases plus a recovery lock, or explicitly narrow the supported v1 contract so one application spool has only one active sender process.
-- **Authentication (U1, deployment-dependent):** explicit sender authentication such as bearer tokens is a release blocker if v1 officially supports direct remote/external ingestion. If the first supported deployment scope is limited to loopback/private infrastructure behind a separately trusted proxy boundary, authentication can remain deferred. Event/application identity fields must never be treated as authenticated identity merely because they appear in the payload.
+### Blocker 1 - Local persistence failure / event-loss behavior
+
+The relay is durable-first: `Emit()` synchronously writes each event to SQLite before the background sender can deliver it. If that write fails for a non-corruption storage reason such as full disk, open/permission failure, or I/O error, the event currently cannot enter the durable spool and is therefore lost after a `SelfLog` diagnostic. Define and test the behavior for these non-corruption SQLite failures without conflating them with `SQLITE_CORRUPT` / `SQLITE_NOTADB` recovery. This is a general single-process reliability problem and exists independently of multi-process use.
+
+### Blocker 2 - Multi-process shared-spool coordination
+
+The application-level default spool can be opened by multiple same-application processes, and receiver-side `EventId` idempotency prevents duplicate stored events. However, each process owns its own `_pendingCount`, sender loop, signal state, and in-process database gate while observing the same SQLite spool. Parallel sender loops can race on the same unsent rows, one process cannot observe another process's in-memory pending state, and corruption recovery is only coordinated inside one process. Solve this independently after Blocker 1, either with cross-process row claiming/leases plus a recovery lock or by explicitly narrowing the supported v1 contract so one application spool has only one active sender process.
+
+### Blocker 3 - Authentication (deployment-dependent)
+
+Explicit sender authentication such as bearer tokens is a release blocker if v1 officially supports direct remote/external ingestion. If the first supported deployment scope is limited to loopback/private infrastructure behind a separately trusted proxy boundary, authentication can remain deferred. Event/application identity fields must never be treated as authenticated identity merely because they appear in the payload.
 
 ## Deferred
 
