@@ -97,11 +97,12 @@ chance to reconnect.
 
 | Setting | Default | Meaning |
 |---|---:|---|
-| MaxSpoolBytes | **64 MiB** | Hard durable spool budget |
+| MaxSpoolBytes | **64 MiB** | Maximum live SQLite database budget |
 | SentRetention | 1 day | Local copy after confirmed server acceptance |
 | UnsentMaxAge | none | Offline duration alone does not delete unsent events |
-| MaxUnsentEvents | 100000 | Secondary guard against huge numbers of tiny rows |
-| PressureLowWatermark | 85% | Reclaim enough space to avoid constant limit oscillation |
+| SqliteBusyTimeout | 1 second | Maximum synchronous wait for a locked/busy spool write |
+| CorruptionArchiveCount | 1 | Preserve only the latest corrupted spool archive |
+| DeadLetterRetention | 7 days | Bounded diagnostic retention for permanently rejected events |
 
 Important: `MaxSpoolBytes = 64 MiB` is a **ceiling, not a reservation**. SQLite still grows on
 demand. A 2-5 MiB application does not allocate a 64 MiB file merely because the configured
@@ -113,6 +114,28 @@ allowed to accumulate gigabytes of logs because the server was never deployed.
 
 Deployments that intentionally need more history can opt into 128 MiB, 256 MiB, 1 GiB, or a
 deployment-specific value.
+
+### What the 64 MiB limit actually means
+
+Prefer the simple SQLite-native mechanism over repeatedly measuring files and running automatic
+`VACUUM`:
+
+- enforce the live database growth with SQLite page limits (for example
+  `PRAGMA max_page_count`);
+- keep WAL growth bounded with normal checkpointing / a small internal WAL size limit;
+- treat `-wal` and `-shm` as bounded SQLite runtime overhead rather than additional public
+  policy knobs;
+- reuse freed SQLite pages after rows are deleted; do not require the physical `.db` file to
+  shrink back to a percentage target.
+
+Therefore `MaxSpoolBytes` means the maximum **live database budget**, not an exact byte-for-byte
+cap for every file in the spool directory. This is easier to enforce reliably and still solves
+the real problem: a permanently dead endpoint cannot make the live log database grow without
+bound.
+
+There is intentionally no `PressureLowWatermark`. With SQLite page reuse, deleting enough
+eligible rows to make the next write possible is sufficient; automatic compaction would add
+I/O, locking, and implementation complexity without improving the safety bound.
 
 ## No independent maximum event-size policy by default
 
@@ -126,21 +149,32 @@ The total spool budget still bounds resource use. Therefore a very large event c
 significant part of the configured spool budget, but the relay should not silently rewrite or
 truncate it.
 
-If one event cannot be durably persisted because the configured spool/disk budget is
-insufficient, that is a storage-limit failure and must be reported explicitly. The caller can
-choose a larger `SpoolPolicy.MaxSpoolBytes` for workloads that intentionally contain very
-large events.
+If one event cannot be durably persisted because the configured spool budget is insufficient,
+that is a storage-policy rejection and must be reported explicitly. The caller can choose a
+larger `SpoolPolicy.MaxSpoolBytes` for workloads that intentionally contain very large events.
+
+Before applying `DropOldest`, detect the impossible case where the incoming event can never
+fit inside the configured spool budget even when the spool is otherwise empty. Return
+`RejectedByPolicy` directly; do not delete existing backlog trying to make room for an event that
+cannot fit.
 
 ## Storage-pressure order
 
-When the spool approaches its hard budget:
+When a write would exceed the configured live-database budget:
 
 1. remove expired rows that have already been sent;
 2. remove additional already-sent rows if necessary;
-3. reclaim expired dead-letter metadata if configured;
-4. if unsent data still exceeds the configured hard budget, apply
-   `UnsentOverflowAction`;
-5. count and report every unsent-loss episode.
+3. remove expired dead-letter rows;
+4. retry the write using the now-reusable SQLite pages;
+5. if the write still cannot fit, apply `UnsentOverflowAction`;
+6. count and report every unsent-loss episode.
+
+`DropNewest` simply rejects the incoming event once no reclaimable sent/dead-letter space
+remains. It does not try to force the database down to an arbitrary percentage.
+
+`DropOldest` deletes the minimum required oldest unsent rows and retries the incoming write.
+The physical database file may remain at its high-water size, but SQLite reuses the freed
+pages, so no `VACUUM` is required for normal operation.
 
 Recommended balanced default:
 
@@ -154,6 +188,91 @@ remain configurable; a deployment may choose `DropNewest` instead.
 
 No unsent event should be deleted merely because it is three, seven, or thirty days old unless
 the user explicitly configures an age limit.
+
+## Capacity result is not storage failure
+
+A configured storage limit is normal policy behavior, not a broken spool.
+
+The spool write API should therefore return a small explicit result instead of throwing every
+non-success path into Emergency:
+
+```text
+SpoolWriteResult
+  Status:
+    Persisted
+    RejectedByPolicy
+    StorageUnavailable
+  EvictedUnsentCount
+```
+
+Only `StorageUnavailable` activates `EmergencyPolicy`.
+
+`RejectedByPolicy` means the incoming event was intentionally rejected by the configured spool
+limit/overflow rule. `DropOldest` instead returns `Persisted` with a non-zero
+`EvictedUnsentCount`. Both paths increment the appropriate loss diagnostics; neither may bypass
+the durable limit
+by consuming emergency RAM or using direct HTTP rescue.
+
+This distinction is more important than introducing many storage exception types.
+
+## Busy/locked writes: one timeout, not two retry systems
+
+Use one SQLite busy timeout as the local contention budget. The recommended default is one
+second.
+
+Do not combine a multi-second SQLite `busy_timeout` with an additional custom
+sleep-and-retry loop. If SQLite cannot complete the write within the configured busy timeout,
+treat that write as temporarily `StorageUnavailable` and use the normal Emergency path.
+
+This keeps synchronous `Emit()` latency bounded and makes the behavior easy to reason about.
+
+## Existing oversized spool during upgrade
+
+A new 64 MiB default must never trigger a destructive startup purge of an existing larger
+spool.
+
+Simple upgrade rule:
+
+- existing data is grandfathered;
+- never delete unsent backlog merely to make the old database immediately fit the new default;
+- prevent further growth beyond the existing high-water size;
+- continue reclaiming sent/dead-letter rows normally;
+- expose `SpoolOverConfiguredBudget = true` until usage naturally falls within policy.
+
+No automatic `VACUUM` is required. A later explicit maintenance/compaction feature can be
+added if real deployments need physical file shrinking.
+
+## Corruption archive
+
+Corrupted DB/WAL/SHM files are outside the live database after quarantine, so they need their
+own simple bound.
+
+Default:
+
+```text
+CorruptionArchiveCount = 1
+```
+
+Before preserving a new corruption archive, delete older relay-created corruption archives so
+only the latest remains. One retained archive is enough for diagnosis/recovery without creating
+a second unbounded storage system.
+
+For a normally capped spool, the archive is naturally bounded to roughly one previous spool
+high-water mark plus its WAL/SHM overhead. A grandfathered oversized pre-policy spool is the
+explicit upgrade exception; it is still bounded by archive count rather than being duplicated
+on every corruption.
+
+## Dead-letter storage
+
+Dead letters should live in a separate SQLite table inside the same spool database, not in
+extra files.
+
+That gives three useful simplifications:
+
+- dead-letter bytes automatically consume the same `MaxSpoolBytes` budget;
+- `DeadLetterRetention` can clean them with normal SQLite deletes;
+- the first PermanentFailure implementation does not need to add columns to the existing event
+  table.
 
 ---
 
@@ -181,6 +300,7 @@ It does **not** decide when a failed endpoint may be retried. That is `RetryPoli
 | MaximumBatchEvents | 100 |
 | TargetBatchBytes | 1 MiB |
 | MaximumBatchWait | 5 seconds |
+| RequestTimeout | 10 seconds |
 | MaxBatchesPerCycle | 20 |
 | InterBatchDelay | 100 ms |
 | DrainBacklogOnStartup | true |
@@ -189,6 +309,10 @@ It does **not** decide when a failed endpoint may be retried. That is `RetryPoli
 
 If one event by itself is larger than the target batch size, send that event alone without
 truncating it.
+
+`RequestTimeout` belongs here because it bounds one transport attempt. A timeout is then
+classified by `RetryPolicy` as a transient delivery failure. The value remains configurable
+for deployments that intentionally send very large single events.
 
 ## Low-volume behavior
 
@@ -278,7 +402,6 @@ Recommended defaults:
 | MaximumDelay | 5 minutes |
 | Jitter | +/-20% |
 | RespectRetryAfter | true |
-| MaximumRetryAfter | 1 hour |
 | ImmediateProbeAfterProcessStart | true |
 
 ## Reset behavior
@@ -310,7 +433,20 @@ Transient:
 - HTTP `429`;
 - HTTP `5xx`.
 
-For `429`, honor a valid `Retry-After`, bounded by policy.
+For `429`, support both delta and HTTP-date forms of `Retry-After`.
+
+Use one unambiguous rule:
+
+```text
+NextAttemptAt = max(
+    now + jittered exponential backoff,
+    Retry-After not-before time
+)
+```
+
+Jitter may delay a retry further, but it must never make the client retry earlier than the
+server's valid `Retry-After`. No additional `MaximumRetryAfter` setting is needed initially;
+adding one would introduce another edge-case rule without evidence that it is required.
 
 Configuration/protocol failures:
 
@@ -343,8 +479,9 @@ without improving retry decisions.
 
 Endpoint retry history belongs to `RetryPolicy`.
 
-Per-event attempt metadata is useful only when we are trying to determine whether a particular
-event itself is undeliverable.
+For the first implementation, do not persist generic per-event attempt counters at all.
+Deterministic single-event rejections are recorded once when the event is moved to dead-letter
+storage.
 
 ---
 
@@ -355,38 +492,45 @@ event itself is undeliverable.
 `PermanentFailurePolicy` owns **events that may themselves be invalid or impossible for the
 receiver to accept**.
 
-This is where per-event attempt metadata belongs.
-
 It prevents one bad oldest event from blocking every later valid log forever.
 
 ## Behavior
+
+Keep the first implementation deterministic and small. Do not add a generic per-event
+`RejectedAttempts` state machine unless real receiver behavior shows that it is needed.
 
 If a multi-event batch receives a response that may be content-specific:
 
 1. split the batch;
 2. retry smaller groups;
-3. identify the offending event;
-4. continue delivering unrelated valid events;
-5. retain explicit failure information for the bad event.
+3. continue until the rejecting event is isolated;
+4. if the single event is deterministically rejected, move it to dead-letter storage;
+5. continue delivering unrelated valid events.
 
-Possible per-event metadata:
+The dead-letter row only needs diagnostic facts such as:
 
-- `RejectedAttempts`;
-- `LastRejectedAt`;
-- `LastRejectedStatus`;
-- `LastRejectedReason`.
+- original event payload/identity;
+- `RejectedAt`;
+- HTTP status / failure classification;
+- optional receiver reason/body excerpt.
 
-Recommended default:
+A confirmed `EventId` content conflict can be dead-lettered immediately. Likewise, a
+single-event `413` is not helped by retrying the identical payload forever.
 
-```text
-MaxRejectedAttempts = 3
-Action = DeadLetter
-```
+Dead-letter means "preserved locally but no longer blocking normal delivery"; it must not mean
+silent deletion.
 
-A deterministic identity conflict may be dead-lettered earlier when the receiver has clearly
-confirmed that the same `EventId` already exists with different content.
+### Schema strategy: avoid migration until it is actually needed
 
-Dead-letter means "not blocking normal delivery anymore"; it must not mean silent deletion.
+For the first PermanentFailure implementation, create a separate
+`SerilogRelayDeadLetters` table with `CREATE TABLE IF NOT EXISTS`.
+
+Do **not** add rejection columns to the existing `SerilogRelayEvents` table merely to support
+this feature. That avoids a schema migration for the first implementation and keeps existing
+spools readable without an upgrade step.
+
+Introduce an explicit schema version/migration mechanism only when a future change truly needs
+to alter an existing table. Do not build a migration framework speculatively.
 
 ## Large events
 
@@ -416,14 +560,20 @@ This is a double-degradation path and therefore must be tightly bounded.
 | Setting | Default |
 |---|---:|
 | MaxBufferedEvents | 16384 |
-| MaxBufferedBytes | **64 MiB** |
+| MaxBufferedPayloadBytes | **64 MiB** |
 | OverflowAction | DropNewest |
-| RetryDelay | 250 ms |
+| LocalSpoolRetryDelay | 250 ms |
 | DirectHttpRescue | enabled when endpoint exists |
 
-The first reached limit wins: event count or byte budget.
+The first reached limit wins: event count or buffered-payload byte budget.
 
-64 MiB is the intended default RAM ceiling for emergency buffering.
+The byte budget is deliberately named `MaxBufferedPayloadBytes`, not a strict process-RAM
+ceiling. It should use one consistent, cheap accounting measure such as the serialized UTF-8
+payload size of the materialized `LogEntry`.
+
+Managed-object overhead, temporary serialization buffers, and the single event currently being
+materialized can make process memory briefly exceed 64 MiB. Guaranteeing exact process RSS
+would require significantly more machinery and is not necessary for this fallback path.
 
 A normal endpoint outage with a healthy SQLite spool must consume **zero** emergency-buffer
 capacity.
@@ -443,7 +593,22 @@ OverflowAction = DropNewest
 Every overflow episode must increment counters and emit throttled diagnostics.
 
 There is no event-content truncation here either. If one event itself cannot fit into the
-remaining emergency byte budget, it is an explicit emergency overflow.
+remaining emergency payload budget, it is an explicit emergency overflow.
+
+## Emergency HTTP rescue and RetryPolicy
+
+`LocalSpoolRetryDelay = 250 ms` controls only how often the Emergency worker retries local
+SQLite persistence.
+
+Direct HTTP rescue must use the **same global RetryGate** as the normal sender:
+
+- if the RetryGate is open, Emergency may use the permitted endpoint probe;
+- if the endpoint fails, the shared RetryPolicy advances `NextAttemptAt`;
+- while the gate is closed, Emergency keeps retrying local persistence but does not generate
+  HTTP requests every 250 ms.
+
+This avoids two independent retry systems fighting each other and prevents a broken local
+spool from bypassing endpoint backoff.
 
 ---
 
@@ -488,7 +653,8 @@ Failure to drain volatile emergency events can be data loss and must be reported
 Useful status values:
 
 - pending durable event count;
-- approximate spool bytes / configured spool budget;
+- live SQLite database bytes / configured spool budget;
+- whether an upgraded spool is currently over the configured budget;
 - oldest unsent age;
 - last successful delivery;
 - last failed delivery;
@@ -497,10 +663,11 @@ Useful status values:
 - last HTTP/network failure class;
 - spool healthy/unavailable;
 - emergency buffered event count;
-- emergency buffered bytes;
+- emergency buffered payload bytes;
 - emergency dropped count;
-- durable spool drop/eviction count;
-- dead-letter count.
+- durable spool policy-drop/eviction count;
+- dead-letter count;
+- retained corruption archive count.
 
 `SelfLog` remains useful, but a status snapshot makes monitoring and testing far more
 reliable.
@@ -522,7 +689,7 @@ Suggested general library default:
 - `MaximumBatchWait = 5s`;
 - retry 5s, 10s, 20s, 40s ... capped at 5m with jitter;
 - `Emergency.MaxBufferedEvents = 16384`;
-- `Emergency.MaxBufferedBytes = 64 MiB`.
+- `Emergency.MaxBufferedPayloadBytes = 64 MiB`.
 
 ## IntermittentClient
 
@@ -645,22 +812,91 @@ Rules:
 
 ---
 
+# Public API compatibility
+
+The grouped policy model should not require an abrupt public API break.
+
+Keep the current flat overload for compatibility and add one policy-based overload whose
+`policy` argument is required, for example conceptually:
+
+```text
+SerilogRelay(endpoint, policy, ...)
+```
+
+Both overloads should map into the same internal policy objects. The existing flat arguments
+become compatibility sugar, not a second implementation path.
+
+Do not make `policy` another optional argument on the already long existing signature if that
+creates overload ambiguity. Prefer a clearly distinct overload and deprecate old flat knobs
+only when there is a real release reason.
+
+---
+
+# Minimal implementation boundaries
+
+Do not split the current sink into a large folder tree just because the design has several
+policies.
+
+The smallest useful first extraction is:
+
+```text
+SerilogRelaySink
+  -> SqliteRelaySpool
+  -> RetryGate
+  -> RelayHttpTransport
+  -> EmergencyBuffer
+```
+
+Responsibilities:
+
+- `SerilogRelaySink`: materialize Serilog events and orchestrate lifecycle;
+- `SqliteRelaySpool`: persistence, cleanup/capacity, dead-letter table, corruption recovery,
+  and `SpoolWriteResult`;
+- `RetryGate`: one endpoint backoff state shared by normal delivery and Emergency HTTP rescue;
+- `RelayHttpTransport`: one HTTP attempt and a structured `DeliveryResult`;
+- `EmergencyBuffer`: bounded volatile queue plus payload-byte accounting.
+
+Use structured results instead of booleans/exceptions for expected decisions:
+
+```text
+SpoolWriteResult:
+  Status = Persisted | RejectedByPolicy | StorageUnavailable
+  EvictedUnsentCount
+
+DeliveryResult:
+  Success
+  TransientFailure
+  ConfigurationFailure
+  PotentialPermanentFailure
+```
+
+That is enough separation to implement the policies cleanly. Do not extract separate shutdown,
+diagnostics, migration, capacity-manager, or permanent-failure classes until their code is large
+enough to justify another boundary.
+
+Tests should follow these few components directly. This removes the need for most private
+reflection tests without creating a class for every design paragraph.
+
+---
+
 # Recommended implementation order
 
-1. Replace the unsafe default three-day unsent startup deletion with capacity-based retention.
-2. Add `MaximumBatchWait` and immediate startup backlog delivery.
-3. Introduce the grouped policy model:
-   `SpoolPolicy`, `DeliveryPolicy`, `RetryPolicy`, `PermanentFailurePolicy`,
-   `EmergencyPolicy`, and `ShutdownPolicy`.
-4. Add the 64 MiB durable spool ceiling and explicit overflow behavior.
-5. Implement retry gating/backoff as 5s -> 10s -> 20s -> 40s ... max 5m, with jitter and
-   immediate reset on success.
-6. Add permanent-event isolation/dead-letter behavior and per-event rejection metadata only
-   for that path.
-7. Add the 64 MiB emergency byte budget alongside the existing 16384-event limit.
+1. Fix the two concrete current delivery hazards first:
+   remove default age-based deletion of unsent startup backlog, and add `MaximumBatchWait` plus
+   immediate startup backlog delivery.
+2. Introduce the grouped policy model and compatibility overload.
+3. Extract only the minimal implementation boundaries:
+   `SqliteRelaySpool`, `RetryGate`, `RelayHttpTransport`, and `EmergencyBuffer`, with
+   `SpoolWriteResult` / `DeliveryResult`.
+4. Add the 64 MiB live-database cap, single SQLite busy timeout, safe oversized-spool upgrade
+   behavior, and one retained corruption archive.
+5. Implement retry gating/backoff as 5s -> 10s -> 20s -> 40s ... max 5m, with jitter,
+   `Retry-After`, immediate reset on success, and one shared gate for Emergency HTTP rescue.
+6. Add the 64 MiB emergency buffered-payload budget alongside the existing 16384-event limit.
+7. Add deterministic permanent-event isolation and the separate dead-letter table; do not add
+   generic per-event attempt counters unless real receiver behavior requires them.
 8. Add diagnostics/status.
 9. Define matching receiver transport/storage policies separately.
 
-The first two items remove concrete current delivery hazards. The grouped policy model should
-then be introduced before additional limits are added so each new parameter has a clear owner
-and semantics.
+This order fixes real current loss/delay behavior first, then creates only the component
+boundaries needed by the new policies before adding the more complex failure modes.
