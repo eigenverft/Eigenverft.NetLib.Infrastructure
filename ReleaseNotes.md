@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `0b40f00` — Make the SerilogRelay limits/outage policy design storage-engine-neutral after responsibility-boundary, independent-change-boundary, concept-model, and usability review: remove SQLite-specific policy mechanics, use a generic retained-spool budget and persistence timeout, keep recovery/representation details internal, avoid speculative backend/provider abstractions, and preserve one-line default Serilog configuration.
+
 - `c75086c` — Simplify and harden the SerilogRelay limits/outage design after source review: use SQLite-native page limits instead of low-watermark/VACUUM management, distinguish policy rejection from actual storage failure, share one RetryGate with Emergency HTTP rescue, avoid speculative per-event attempt/migration machinery, grandfather oversized existing spools safely, bound corruption archives, and define only a small first set of implementation components.
 
 - `ec6b0e6` — Remove the proposed post-recovery throttle from the SerilogRelay outage design: a successful endpoint response now resets retry backoff immediately and backlog draining resumes at the normal DeliveryPolicy rate, bounded by the existing batch/cycle/inter-batch controls rather than a second token bucket.
