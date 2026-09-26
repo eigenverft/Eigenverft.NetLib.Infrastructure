@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `ec6b0e6` — Remove the proposed post-recovery throttle from the SerilogRelay outage design: a successful endpoint response now resets retry backoff immediately and backlog draining resumes at the normal DeliveryPolicy rate, bounded by the existing batch/cycle/inter-batch controls rather than a second token bucket.
+
 - `d2bb2bb` — Refine the SerilogRelay outage design into explicit behavioral policies: reduce the proposed balanced durable-spool ceiling to 64 MiB, remove the arbitrary per-event size cap, separate retry gating from recovery catch-up rate limiting, define 5s→10s→20s→40s exponential backoff with jitter/reset semantics, and set the emergency byte budget default to 64 MiB.
 
 - `984c9ec` — Define the SerilogRelay limits/outage policy model for durable spool capacity, intermittent clients, maximum batch wait, endpoint retry/circuit handling, poison-event isolation, bounded emergency memory, shutdown deadlines, observability, and explicit 1h/12h/1d/7d failure semantics; no runtime behavior changes yet.
