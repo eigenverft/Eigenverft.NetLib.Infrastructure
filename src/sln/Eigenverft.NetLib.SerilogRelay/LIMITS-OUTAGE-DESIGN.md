@@ -2,109 +2,49 @@
 
 ## Purpose
 
-This document defines the intended limits, outage behavior, and policy boundaries for
-`Eigenverft.NetLib.SerilogRelay` and the matching `Eigenverft.Service.CentralLogging`
-ingestion path.
+This document defines the intended limits, outage behavior, and configuration model for
+`Eigenverft.NetLib.SerilogRelay`.
 
-The goal is not to promise lossless logging under every combination of failures. The goal is
-to make the expected behavior explicit, bounded, observable, and suitable for both always-on
-services and intermittently connected clients.
+The goal is not to promise lossless logging under every possible double failure. The goal is
+to make behavior explicit, bounded, configurable, and diagnosable.
 
-The core durability rule remains:
+The durable-first rule remains:
 
 1. In normal operation an event is persisted to the local SQLite spool before HTTP delivery.
-2. A remote endpoint outage must not move healthy-spool traffic into the volatile emergency
-   buffer.
-3. The volatile emergency buffer is only a fallback when local durable persistence itself is
-   unavailable.
-4. No policy may allow logging to consume unbounded RAM or unbounded disk.
-5. Data loss at a configured hard limit must be explicit and observable rather than silent.
+2. A remote endpoint outage must use the durable spool, not the volatile emergency buffer.
+3. The emergency buffer exists only when local durable persistence itself is unavailable.
+4. RAM and disk use must be bounded by explicit policy.
+5. If a configured hard limit forces loss, that loss must be observable and counted.
 
-## Current behavior and identified gaps
+## What a policy means here
 
-The current implementation already provides several useful building blocks:
+A **policy** is not one numeric setting.
 
-- durable SQLite-first persistence;
-- stable per-event `EventId` values and receiver-side idempotency;
-- a 16384-event bounded emergency Channel for local-spool failures;
-- HTTP retry with adaptive delay;
-- `429 Retry-After` handling;
-- a 2-second HTTP timeout;
-- default batches of 20 to 100 events;
-- at most 20 batches in one sender pass;
-- oldest-unsent-first delivery;
-- a best-effort shutdown flush;
-- SQLite corruption quarantine and recreation;
-- `SelfLog` diagnostics.
+A policy is the complete behavior for one failure/resource domain:
 
-The following current behaviors are important enough to change before treating the outage
-model as complete.
+```text
+policy = decision rules + limits/timers + action when a limit/failure is reached
+```
 
-### Unsent rows can expire before reconnect delivery
+Example:
 
-The public default is currently `unsentRetention = 3 days`. Cleanup runs during sink
-construction, before the background sender starts, and removes unsent rows using their local
-`CreatedAt` value.
+`RetryPolicy.InitialDelay = 5s` is only a parameter.
 
-That means a client that has durable backlog, remains offline for more than three days, and
-then starts again can delete those old unsent rows before it has a chance to reconnect and
-deliver them.
+The **RetryPolicy** is the complete rule that says:
 
-This is not a good default for laptops, field devices, tools, or other intermittent clients.
+- which failures are retryable;
+- when another attempt is allowed;
+- how the delay grows;
+- whether jitter is applied;
+- what `Retry-After` means;
+- when the failure state resets;
+- which failures must not use ordinary retry.
 
-### Low-volume clients can wait indefinitely for the normal sender
+This distinction keeps the public API understandable. We should not turn
+`.WriteTo.SerilogRelay(...)` into a flat collection of twenty unrelated primitive
+parameters.
 
-The normal sender currently starts a delivery pass only when the pending count reaches
-`minimumBatchSize` (default 20). A graceful shutdown bypasses that minimum, but a process
-that stays alive with only a few events can retain them indefinitely, and a crash/power loss
-does not execute the shutdown flush.
-
-A minimum batch size is useful for efficiency, but it needs a maximum batch wait.
-
-### Local spool growth is not bounded
-
-The file spool currently has time-based cleanup but no hard byte limit and no total-event
-limit. During a long endpoint outage, a healthy spool can therefore grow until the host disk
-becomes the effective limit.
-
-### Emergency memory is bounded by event count, not by bytes
-
-16384 events is a useful event-count bound, but one event can contain a very large message,
-exception, or properties payload. The emergency path therefore also needs a byte budget or an
-event-size limit.
-
-### Permanent HTTP failures can head-of-line block the backlog
-
-Network failures, `429`, and server failures are naturally retryable. Some `4xx` responses
-are different. A permanently invalid event or conflict in the oldest batch can currently
-cause that same oldest batch to be retried indefinitely, preventing later valid events from
-being delivered.
-
-### Retry state is endpoint-level but not explicitly modeled
-
-The sender already backs off after unsuccessful work, up to five minutes, and resets after
-successful work. This is fundamentally endpoint/circuit state, not an individual-event
-property.
-
-Persisting a `SendAttempts` counter on every event for every network outage would cause
-unnecessary SQLite writes during a long outage. Per-event failure metadata is useful for
-isolating permanent/poison events, but transient endpoint backoff should remain endpoint-level.
-
-### Receiver limits are implicit
-
-The current CentralLogging receiver validates protocol identity and event identity, stores a
-batch transactionally, accepts duplicate `EventId` values when their content matches, and
-does not reject events merely because their event timestamp is old. That is desirable for
-offline clients.
-
-It currently has no explicit application-level maximum batch count, maximum event size,
-maximum request body size, or storage-retention/size policy. Those should be made explicit and
-kept compatible with the sender.
-
-## Proposed policy model
-
-Avoid growing the public Serilog extension method into a long list of unrelated primitive
-parameters. Introduce one top-level policy object with a small number of cohesive sub-policies.
+## Proposed top-level configuration
 
 Conceptually:
 
@@ -113,381 +53,614 @@ SerilogRelayPolicy
   Spool
   Delivery
   Retry
+  PermanentFailure
   Emergency
   Shutdown
-  Observability
+
+SerilogRelayDiagnosticsOptions
 ```
 
-Profiles may later provide preconfigured policy objects, but all behavior should ultimately be
-expressed through the same policy model.
+The first six are behavioral policies. Diagnostics is deliberately separate: diagnostics
+reports state, but does not decide how the relay behaves.
 
-### 1. Spool policy
+Profiles such as `Balanced`, `IntermittentClient`, or `AlwaysOnService` may later be
+convenience factories that compose these same policies. A profile is not a separate
+implementation.
 
-Recommended balanced defaults:
+---
 
-| Setting | Recommended default | Meaning |
+# 1. SpoolPolicy
+
+## Responsibility
+
+`SpoolPolicy` owns **durable local storage**.
+
+It answers:
+
+- how large the SQLite spool may grow;
+- how long already-sent rows are retained locally;
+- whether unsent rows may expire by age;
+- what happens when the configured durable-storage budget is exhausted;
+- which data is removed first under storage pressure.
+
+It does **not** own HTTP retry timing or emergency RAM.
+
+## Current problem
+
+The current default `unsentRetention = 3 days` is unsafe for intermittent clients.
+
+Cleanup runs during sink construction before the sender starts. Therefore a client that has
+five-day-old unsent backlog can delete that backlog immediately on startup before it gets a
+chance to reconnect.
+
+## Recommended balanced defaults
+
+| Setting | Default | Meaning |
 |---|---:|---|
+| MaxSpoolBytes | **64 MiB** | Hard durable spool budget |
 | SentRetention | 1 day | Local copy after confirmed server acceptance |
-| UnsentMaxAge | none | Do not drop durable unsent rows merely because a client was offline |
-| MaxSpoolBytes | 1 GiB | Primary durable-backlog safety limit |
-| MaxUnsentEvents | 250000 | Secondary guard against millions of tiny rows |
-| ReservedFreeDiskBytes | 512 MiB | Do not consume the host's last free disk space |
-| MaxEventBytes | 256 KiB | Prevent one event from dominating disk/RAM/request size |
-| PressureLowWatermark | 90% | After pressure cleanup, create useful headroom |
+| UnsentMaxAge | none | Offline duration alone does not delete unsent events |
+| MaxUnsentEvents | 100000 | Secondary guard against huge numbers of tiny rows |
+| PressureLowWatermark | 85% | Reclaim enough space to avoid constant limit oscillation |
 
-`UnsentMaxAge = none` is deliberate. A bounded disk budget is a better default safety
-mechanism than silently deleting a three-day-old event before a rarely connected client can
-send it.
+Important: `MaxSpoolBytes = 64 MiB` is a **ceiling, not a reservation**. SQLite still grows on
+demand. A 2-5 MiB application does not allocate a 64 MiB file merely because the configured
+maximum is 64 MiB.
 
-If a deployment wants legal/privacy age limits, it can explicitly set `UnsentMaxAge`.
-Age-based expiration should not run before the sender has had a reconnect opportunity unless
-the configured hard storage limit requires eviction.
+64 MiB is intentionally much smaller than the previously proposed 1 GiB. This is a reusable
+library and cannot assume that every small desktop utility or command-line tool should be
+allowed to accumulate gigabytes of logs because the server was never deployed.
 
-Storage-pressure cleanup order:
+Deployments that intentionally need more history can opt into 128 MiB, 256 MiB, 1 GiB, or a
+deployment-specific value.
 
-1. delete expired already-sent rows;
-2. aggressively delete older already-sent rows if more room is required;
-3. remove expired dead-letter/quarantine metadata if configured;
-4. only as a last resort, evict the oldest unsent rows until the low-watermark is reached;
-5. increment explicit loss counters and emit throttled diagnostics for every unsent eviction
-   episode.
+## No independent maximum event-size policy by default
 
-The sender should never silently switch to deleting new events merely because the file has
-grown.
+There should be **no default `MaxEventBytes` that truncates or rejects an event merely because
+it is large**.
 
-Large individual events should preferably be materialized into a bounded representation
-(truncating oversized message/exception/property fields with an explicit truncation marker)
-rather than dropping the whole event.
+If an application deliberately logs a large exception, diagnostic dump, structured payload,
+or other event, it may have a valid reason.
 
-### 2. Delivery policy
+The total spool budget still bounds resource use. Therefore a very large event can consume a
+significant part of the configured spool budget, but the relay should not silently rewrite or
+truncate it.
 
-Recommended balanced defaults:
+If one event cannot be durably persisted because the configured spool/disk budget is
+insufficient, that is a storage-limit failure and must be reported explicitly. The caller can
+choose a larger `SpoolPolicy.MaxSpoolBytes` for workloads that intentionally contain very
+large events.
 
-| Setting | Recommended default |
+## Storage-pressure order
+
+When the spool approaches its hard budget:
+
+1. remove expired rows that have already been sent;
+2. remove additional already-sent rows if necessary;
+3. reclaim expired dead-letter metadata if configured;
+4. if unsent data still exceeds the configured hard budget, apply
+   `UnsentOverflowAction`;
+5. count and report every unsent-loss episode.
+
+Recommended balanced default:
+
+```text
+UnsentOverflowAction = DropOldest
+```
+
+For logging, keeping the most recent diagnostic history is generally more useful during an
+indefinitely dead server than preserving only the beginning of an outage. This action should
+remain configurable; a deployment may choose `DropNewest` instead.
+
+No unsent event should be deleted merely because it is three, seven, or thirty days old unless
+the user explicitly configures an age limit.
+
+---
+
+# 2. DeliveryPolicy
+
+## Responsibility
+
+`DeliveryPolicy` owns **normal healthy delivery and backlog draining**.
+
+It answers:
+
+- how events are batched;
+- how long a small batch may wait;
+- what happens to backlog on startup;
+- how aggressively backlog is drained after recovery;
+- how large a normal multi-event batch should become.
+
+It does **not** decide when a failed endpoint may be retried. That is `RetryPolicy`.
+
+## Recommended balanced defaults
+
+| Setting | Default |
 |---|---:|
 | MinimumBatchEvents | 20 |
 | MaximumBatchEvents | 100 |
-| MaximumBatchBytes | 1 MiB |
+| TargetBatchBytes | 1 MiB |
 | MaximumBatchWait | 5 seconds |
 | MaxBatchesPerCycle | 20 |
 | InterBatchDelay | 100 ms |
 | DrainBacklogOnStartup | true |
 
-Rules:
+`TargetBatchBytes` is a batching target, **not an individual-event limit**.
 
-- `MinimumBatchEvents` remains an efficiency target, not a delivery requirement.
-- If pending events have waited for `MaximumBatchWait`, send a partial batch.
-- On startup, if durable backlog exists, make an immediate delivery attempt without waiting
-  to accumulate 20 new events.
-- Batch construction must obey both an event-count limit and a serialized-byte limit.
-- Oldest unsent events remain first in normal delivery order.
+If one event by itself is larger than the target batch size, send that event alone without
+truncating it.
 
-This removes the current low-volume failure mode where 1-19 events can remain pending
-indefinitely in a long-running process.
+## Low-volume behavior
 
-### 3. Retry / endpoint circuit policy
+`MinimumBatchEvents = 20` remains an efficiency target.
 
-Recommended balanced defaults:
+It must not mean "never send until 20 events exist."
 
-| Setting | Recommended default |
+If the oldest pending event has waited for `MaximumBatchWait`, send the partial batch.
+
+This fixes the current case where a long-running client with only 1-19 events can leave those
+events pending indefinitely and only a graceful shutdown happens to flush them.
+
+## Startup behavior
+
+If durable backlog exists when the process starts:
+
+- do not wait for 20 new events;
+- do not wait for the normal batch timer before the first probe;
+- allow an immediate backlog delivery attempt, subject to `RetryPolicy`.
+
+This is particularly important for clients that run only occasionally.
+
+## Recovery catch-up
+
+After the endpoint recovers, avoid an uncontrolled request stampede.
+
+Delivery may use a simple recovery-rate limiter/token bucket, for example:
+
+- small burst allowance immediately after recovery;
+- then a bounded sustained batch rate;
+- normal current `MaxBatchesPerCycle` remains a safety bound.
+
+This rate limiter controls **successful catch-up throughput**. It is different from retry
+backoff, which controls how often a dead endpoint is probed.
+
+---
+
+# 3. RetryPolicy
+
+## Responsibility
+
+`RetryPolicy` owns the **endpoint-unhealthy state**.
+
+It answers:
+
+- what counts as a transient endpoint failure;
+- when another probe is allowed;
+- how the retry interval grows;
+- how jitter is applied;
+- how `Retry-After` affects the schedule;
+- when the endpoint is considered healthy again.
+
+It does not need to increment every event in SQLite whenever the whole server is unreachable.
+
+## Backoff model
+
+The desired behavior is effectively a one-permit retry gate/token bucket with a changing refill
+time.
+
+After a failed endpoint attempt, no new attempt token becomes available until
+`NextAttemptAt`.
+
+Recommended sequence:
+
+```text
+failure 1 -> wait about 5 seconds
+failure 2 -> wait about 10 seconds
+failure 3 -> wait about 20 seconds
+failure 4 -> wait about 40 seconds
+failure 5 -> wait about 80 seconds
+failure 6 -> wait about 160 seconds
+later    -> cap around 5 minutes
+```
+
+Apply jitter so that many clients do not retry at the same instant:
+
+```text
+actual delay = backoff delay +/- 20%
+```
+
+Recommended defaults:
+
+| Setting | Default |
 |---|---:|
-| RequestTimeout | 10 seconds |
-| InitialRetryDelay | 5 seconds |
-| RetryMultiplier | 2 |
-| MaximumRetryDelay | 5 minutes |
-| RetryJitter | +/-20% |
+| InitialDelay | 5 seconds |
+| Multiplier | 2 |
+| MaximumDelay | 5 minutes |
+| Jitter | +/-20% |
 | RespectRetryAfter | true |
 | MaximumRetryAfter | 1 hour |
 | ImmediateProbeAfterProcessStart | true |
 
-The retry/circuit state should track at least:
+## Reset behavior
 
-- last successful delivery time;
-- last failed delivery time;
-- consecutive endpoint failures;
-- current retry delay / next eligible attempt;
-- last failure class/status.
+As soon as a delivery succeeds:
 
-This state may remain in memory initially. A process restart performing an immediate probe is
-desirable; a week-old persisted backoff deadline is generally not.
+- `ConsecutiveFailures = 0`;
+- clear `NextAttemptAt`;
+- reset the delay to the normal 5-second starting state;
+- return immediately to normal `DeliveryPolicy`.
 
-HTTP outcome classification:
+So after recovery there is no artificial five-minute penalty left over from the outage.
 
-- network errors, timeouts, `408`, `429`, and `5xx`: transient; keep backlog and retry;
-- `429`: honor valid `Retry-After` within the configured ceiling;
-- `413`: reduce/split the batch rather than retrying the identical oversized request;
-- `401`/`403`: configuration/authentication failure; retain backlog, back off strongly,
-  surface unhealthy status, do not silently drop;
-- `404`/protocol-route mismatch: configuration/protocol failure; retain backlog and use slow
-  probes;
-- `400`/`409` caused by event content: treat as potentially permanent and isolate the
-  offending event instead of blocking the entire backlog forever.
+## New logs while endpoint is down
 
-### 4. Poison-event / attempt policy
+New log events continue to be durably spooled.
 
-Do not use a per-event `SendAttempts` counter to drive ordinary network backoff. A server
-outage affects the endpoint, not the semantic validity of each individual log row.
+They must **not** bypass the retry gate and create a new HTTP request for every incoming log.
+The endpoint is already known to be unhealthy until the next permitted probe time.
 
-Per-event metadata is useful after a response indicates that content may be permanently
-undeliverable.
+## Failure classification
 
-Recommended model:
+Transient:
 
-- endpoint-level `ConsecutiveFailures` for transient failures;
-- per-event `PermanentFailureCount`, `LastPermanentFailureAt`, and
-  `LastPermanentFailureCode` only when isolating a `4xx` content problem;
-- split a failing multi-event batch (binary split or one-by-one fallback) until the offending
-  event is identified;
-- move a confirmed poison event to a local dead-letter state/table so later valid events can
-  continue;
-- never delete a poison event silently;
-- retain dead-letter metadata for a bounded period (for example 7 days) and expose its count.
+- connection failure;
+- DNS/network failure;
+- request timeout;
+- HTTP `408`;
+- HTTP `429`;
+- HTTP `5xx`.
 
-A general per-event total attempt counter may still be added for diagnostics, but it should not
-require updating every row on every unreachable-server retry.
+For `429`, honor a valid `Retry-After`, bounded by policy.
 
-### 5. Emergency policy
+Configuration/protocol failures:
 
-Recommended balanced defaults:
+- `401` / `403`;
+- persistent `404`;
+- incompatible protocol endpoint.
 
-| Setting | Recommended default |
+These should use a slow retry/probe state and expose an unhealthy status, not delete backlog.
+
+Potentially event-specific failures:
+
+- `400`;
+- `409`;
+- `413` after normal batch splitting.
+
+Those are handed to `PermanentFailurePolicy`.
+
+## Why not persist SendAttempts for every outage?
+
+When the server is simply down, all pending events share the same failure cause.
+
+Writing:
+
+```text
+SendAttempts = SendAttempts + 1
+```
+
+to hundreds or thousands of SQLite rows every time the endpoint probe fails adds write load
+without improving retry decisions.
+
+Endpoint retry history belongs to `RetryPolicy`.
+
+Per-event attempt metadata is useful only when we are trying to determine whether a particular
+event itself is undeliverable.
+
+---
+
+# 4. PermanentFailurePolicy
+
+## Responsibility
+
+`PermanentFailurePolicy` owns **events that may themselves be invalid or impossible for the
+receiver to accept**.
+
+This is where per-event attempt metadata belongs.
+
+It prevents one bad oldest event from blocking every later valid log forever.
+
+## Behavior
+
+If a multi-event batch receives a response that may be content-specific:
+
+1. split the batch;
+2. retry smaller groups;
+3. identify the offending event;
+4. continue delivering unrelated valid events;
+5. retain explicit failure information for the bad event.
+
+Possible per-event metadata:
+
+- `RejectedAttempts`;
+- `LastRejectedAt`;
+- `LastRejectedStatus`;
+- `LastRejectedReason`.
+
+Recommended default:
+
+```text
+MaxRejectedAttempts = 3
+Action = DeadLetter
+```
+
+A deterministic identity conflict may be dead-lettered earlier when the receiver has clearly
+confirmed that the same `EventId` already exists with different content.
+
+Dead-letter means "not blocking normal delivery anymore"; it must not mean silent deletion.
+
+## Large events
+
+There is no independent client-side event-size rejection.
+
+If an event exceeds `DeliveryPolicy.TargetBatchBytes`, send it alone.
+
+If the receiver or transport returns `413 Payload Too Large` for that single event, preserve
+the event and record the rejection through this policy. Do not truncate it automatically.
+
+The deployment can then intentionally raise the receiver/transport request limit if such large
+events are expected.
+
+---
+
+# 5. EmergencyPolicy
+
+## Responsibility
+
+`EmergencyPolicy` owns the **volatile fallback used only when SQLite/local persistence cannot
+accept new events**.
+
+This is a double-degradation path and therefore must be tightly bounded.
+
+## Recommended balanced defaults
+
+| Setting | Default |
 |---|---:|
 | MaxBufferedEvents | 16384 |
-| MaxBufferedBytes | 128 MiB |
+| MaxBufferedBytes | **64 MiB** |
 | OverflowAction | DropNewest |
 | RetryDelay | 250 ms |
 | DirectHttpRescue | enabled when endpoint exists |
 
-The emergency buffer remains only for local-persistence failures. A normal endpoint outage
-with working SQLite must never consume this RAM budget.
+The first reached limit wins: event count or byte budget.
 
-Both event-count and byte limits are required. If either is exhausted, dropping is allowed
-because the system has already lost both normal remote delivery and local durability.
+64 MiB is the intended default RAM ceiling for emergency buffering.
 
-Drops must remain observable through counters/status and throttled `SelfLog` diagnostics.
+A normal endpoint outage with a healthy SQLite spool must consume **zero** emergency-buffer
+capacity.
 
-### 6. Shutdown policy
+## Overflow
 
-Recommended defaults:
+If both durable local persistence and remote delivery are unavailable long enough to fill the
+emergency budget, loss is unavoidable.
 
-| Setting | Recommended default |
+The default should drop the new event rather than continuously replacing already-buffered
+volatile events:
+
+```text
+OverflowAction = DropNewest
+```
+
+Every overflow episode must increment counters and emit throttled diagnostics.
+
+There is no event-content truncation here either. If one event itself cannot fit into the
+remaining emergency byte budget, it is an explicit emergency overflow.
+
+---
+
+# 6. ShutdownPolicy
+
+## Responsibility
+
+`ShutdownPolicy` owns **how much time the relay may spend trying to finish work during
+shutdown**.
+
+It answers:
+
+- how long to drain volatile emergency events;
+- how long to flush durable backlog;
+- whether partial batches are allowed;
+- how shutdown deadlines cancel in-flight work.
+
+## Recommended defaults
+
+| Setting | Default |
 |---|---:|
 | EmergencyDrainTimeout | 3 seconds |
 | DurableFlushTimeout | 5 seconds |
 | FlushPartialBatch | true |
 
-The timeout must be a real upper bound. The current shutdown loop checks a deadline outside a
-delivery pass, but one pass can itself contain up to 20 HTTP requests. The implementation
-should use a deadline cancellation token so the configured shutdown budget cannot
-accidentally become tens of seconds.
+These values must be real wall-clock upper bounds.
 
-Failure to flush durable rows is not data loss; they stay in SQLite for the next start.
-Failure to drain volatile emergency rows can be data loss and must remain explicitly
-reported.
+The implementation should use deadline cancellation tokens rather than checking a deadline
+only between large delivery passes.
 
-## Suggested profiles
+Failure to flush durable SQLite backlog is not immediate data loss: it remains for the next
+start.
 
-Profiles should be convenience factories over the policy model, not separate implementations.
+Failure to drain volatile emergency events can be data loss and must be reported.
 
-### Balanced
+---
 
-Suitable as the normal default.
+# Diagnostics options, not a policy
 
-- 1 GiB durable spool;
-- no automatic age deletion of unsent rows;
-- 250000 unsent-event cap;
-- 256 KiB per event;
-- 20-100 event batches, 1 MiB maximum serialized batch;
-- 5 second maximum batch wait;
-- retry from 5 seconds up to 5 minutes;
-- 16384 / 128 MiB emergency buffer.
+`SerilogRelayDiagnosticsOptions` should expose state but should not change delivery semantics.
 
-### IntermittentClient
+Useful status values:
 
-For laptops, field devices, maintenance tools, and applications that may run only every few
-days.
-
-- preserve unsent rows by capacity rather than age;
-- immediate backlog probe on startup;
-- shorter maximum batch wait (for example 2 seconds);
-- same bounded disk and event-size rules;
-- no assumption that a clean shutdown will happen before the client disappears.
-
-A client being offline for 3, 7, or 30 days must not by itself cause backlog deletion when it
-starts again.
-
-### AlwaysOnService
-
-For continuously running services with predictable disk allocation.
-
-- larger explicit spool budget (for example 2 GiB or deployment-specific);
-- same bounded event size;
-- normal 5 second maximum batch wait;
-- optional higher event-count cap if measured traffic requires it;
-- health monitoring/alerting expected when spool utilization or oldest-unsent age grows.
-
-Do not automatically increase batch count beyond the receiver's explicit ingestion limits.
-
-## Outage matrix
-
-### Remote endpoint unavailable, local spool healthy
-
-**1 hour:** expected to be fully durable provided generated data fits the configured spool
-budget. Retry backs off; no emergency memory is consumed.
-
-**12 hours:** same semantics. Spool utilization and oldest-unsent age should make the outage
-visible.
-
-**1 day:** same semantics. Capacity, not event age, determines whether loss occurs.
-
-**7 days:** still deliverable if the generated backlog fits the configured durable-spool
-budget. No generic library can guarantee seven days without knowing event rate and event
-size. When the hard storage budget is reached, sent rows are reclaimed first; oldest unsent
-rows are evicted only as the last bounded-loss action and the loss is reported.
-
-Capacity planning is therefore:
-
-```text
-required spool ~= event rate * average serialized event bytes * outage duration
-```
-
-plus SQLite/WAL/index overhead.
-
-### Client process is offline for several days
-
-No new events are generated while the process is not running.
-
-Existing durable backlog must remain on disk. On the next start the sender should get a
-delivery opportunity before any optional age-based unsent expiry is applied. With the
-recommended default (`UnsentMaxAge = none`), merely being offline does not expire backlog.
-
-This explicitly fixes the current three-day startup-cleanup problem.
-
-### Low-volume client
-
-With `MaximumBatchWait`, a client producing fewer than 20 events still sends after the time
-limit. Delivery no longer depends on eventually reaching the minimum batch count or executing
-a graceful shutdown.
-
-### Endpoint unavailable and local spool temporarily busy/locked
-
-Existing SQLite retry remains useful. If durable persistence still cannot accept an event,
-that new event enters the emergency buffer.
-
-Previously durable backlog remains on disk.
-
-### Endpoint unavailable and local disk/spool unavailable
-
-This is a double failure. The only remaining storage is the bounded emergency memory budget.
-
-The system cannot guarantee lossless delivery for an arbitrary duration in this state.
-Events beyond the emergency event/byte limit are dropped with explicit diagnostics.
-
-### Disk full while endpoint is unavailable
-
-Apply spool pressure policy before SQLite becomes unusable:
-
-1. remove sent data;
-2. reclaim optional/dead-letter data;
-3. evict oldest unsent data only as the final hard-limit action;
-4. if SQLite still becomes unwritable, enter emergency memory.
-
-This is an explicitly degraded state, not a lossless guarantee.
-
-### SQLite corruption while endpoint is available
-
-Keep the existing quarantine/recreate behavior. New events can continue through the recovered
-spool or emergency HTTP rescue. Quarantined data is preserved for diagnosis/recovery but is
-not automatically guaranteed to be resendable.
-
-### SQLite corruption while endpoint is unavailable
-
-This is another double failure. Old corrupted data may survive only in quarantine, while new
-events are limited by emergency memory until local durability recovers.
-
-No lossless guarantee is possible; health/loss diagnostics are mandatory.
-
-### Permanent bad event
-
-A bad oldest event must not block all later events indefinitely. Isolate it, mark/dead-letter
-it, and continue with subsequent rows.
-
-## Receiver-side matching policies
-
-The CentralLogging service should define explicit ingestion limits that are compatible with
-the sender.
-
-Proposed starting values:
-
-| Setting | Proposed server value |
-|---|---:|
-| MaxBatchEvents | 200 |
-| MaxRequestBodyBytes | 4 MiB |
-| MaxEventBytes | 256 KiB |
-
-The sender default of 100 events / 1 MiB stays comfortably below these limits.
-
-The receiver should continue accepting old event timestamps. `Timestamp` is the producer
-event time, while `ReceivedAt` records ingestion time. An intermittent client sending a
-week-old event is valid and should not be rejected merely because of age.
-
-Server-side database retention and maximum storage size should be a separate storage policy.
-The current receiver store is also unbounded and therefore needs an explicit long-term
-retention/capacity decision before production-scale use.
-
-## Observability contract
-
-A limits/outage design is incomplete if the application can only discover loss by reading a
-rare `SelfLog` line.
-
-Expose at least a lightweight status snapshot containing:
-
-- durable pending event count;
-- estimated pending bytes / spool utilization;
-- oldest unsent event age;
+- pending durable event count;
+- approximate spool bytes / configured spool budget;
+- oldest unsent age;
 - last successful delivery;
-- last delivery failure and failure class;
+- last failed delivery;
 - consecutive endpoint failures;
-- next retry time/current delay;
-- spool available/unavailable state;
-- emergency buffered events and bytes;
+- current retry delay / next permitted attempt;
+- last HTTP/network failure class;
+- spool healthy/unavailable;
+- emergency buffered event count;
+- emergency buffered bytes;
 - emergency dropped count;
-- storage-pressure unsent-drop count;
+- durable spool drop/eviction count;
 - dead-letter count.
 
-`SelfLog` remains useful for diagnostics, but counters/status make monitoring and tests much
-more reliable.
+`SelfLog` remains useful, but a status snapshot makes monitoring and testing far more
+reliable.
 
-## Guarantee boundary
+---
 
-With the proposed policies, the intended guarantee is:
+# Profiles
 
-- **healthy local spool:** remote outages are durable until the configured disk/event budget
-  is exhausted;
-- **intermittent client:** offline duration alone does not delete unsent backlog;
-- **low traffic:** maximum batch wait ensures eventual background delivery without relying on
-  shutdown;
-- **local spool failure:** bounded emergency RAM provides best-effort continuity;
-- **remote plus local failure:** lossless delivery is not guaranteed after the emergency
-  budget is exhausted;
-- **hard resource limit:** bounded loss is permitted, explicit, counted, and diagnosable;
-- **permanent bad event:** isolated failure must not indefinitely block valid later events.
+Profiles are preconfigured policy sets, not new behavior.
 
-## Recommended implementation order
+## Balanced
 
-1. Remove the unsafe default unsent-age cleanup behavior and add regression coverage for a
-   backlog older than three/seven days surviving startup and being deliverable.
-2. Add `MaximumBatchWait` plus immediate startup backlog draining so low-volume clients are
-   not dependent on a clean shutdown.
-3. Introduce the policy object/sub-policies while preserving compatibility defaults where
-   they are still safe.
-4. Add spool byte/event pressure limits and event/batch byte limits.
-5. Add explicit endpoint failure classification, jittered retry/circuit status, and real
-   shutdown deadline cancellation.
-6. Add poison-event isolation/dead-letter behavior for permanent `4xx` failures.
-7. Add byte-bounded emergency buffering and the health/status snapshot.
-8. Add matching CentralLogging ingestion limits and then design server-side storage
-   retention/capacity separately.
+Suggested general library default:
 
-The first two items remove concrete current data-loss/delivery hazards and should precede
-broader tuning.
+- `Spool.MaxSpoolBytes = 64 MiB`;
+- no age-based deletion of unsent rows;
+- `MinimumBatchEvents = 20`;
+- `MaximumBatchEvents = 100`;
+- `MaximumBatchWait = 5s`;
+- retry 5s, 10s, 20s, 40s ... capped at 5m with jitter;
+- `Emergency.MaxBufferedEvents = 16384`;
+- `Emergency.MaxBufferedBytes = 64 MiB`.
+
+## IntermittentClient
+
+For laptops, field devices, tools, or clients that may run once every few days:
+
+- same bounded spool model;
+- no unsent age expiry by default;
+- immediate startup backlog probe;
+- short maximum batch wait;
+- do not assume a clean shutdown will occur.
+
+Offline for 3, 7, or 30 days does not by itself delete unsent backlog.
+
+## AlwaysOnService
+
+For known server workloads:
+
+- same policy model;
+- deployment may intentionally raise spool budget;
+- health monitoring should watch spool utilization and oldest-unsent age;
+- catch-up throughput can be raised intentionally when CentralLogging capacity is known.
+
+The library should not assume this high-capacity profile for every executable.
+
+---
+
+# Outage behavior
+
+## Endpoint down, local spool healthy
+
+### 1 hour
+
+Events are written to SQLite. Retry probes back off according to `RetryPolicy`. Emergency RAM
+is not used.
+
+### 12 hours
+
+Same behavior. The only relevant hard limit is the configured durable spool budget.
+
+### 1 day
+
+Same behavior. Unsent age alone does not remove the backlog.
+
+### 7 days
+
+Still recoverable if the backlog fits the configured spool budget.
+
+The relay cannot promise "seven days" independently of traffic volume. A 64 MiB budget may
+represent days for a quiet client and minutes for a very noisy service.
+
+The meaningful guarantee is therefore:
+
+```text
+durable while generated backlog <= configured spool budget
+```
+
+not:
+
+```text
+durable for exactly N days
+```
+
+## Server never exists / endpoint is permanently wrong
+
+The executable does not grow its log database forever.
+
+It grows only up to `SpoolPolicy.MaxSpoolBytes` (64 MiB by default), then follows the
+configured unsent overflow action with explicit loss accounting.
+
+This is the important protection for a small application that ships with a sink configuration
+but whose CentralLogging server is never actually deployed.
+
+## Client only runs every few days
+
+Existing backlog remains on disk.
+
+On startup the relay gets an immediate delivery opportunity instead of deleting rows because
+they are older than three days.
+
+## Low-volume client
+
+A client with 1-19 logs sends them when `MaximumBatchWait` expires. It does not rely on a
+clean shutdown.
+
+## Endpoint down + spool unavailable
+
+This is a genuine double failure.
+
+New events use the bounded emergency buffer: 16384 events and 64 MiB by default.
+
+After that budget is exhausted, loss is unavoidable and explicitly reported.
+
+## Disk full + endpoint down
+
+Storage-pressure actions happen before SQLite becomes unusable where possible.
+
+If durable persistence ultimately fails, new events move to `EmergencyPolicy`.
+
+## Permanent bad event
+
+The event is isolated by `PermanentFailurePolicy`; it must not block later valid backlog.
+
+---
+
+# Receiver relationship
+
+The sender should not invent an arbitrary small individual-event limit merely because batching
+normally targets 1 MiB.
+
+The receiver/transport will always have some practical request-body ceiling. That ceiling
+should be explicit in the CentralLogging deployment and compatible with expected workloads.
+
+Rules:
+
+- large events may be sent as a one-event batch;
+- old producer timestamps remain valid;
+- `ReceivedAt` remains distinct from producer `Timestamp`;
+- a receiver-side size rejection must not cause silent client-side truncation;
+- receiver storage retention/capacity is a separate server policy.
+
+---
+
+# Recommended implementation order
+
+1. Replace the unsafe default three-day unsent startup deletion with capacity-based retention.
+2. Add `MaximumBatchWait` and immediate startup backlog delivery.
+3. Introduce the grouped policy model:
+   `SpoolPolicy`, `DeliveryPolicy`, `RetryPolicy`, `PermanentFailurePolicy`,
+   `EmergencyPolicy`, and `ShutdownPolicy`.
+4. Add the 64 MiB durable spool ceiling and explicit overflow behavior.
+5. Implement retry gating/backoff as 5s -> 10s -> 20s -> 40s ... max 5m, with jitter and
+   immediate reset on success.
+6. Add permanent-event isolation/dead-letter behavior and per-event rejection metadata only
+   for that path.
+7. Add the 64 MiB emergency byte budget alongside the existing 16384-event limit.
+8. Add diagnostics/status.
+9. Define matching receiver transport/storage policies separately.
+
+The first two items remove concrete current delivery hazards. The grouped policy model should
+then be introduced before additional limits are added so each new parameter has a clear owner
+and semantics.
