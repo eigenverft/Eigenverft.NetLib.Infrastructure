@@ -154,6 +154,8 @@ namespace Eigenverft.NetLib.SerilogRelay
         private const int MaxBusyRetries = 5;
         private const int BusyRetryDelayMs = 100;
         private const string TableName = "SerilogRelayEvents";
+        private const string CorruptionDirectoryName = "corrupted";
+        private const string CorruptionEventType = "spool_corrupted";
 
         private const string TableSchema = @"
 CREATE TABLE IF NOT EXISTS {0} (
@@ -172,6 +174,8 @@ CREATE TABLE IF NOT EXISTS {0} (
 );";
 
         private readonly string _connectionString;
+        private readonly string? _databasePath;
+        private readonly SemaphoreSlim _databaseGate = new SemaphoreSlim(1, 1);
         private readonly string? _endpoint;
         private readonly int _minBatchSize;
         private readonly int _maxBatchSize;
@@ -221,18 +225,21 @@ CREATE TABLE IF NOT EXISTS {0} (
                 throw new ArgumentException("Minimum batch size must be less than or equal to maximum batch size.", nameof(minBatchItems));
 
             _connectionString = connectionString;
+            _databasePath = ResolveDatabasePath(connectionString);
             _endpoint = endpoint;
             _minBatchSize = minBatchItems;
             _maxBatchSize = maxBatchItems;
             _baseInterval = baseInterval;
             _currentInterval = baseInterval;
 
-            EnsureTableCreated();
-            EnsureEventIdentitySchema();
+            ExecuteDatabaseWithRecovery(() =>
+            {
+                EnsureTableCreatedCore();
+                EnsureEventIdentitySchemaCore();
+                CleanupOldLogsCore(sentRetention, unsentRetention);
+            });
 
-            CleanupOldLogs(sentRetention, unsentRetention);
-
-            _pendingCount = GetPendingCount();
+            _pendingCount = ExecuteDatabaseWithRecovery(GetPendingCountCore);
 
 
             _httpClient = new HttpClient(_handler, disposeHandler: false) { Timeout = TimeSpan.FromSeconds(2) };
@@ -249,7 +256,7 @@ CREATE TABLE IF NOT EXISTS {0} (
         /// </summary>
         /// <param name="sentRetention">How long to keep logs that have been sent (e.g. TimeSpan.FromDays(1)).</param>
         /// <param name="unsentRetention">How long to keep logs not yet sent (e.g. TimeSpan.FromDays(7)).</param>
-        private void CleanupOldLogs(TimeSpan sentRetention, TimeSpan unsentRetention)
+        private void CleanupOldLogsCore(TimeSpan sentRetention, TimeSpan unsentRetention)
         {
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
@@ -293,31 +300,7 @@ DELETE FROM {TableName}
             {
                 try
                 {
-                    using var conn = new SqliteConnection(_connectionString);
-                    conn.Open();
-                    ConfigurePragmas(conn);
-                    using var tx = conn.BeginTransaction();
-                    using var cmd = conn.CreateCommand();
-                    cmd.Transaction = tx;
-                    cmd.CommandText = $@"
-INSERT INTO {TableName}
-  (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
-VALUES
-  ($eventId, $ts, $lvl, $rendered, $tmpl, $tid, $sid, $ex, $props, 0);";
-
-                    cmd.Parameters.AddWithValue("$eventId", eventId);
-                    cmd.Parameters.AddWithValue("$ts", logEvent.Timestamp.UtcDateTime.ToString("o"));
-                    cmd.Parameters.AddWithValue("$lvl", logEvent.Level.ToString());
-                    cmd.Parameters.AddWithValue("$rendered", logEvent.RenderMessage(CultureInfo.InvariantCulture));
-                    cmd.Parameters.AddWithValue("$tmpl", logEvent.MessageTemplate.Text);
-                    cmd.Parameters.AddWithValue("$tid", logEvent.TraceId?.ToHexString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue("$sid", logEvent.SpanId?.ToHexString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue("$ex", logEvent.Exception?.ToString() ?? string.Empty);
-                    var propsJson = SerializeProperties(logEvent);
-                    cmd.Parameters.AddWithValue("$props", propsJson);
-
-                    cmd.ExecuteNonQuery();
-                    tx.Commit();
+                    ExecuteDatabaseWithRecovery(() => PersistLogEventCore(logEvent, eventId));
 
                     Interlocked.Increment(ref _pendingCount);
                     lock (_signalLock) { _hasNewLogs = true; }
@@ -333,6 +316,34 @@ VALUES
                     break;
                 }
             }
+        }
+
+        private void PersistLogEventCore(LogEvent logEvent, string eventId)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            conn.Open();
+            ConfigurePragmas(conn);
+            using var tx = conn.BeginTransaction();
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = $@"
+INSERT INTO {TableName}
+  (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
+VALUES
+  ($eventId, $ts, $lvl, $rendered, $tmpl, $tid, $sid, $ex, $props, 0);";
+
+            cmd.Parameters.AddWithValue("$eventId", eventId);
+            cmd.Parameters.AddWithValue("$ts", logEvent.Timestamp.UtcDateTime.ToString("o", CultureInfo.InvariantCulture));
+            cmd.Parameters.AddWithValue("$lvl", logEvent.Level.ToString());
+            cmd.Parameters.AddWithValue("$rendered", logEvent.RenderMessage(CultureInfo.InvariantCulture));
+            cmd.Parameters.AddWithValue("$tmpl", logEvent.MessageTemplate.Text);
+            cmd.Parameters.AddWithValue("$tid", logEvent.TraceId?.ToHexString() ?? string.Empty);
+            cmd.Parameters.AddWithValue("$sid", logEvent.SpanId?.ToHexString() ?? string.Empty);
+            cmd.Parameters.AddWithValue("$ex", logEvent.Exception?.ToString() ?? string.Empty);
+            cmd.Parameters.AddWithValue("$props", SerializeProperties(logEvent));
+
+            cmd.ExecuteNonQuery();
+            tx.Commit();
         }
 
         // Continuously send stored logs to the HTTP endpoint
@@ -407,7 +418,7 @@ VALUES
                 if (!await SendBatchAsync(entries, token)) break;
                 await MarkAsSentAsync(entries, token);
 
-                Interlocked.Add(ref _pendingCount, -entries.Count);
+                Interlocked.Exchange(ref _pendingCount, ExecuteDatabaseWithRecovery(GetPendingCountCore));
                 sentCount += entries.Count;
                 await Task.Delay(100, token);
             }
@@ -450,51 +461,61 @@ VALUES
         // Load unsent log entries from SQLite
         private async Task<List<LogEntry>> LoadUnsentAsync(int limit, CancellationToken token)
         {
-            var list = new List<LogEntry>();
-            using var conn = new SqliteConnection(_connectionString);
-            await conn.OpenAsync(token);
-            ConfigurePragmas(conn);
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = $@"
+            return await ExecuteDatabaseWithRecoveryAsync(
+                async () =>
+                {
+                    var list = new List<LogEntry>();
+                    using var conn = new SqliteConnection(_connectionString);
+                    await conn.OpenAsync(token).ConfigureAwait(false);
+                    ConfigurePragmas(conn);
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = $@"
 SELECT Id, EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties
 FROM {TableName}
 WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
-            using var reader = await cmd.ExecuteReaderAsync(token);
-            while (await reader.ReadAsync(token))
-            {
-                list.Add(new LogEntry
-                {
-                    Id = reader.GetInt64(0),
-                    EventId = reader.GetString(1),
-                    Timestamp = reader.GetString(2),
-                    Level = reader.GetString(3),
-                    RenderMessage = reader.GetString(4),
-                    MessageTemplate = reader.GetString(5),
-                    TraceId = reader.IsDBNull(6) ? null : reader.GetString(6),
-                    SpanId = reader.IsDBNull(7) ? null : reader.GetString(7),
-                    Exception = reader.IsDBNull(8) ? null : reader.GetString(8),
-                    Properties = reader.IsDBNull(9) ? null : reader.GetString(9)
-                });
-            }
-            return list;
+                    using var reader = await cmd.ExecuteReaderAsync(token).ConfigureAwait(false);
+                    while (await reader.ReadAsync(token).ConfigureAwait(false))
+                    {
+                        list.Add(new LogEntry
+                        {
+                            Id = reader.GetInt64(0),
+                            EventId = reader.GetString(1),
+                            Timestamp = reader.GetString(2),
+                            Level = reader.GetString(3),
+                            RenderMessage = reader.GetString(4),
+                            MessageTemplate = reader.GetString(5),
+                            TraceId = reader.IsDBNull(6) ? null : reader.GetString(6),
+                            SpanId = reader.IsDBNull(7) ? null : reader.GetString(7),
+                            Exception = reader.IsDBNull(8) ? null : reader.GetString(8),
+                            Properties = reader.IsDBNull(9) ? null : reader.GetString(9),
+                        });
+                    }
+
+                    return list;
+                },
+                token).ConfigureAwait(false);
         }
 
-        // Mark specific log entries as sent in SQLite
         private async Task MarkAsSentAsync(List<LogEntry> entries, CancellationToken token)
         {
-            using var conn = new SqliteConnection(_connectionString);
-            await conn.OpenAsync(token);
-            ConfigurePragmas(conn);
-            using var tx = conn.BeginTransaction();
-            using var cmd = conn.CreateCommand();
-            cmd.Transaction = tx;
-            cmd.CommandText = $"UPDATE {TableName} SET Sent = 1 WHERE Id IN ({string.Join(",", entries.ConvertAll(e => e.Id))})";
-            await cmd.ExecuteNonQueryAsync(token);
-            tx.Commit();
+            await ExecuteDatabaseWithRecoveryAsync(
+                async () =>
+                {
+                    using var conn = new SqliteConnection(_connectionString);
+                    await conn.OpenAsync(token).ConfigureAwait(false);
+                    ConfigurePragmas(conn);
+                    using var tx = conn.BeginTransaction();
+                    using var cmd = conn.CreateCommand();
+                    cmd.Transaction = tx;
+                    cmd.CommandText = $"UPDATE {TableName} SET Sent = 1 WHERE Id IN ({string.Join(",", entries.ConvertAll(e => e.Id))})";
+                    await cmd.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+                    tx.Commit();
+                },
+                token).ConfigureAwait(false);
         }
 
         // Retrieve the total number of unsent logs
-        private long GetPendingCount()
+        private long GetPendingCountCore()
         {
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
@@ -505,7 +526,7 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
         }
 
         // Ensure the logs table exists in SQLite
-        private void EnsureTableCreated()
+        private void EnsureTableCreatedCore()
         {
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
@@ -515,7 +536,7 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             cmd.ExecuteNonQuery();
         }
 
-        private void EnsureEventIdentitySchema()
+        private void EnsureEventIdentitySchemaCore()
         {
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
@@ -583,6 +604,254 @@ PRAGMA busy_timeout = 5000;";
             cmd.ExecuteNonQuery();
         }
 
+        private T ExecuteDatabaseWithRecovery<T>(Func<T> operation)
+        {
+            _databaseGate.Wait();
+            try
+            {
+                try
+                {
+                    return operation();
+                }
+                catch (SqliteException ex) when (IsCorruptionError(ex))
+                {
+                    if (!TryRecoverCorruptedSpool(ex))
+                        throw;
+
+                    return operation();
+                }
+            }
+            finally
+            {
+                _databaseGate.Release();
+            }
+        }
+
+        private void ExecuteDatabaseWithRecovery(Action operation)
+            => ExecuteDatabaseWithRecovery(
+                () =>
+                {
+                    operation();
+                    return true;
+                });
+
+        private async Task<T> ExecuteDatabaseWithRecoveryAsync<T>(
+            Func<Task<T>> operation,
+            CancellationToken token)
+        {
+            await _databaseGate.WaitAsync(token).ConfigureAwait(false);
+            T result;
+            try
+            {
+                try
+                {
+                    result = await operation().ConfigureAwait(false);
+                }
+                catch (SqliteException ex) when (IsCorruptionError(ex))
+                {
+                    if (!TryRecoverCorruptedSpool(ex))
+                        throw;
+
+                    result = await operation().ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                _databaseGate.Release();
+            }
+
+            return result;
+        }
+
+        private async Task ExecuteDatabaseWithRecoveryAsync(
+            Func<Task> operation,
+            CancellationToken token)
+        {
+            await ExecuteDatabaseWithRecoveryAsync(
+                async () =>
+                {
+                    await operation().ConfigureAwait(false);
+                    return true;
+                },
+                token).ConfigureAwait(false);
+        }
+
+        private bool TryRecoverCorruptedSpool(SqliteException exception)
+        {
+            if (_databasePath is null || !File.Exists(_databasePath))
+            {
+                SelfLog.WriteLine(
+                    "SQLite corruption was detected but the relay spool is not a recoverable file-backed database. ErrorCode={0}, ExtendedErrorCode={1}.",
+                    exception.SqliteErrorCode,
+                    exception.SqliteExtendedErrorCode);
+                return false;
+            }
+
+            string quarantineId =
+                DateTimeOffset.UtcNow.ToString("yyyyMMddTHHmmss.fffffff'Z'", CultureInfo.InvariantCulture)
+                + "-"
+                + Guid.NewGuid().ToString("N")[..8];
+
+            string databaseDirectory = Path.GetDirectoryName(_databasePath)!;
+            string quarantineDirectory = Path.Combine(
+                databaseDirectory,
+                CorruptionDirectoryName,
+                quarantineId);
+
+            try
+            {
+                SqliteConnection.ClearAllPools();
+                Directory.CreateDirectory(quarantineDirectory);
+
+                MoveToQuarantineIfPresent(_databasePath + "-wal", quarantineDirectory);
+                MoveToQuarantineIfPresent(_databasePath + "-shm", quarantineDirectory);
+                MoveToQuarantineIfPresent(_databasePath, quarantineDirectory);
+
+                WriteCorruptionMetadata(quarantineDirectory, quarantineId, exception);
+
+                EnsureTableCreatedCore();
+                EnsureEventIdentitySchemaCore();
+                InsertCorruptionEventCore(quarantineId, exception);
+
+                Interlocked.Exchange(ref _pendingCount, GetPendingCountCore());
+                lock (_signalLock)
+                {
+                    _hasNewLogs = true;
+                }
+
+                SelfLog.WriteLine(
+                    "SerilogRelay quarantined a corrupted SQLite spool and created a new spool. QuarantineId={0}, ErrorCode={1}, ExtendedErrorCode={2}.",
+                    quarantineId,
+                    exception.SqliteErrorCode,
+                    exception.SqliteExtendedErrorCode);
+                return true;
+            }
+            catch (Exception recoveryException)
+            {
+                SelfLog.WriteLine(
+                    "SerilogRelay failed to quarantine/recreate a corrupted SQLite spool. OriginalErrorCode={0}, OriginalExtendedErrorCode={1}, RecoveryError={2}",
+                    exception.SqliteErrorCode,
+                    exception.SqliteExtendedErrorCode,
+                    recoveryException.Message);
+                return false;
+            }
+        }
+
+        private void InsertCorruptionEventCore(string quarantineId, SqliteException exception)
+        {
+            var properties = new Dictionary<string, string>
+            {
+                ["RelayEventType"] = CorruptionEventType,
+                ["QuarantineId"] = quarantineId,
+                ["SpoolFileName"] = Path.GetFileName(_databasePath!),
+                ["SqliteErrorCode"] = exception.SqliteErrorCode.ToString(CultureInfo.InvariantCulture),
+                ["SqliteExtendedErrorCode"] = exception.SqliteExtendedErrorCode.ToString(CultureInfo.InvariantCulture),
+                ["RecoveryAction"] = "quarantined_and_recreated",
+            };
+
+            string propertiesJson = JsonSerializer.Serialize(
+                properties,
+                typeof(Dictionary<string, string>),
+                LogBatchJsonContext.Default);
+
+            const string message =
+                "SerilogRelay quarantined a corrupted SQLite spool and created a new spool.";
+
+            using var conn = new SqliteConnection(_connectionString);
+            conn.Open();
+            ConfigurePragmas(conn);
+            using var tx = conn.BeginTransaction();
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = $@"
+INSERT INTO {TableName}
+  (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
+VALUES
+  ($eventId, $ts, $lvl, $rendered, $tmpl, NULL, NULL, $ex, $props, 0);";
+
+            cmd.Parameters.AddWithValue("$eventId", Guid.NewGuid().ToString("D"));
+            cmd.Parameters.AddWithValue(
+                "$ts",
+                DateTimeOffset.UtcNow.UtcDateTime.ToString("o", CultureInfo.InvariantCulture));
+            cmd.Parameters.AddWithValue("$lvl", "Error");
+            cmd.Parameters.AddWithValue("$rendered", message);
+            cmd.Parameters.AddWithValue("$tmpl", message);
+            cmd.Parameters.AddWithValue(
+                "$ex",
+                $"{exception.GetType().FullName}: {exception.Message}");
+            cmd.Parameters.AddWithValue("$props", propertiesJson);
+
+            cmd.ExecuteNonQuery();
+            tx.Commit();
+        }
+
+        private void WriteCorruptionMetadata(
+            string quarantineDirectory,
+            string quarantineId,
+            SqliteException exception)
+        {
+            try
+            {
+                var metadata = new Dictionary<string, string>
+                {
+                    ["DetectedUtc"] = DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture),
+                    ["QuarantineId"] = quarantineId,
+                    ["SpoolFileName"] = Path.GetFileName(_databasePath!),
+                    ["SqliteErrorCode"] = exception.SqliteErrorCode.ToString(CultureInfo.InvariantCulture),
+                    ["SqliteExtendedErrorCode"] = exception.SqliteExtendedErrorCode.ToString(CultureInfo.InvariantCulture),
+                    ["SqliteMessage"] = exception.Message,
+                    ["RecoveryAction"] = "quarantined_and_recreated",
+                };
+
+                string json = JsonSerializer.Serialize(
+                    metadata,
+                    typeof(Dictionary<string, string>),
+                    LogBatchJsonContext.Default);
+
+                File.WriteAllText(
+                    Path.Combine(quarantineDirectory, "corruption.json"),
+                    json);
+            }
+            catch (Exception metadataException)
+            {
+                SelfLog.WriteLine(
+                    "SerilogRelay could not write corruption metadata: {0}",
+                    metadataException.Message);
+            }
+        }
+
+        private static void MoveToQuarantineIfPresent(
+            string sourcePath,
+            string quarantineDirectory)
+        {
+            if (!File.Exists(sourcePath))
+                return;
+
+            string targetPath = Path.Combine(
+                quarantineDirectory,
+                Path.GetFileName(sourcePath));
+
+            File.Move(sourcePath, targetPath);
+        }
+
+        private static string? ResolveDatabasePath(string connectionString)
+        {
+            var builder = new SqliteConnectionStringBuilder(connectionString);
+            if (builder.Mode == SqliteOpenMode.Memory
+                || string.Equals(builder.DataSource, ":memory:", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return string.IsNullOrWhiteSpace(builder.DataSource)
+                ? null
+                : Path.GetFullPath(builder.DataSource);
+        }
+
+        private static bool IsCorruptionError(SqliteException ex)
+            => ex.SqliteErrorCode == SQLitePCL.raw.SQLITE_CORRUPT
+               || ex.SqliteErrorCode == SQLitePCL.raw.SQLITE_NOTADB;
+
         // Detect SQLite busy or locked errors
         private static bool IsBusyError(SqliteException ex)
             => ex.SqliteErrorCode == SQLitePCL.raw.SQLITE_BUSY
@@ -637,7 +906,7 @@ PRAGMA busy_timeout = 5000;";
                     var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(3);
                     while (DateTime.UtcNow < deadline)
                     {
-                        long count = GetPendingCount();
+                        long count = ExecuteDatabaseWithRecovery(GetPendingCountCore);
                         if (count == 0)
                             break;
 
@@ -651,6 +920,7 @@ PRAGMA busy_timeout = 5000;";
             {
                 _httpClient.Dispose();
                 _cts.Dispose();
+                _databaseGate.Dispose();
             }
         }
 

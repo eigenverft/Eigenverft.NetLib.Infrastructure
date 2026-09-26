@@ -45,6 +45,7 @@ The migrated relay currently provides:
 - configurable minimum and maximum batch sizes;
 - retention cleanup for sent and unsent rows;
 - SQLite WAL mode, `synchronous=FULL`, busy timeout, and busy/locked retry handling;
+- explicit SQLite corruption handling for `SQLITE_CORRUPT` / `SQLITE_NOTADB`: the file-backed spool is quarantined under `corrupted/<quarantine-id>/`, any DB/WAL/SHM files still present are moved together, `corruption.json` is written best-effort, a fresh spool is created, and a durable `spool_corrupted` event is inserted before normal logging resumes;
 - adaptive sender delay and HTTP `429 Retry-After` handling;
 - a shutdown flush that attempts to send remaining pending rows;
 - idempotent shared sync/async disposal: concurrent/repeated disposal joins one shutdown operation and new events are rejected once shutdown begins;
@@ -76,6 +77,7 @@ The current implementation intentionally defers the remaining security/operation
 - bearer-token authentication is not implemented yet;
 - each HTTP attempt receives a newly generated `BatchId`; this is intentional correlation metadata, while stable `EventId` values provide retry idempotency;
 - operational diagnostics remain primarily Serilog `SelfLog` rather than a dedicated relay health surface.
+- the default application-level spool can be shared by parallel processes. SQLite and receiver-side `EventId` idempotency preserve correctness, but sender claiming is not yet coordinated across processes, so parallel senders may temporarily issue duplicate HTTP attempts; corruption quarantine is also best-effort if another process still holds the spool files open.
 
 These are known follow-up areas, not accidental omissions from the migration.
 

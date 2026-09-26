@@ -51,6 +51,256 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         }
 
         [TestMethod]
+        [DoNotParallelize]
+        public void CorruptedSpoolIsQuarantinedRecreatedAndReported()
+        {
+            string directory = CreateTemporaryDirectory();
+            string databasePath = Path.Combine(directory, "SerilogRelay.db");
+            string walPath = databasePath + "-wal";
+            string shmPath = databasePath + "-shm";
+
+            try
+            {
+                File.WriteAllBytes(databasePath, Encoding.UTF8.GetBytes("this is not a sqlite database"));
+                File.WriteAllText(walPath, "fake wal");
+                File.WriteAllText(shmPath, "fake shm");
+
+                using (Logger logger = new LoggerConfiguration()
+                    .WriteTo.SerilogRelay(
+                        endpoint: null,
+                        spoolDirectory: directory)
+                    .CreateLogger())
+                {
+                    logger.Information("After corruption recovery");
+                }
+
+                using var connection = new SqliteConnection($"Data Source={databasePath}");
+                connection.Open();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "SELECT COUNT(*) FROM SerilogRelayEvents;";
+                    Assert.AreEqual(2L, Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture));
+                }
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = @"
+SELECT Properties
+FROM SerilogRelayEvents
+WHERE RenderMessage = 'SerilogRelay quarantined a corrupted SQLite spool and created a new spool.'
+LIMIT 1;";
+
+                    string propertiesJson =
+                        Convert.ToString(command.ExecuteScalar(), CultureInfo.InvariantCulture)
+                        ?? string.Empty;
+
+                    using JsonDocument document = JsonDocument.Parse(propertiesJson);
+                    Assert.AreEqual(
+                        "spool_corrupted",
+                        document.RootElement.GetProperty("RelayEventType").GetString());
+                    Assert.AreEqual(
+                        "quarantined_and_recreated",
+                        document.RootElement.GetProperty("RecoveryAction").GetString());
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(
+                        document.RootElement.GetProperty("QuarantineId").GetString()));
+                }
+
+                string corruptedRoot = Path.Combine(directory, "corrupted");
+                string[] quarantineDirectories = Directory.GetDirectories(corruptedRoot);
+                Assert.HasCount(1, quarantineDirectories);
+
+                string quarantineDirectory = quarantineDirectories[0];
+                Assert.IsTrue(File.Exists(Path.Combine(quarantineDirectory, "SerilogRelay.db")));
+                Assert.IsTrue(File.Exists(Path.Combine(quarantineDirectory, "corruption.json")));
+
+                Assert.IsTrue(File.Exists(databasePath));
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public void CorruptionHelpersClassifyPathsAndSidecars()
+        {
+            Assert.IsTrue(InvokeIsCorruptionError(new SqliteException("corrupt", SQLitePCL.raw.SQLITE_CORRUPT)));
+            Assert.IsTrue(InvokeIsCorruptionError(new SqliteException("notadb", SQLitePCL.raw.SQLITE_NOTADB)));
+            Assert.IsFalse(InvokeIsCorruptionError(new SqliteException("ioerr", SQLitePCL.raw.SQLITE_IOERR)));
+
+            Assert.IsNull(InvokeResolveDatabasePath("Data Source=:memory:"));
+
+            string namedMemoryConnection = new SqliteConnectionStringBuilder
+            {
+                DataSource = "relay-memory",
+                Mode = SqliteOpenMode.Memory,
+            }.ToString();
+            Assert.IsNull(InvokeResolveDatabasePath(namedMemoryConnection));
+            Assert.IsNull(InvokeResolveDatabasePath(string.Empty));
+
+            string directory = CreateTemporaryDirectory();
+            string quarantineDirectory = Path.Combine(directory, "quarantine");
+            string source = Path.Combine(directory, "SerilogRelay.db-wal");
+
+            try
+            {
+                Directory.CreateDirectory(quarantineDirectory);
+                File.WriteAllText(source, "sidecar");
+
+                InvokeMoveToQuarantineIfPresent(source, quarantineDirectory);
+
+                Assert.IsFalse(File.Exists(source));
+                Assert.IsTrue(File.Exists(Path.Combine(quarantineDirectory, "SerilogRelay.db-wal")));
+
+                InvokeMoveToQuarantineIfPresent(
+                    Path.Combine(directory, "missing.db-shm"),
+                    quarantineDirectory);
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DoNotParallelize]
+        public async Task CorruptionDuringAsyncReadIsRecovered()
+        {
+            string directory = CreateTemporaryDirectory();
+            string databasePath = Path.Combine(directory, "relay.db");
+            string connectionString = $"Data Source={databasePath}";
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    minBatchItems: 1,
+                    maxBatchItems: 10,
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3));
+
+                SqliteConnection.ClearAllPools();
+                File.Delete(databasePath + "-wal");
+                File.Delete(databasePath + "-shm");
+                File.WriteAllBytes(databasePath, Encoding.UTF8.GetBytes("not sqlite anymore"));
+
+                List<LogEntry> entries = await InvokeLoadUnsentAsync(
+                    sink,
+                    limit: 10,
+                    CancellationToken.None);
+
+                Assert.HasCount(1, entries);
+                using JsonDocument properties = JsonDocument.Parse(entries[0].Properties!);
+                Assert.AreEqual(
+                    "spool_corrupted",
+                    properties.RootElement.GetProperty("RelayEventType").GetString());
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DoNotParallelize]
+        public async Task NonFileBackedCorruptionCannotBeRecovered()
+        {
+            string directory = CreateTemporaryDirectory();
+            string databasePath = Path.Combine(directory, "relay.db");
+            using var selfLog = new StringWriter(CultureInfo.InvariantCulture);
+            SelfLog.Enable(selfLog);
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    $"Data Source={databasePath}",
+                    endpoint: null,
+                    minBatchItems: 1,
+                    maxBatchItems: 10,
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3));
+
+                SetPrivateField<string?>(sink, "_databasePath", null);
+
+                Assert.IsFalse(InvokeTryRecoverCorruptedSpool(
+                    sink,
+                    new SqliteException("notadb", SQLitePCL.raw.SQLITE_NOTADB)));
+
+                Assert.ThrowsExactly<SqliteException>(
+                    () => InvokeSyncRecoveryOperationThatAlwaysCorrupts(sink));
+
+                await Assert.ThrowsExactlyAsync<SqliteException>(
+                    () => InvokeAsyncRecoveryOperationThatAlwaysCorrupts(sink));
+
+                StringAssert.Contains(
+                    selfLog.ToString(),
+                    "not a recoverable file-backed database");
+            }
+            finally
+            {
+                SelfLog.Disable();
+                SqliteConnection.ClearAllPools();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DoNotParallelize]
+        public async Task CorruptionRecoveryInfrastructureFailuresAreBestEffort()
+        {
+            string directory = CreateTemporaryDirectory();
+            string databasePath = Path.Combine(directory, "relay.db");
+            string connectionString = $"Data Source={databasePath}";
+            using var selfLog = new StringWriter(CultureInfo.InvariantCulture);
+            SelfLog.Enable(selfLog);
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    minBatchItems: 1,
+                    maxBatchItems: 10,
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3));
+
+                string corruptedPath = Path.Combine(directory, "corrupted");
+                File.WriteAllText(corruptedPath, "blocks directory creation");
+
+                Assert.IsFalse(InvokeTryRecoverCorruptedSpool(
+                    sink,
+                    new SqliteException("corrupt", SQLitePCL.raw.SQLITE_CORRUPT)));
+
+                StringAssert.Contains(
+                    selfLog.ToString(),
+                    "failed to quarantine/recreate");
+
+                InvokeWriteCorruptionMetadata(
+                    sink,
+                    Path.Combine(directory, "missing", "nested"),
+                    "test-quarantine",
+                    new SqliteException("corrupt", SQLitePCL.raw.SQLITE_CORRUPT));
+
+                StringAssert.Contains(
+                    selfLog.ToString(),
+                    "could not write corruption metadata");
+            }
+            finally
+            {
+                SelfLog.Disable();
+                SqliteConnection.ClearAllPools();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
         public void SpoolPathDefaultsToApplicationLocalData()
         {
             string applicationId = "My App/Worker";
@@ -971,6 +1221,106 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 listener.Stop();
                 DeleteTemporaryDirectory(directory);
             }
+        }
+
+        private static bool InvokeIsCorruptionError(SqliteException exception)
+        {
+            MethodInfo method = GetPrivateMethod("IsCorruptionError", isStatic: true);
+            return (bool)method.Invoke(null, new object[] { exception })!;
+        }
+
+        private static string? InvokeResolveDatabasePath(string connectionString)
+        {
+            MethodInfo method = GetPrivateMethod("ResolveDatabasePath", isStatic: true);
+            return (string?)method.Invoke(null, new object[] { connectionString });
+        }
+
+        private static void InvokeMoveToQuarantineIfPresent(
+            string sourcePath,
+            string quarantineDirectory)
+        {
+            MethodInfo method = GetPrivateMethod("MoveToQuarantineIfPresent", isStatic: true);
+            method.Invoke(null, new object[] { sourcePath, quarantineDirectory });
+        }
+
+        private static bool InvokeTryRecoverCorruptedSpool(
+            SerilogRelaySink sink,
+            SqliteException exception)
+        {
+            MethodInfo method = GetPrivateMethod("TryRecoverCorruptedSpool", isStatic: false);
+            return (bool)method.Invoke(sink, new object[] { exception })!;
+        }
+
+        private static void InvokeWriteCorruptionMetadata(
+            SerilogRelaySink sink,
+            string quarantineDirectory,
+            string quarantineId,
+            SqliteException exception)
+        {
+            MethodInfo method = GetPrivateMethod("WriteCorruptionMetadata", isStatic: false);
+            method.Invoke(
+                sink,
+                new object[] { quarantineDirectory, quarantineId, exception });
+        }
+
+        private static async Task<List<LogEntry>> InvokeLoadUnsentAsync(
+            SerilogRelaySink sink,
+            int limit,
+            CancellationToken cancellationToken)
+        {
+            MethodInfo method = GetPrivateMethod("LoadUnsentAsync", isStatic: false);
+            var task = (Task<List<LogEntry>>)method.Invoke(
+                sink,
+                new object[] { limit, cancellationToken })!;
+            return await task;
+        }
+
+        private static void InvokeSyncRecoveryOperationThatAlwaysCorrupts(
+            SerilogRelaySink sink)
+        {
+            MethodInfo definition = Array.Find(
+                typeof(SerilogRelaySink).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic),
+                method => method.Name == "ExecuteDatabaseWithRecovery"
+                    && method.IsGenericMethodDefinition)
+                ?? throw new MissingMethodException(
+                    typeof(SerilogRelaySink).FullName,
+                    "ExecuteDatabaseWithRecovery<T>");
+
+            MethodInfo method = definition.MakeGenericMethod(typeof(int));
+            Func<int> operation =
+                () => throw new SqliteException("notadb", SQLitePCL.raw.SQLITE_NOTADB);
+
+            try
+            {
+                method.Invoke(sink, new object[] { operation });
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException is SqliteException sqliteException)
+            {
+                throw sqliteException;
+            }
+        }
+
+        private static async Task InvokeAsyncRecoveryOperationThatAlwaysCorrupts(
+            SerilogRelaySink sink)
+        {
+            MethodInfo definition = Array.Find(
+                typeof(SerilogRelaySink).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic),
+                method => method.Name == "ExecuteDatabaseWithRecoveryAsync"
+                    && method.IsGenericMethodDefinition)
+                ?? throw new MissingMethodException(
+                    typeof(SerilogRelaySink).FullName,
+                    "ExecuteDatabaseWithRecoveryAsync<T>");
+
+            MethodInfo method = definition.MakeGenericMethod(typeof(int));
+            Func<Task<int>> operation =
+                () => Task.FromException<int>(
+                    new SqliteException("notadb", SQLitePCL.raw.SQLITE_NOTADB));
+
+            var task = (Task<int>)method.Invoke(
+                sink,
+                new object[] { operation, CancellationToken.None })!;
+
+            await task;
         }
 
         private static string InvokeBuildSqliteOffset(TimeSpan span)

@@ -46,6 +46,7 @@ Only small compatibility and correctness adaptations were made while bringing th
 - old spool schemas are upgraded in place by adding/backfilling `EventId` and creating a unique local index without discarding pending rows;
 - protocol version `1` is sent to `Eigenverft.Service.CentralLogging` `/api/v1/logs`; `BatchId` remains a new per-attempt correlation ID while `EventId` is the idempotency key;
 - the client API now treats the relay as fire-and-forget infrastructure: endpoint is the only normal remote-delivery input, while application identity, LocalApplicationData-based spool directory, `SerilogRelay.db` filename, and internal `SerilogRelayEvents` table are automatic; `spoolDirectory`, `spoolFileName`, and `applicationId` remain optional overrides;
+- `SQLITE_CORRUPT` and `SQLITE_NOTADB` now trigger serialized file-backed recovery: close/clear relay SQLite pools, quarantine the active DB plus WAL/SHM sidecars when still present, write a best-effort `corruption.json`, recreate the spool/schema, persist a durable `spool_corrupted` event in the fresh spool, and retry the failed database operation; `BUSY`, `LOCKED`, `FULL`, `CANTOPEN`, and `IOERR` are not misclassified as corruption;
 - compiler-generated `System.Text.Json` source-generator files are excluded from Coverlet measurement while the authored library code remains subject to the unchanged 100% line/branch/method threshold.
 - direct package references were refreshed to the current stable versions used by the repository: `Microsoft.Data.Sqlite 10.0.12`, `Serilog 4.4.0`, `Microsoft.NET.Test.Sdk 18.10.1`, `MSTest 4.4.1`, and `coverlet.msbuild 10.0.1`; `Nerdbank.GitVersioning 3.10.94` was already current.
 
@@ -63,8 +64,9 @@ The regression suite characterizes the migrated behavior, including:
 - trace/span/exception/property persistence;
 - historical nullable database columns;
 - sender-loop failure and cancellation paths.
+- real corrupted SQLite startup recovery, async read-time recovery, corruption-code classification, sidecar quarantine, non-file-backed behavior, and best-effort recovery/metadata failure paths.
 
-The current regression suite contains 22 tests. On `net10.0`, all 22 pass and authored library code reaches 100% line, branch, and method coverage. The solution also builds successfully for `net8.0` and `net10.0`. A real temporary end-to-end run against the current `Eigenverft.Service.CentralLogging` receiver confirmed that `.WriteTo.SerilogRelay(...)` reaches `/api/v1/logs` and persists the same canonical `EventId` on the receiver.
+The current regression suite contains 27 tests. On `net10.0`, all 27 pass and authored library code reaches 100% line, branch, and method coverage. The solution also builds successfully for `net8.0` and `net10.0`. A real temporary end-to-end run against the current `Eigenverft.Service.CentralLogging` receiver confirmed that `.WriteTo.SerilogRelay(...)` reaches `/api/v1/logs` and persists the same canonical `EventId` on the receiver.
 
 The inherited analyzer cleanup is now complete for the current relay source. The Release pack for both `net8.0` and `net10.0` completes with 0 warnings and 0 errors. Persisted rendered messages use `CultureInfo.InvariantCulture` so their text is stable across host/thread locales; the remaining analyzer fixes were private parameter ordering and format/conversion cleanup without behavioral redesign.
 
@@ -76,12 +78,22 @@ The following review items are intentionally deferred rather than missing from t
 - **Authentication (U1):** add an explicit sender-authentication mechanism such as bearer tokens when the CentralLogging deployment/authentication model is defined. Event/application fields must not be treated as authenticated identity merely because they appear in the payload.
 - **Operational health/status (U2):** consider a small observable relay status surface for values such as pending count, last successful delivery, and last delivery failure. `SelfLog` remains the current diagnostic path; a larger health API is intentionally deferred.
 
+### Protocol / client identity ideas for later
+
+These are recorded design directions, not current wire requirements:
+
+- Treat the configured endpoint as the **logging API base**, e.g. `https://host/api/v1/logs`. Normal application batches continue to POST directly to that base; future relay-operational traffic can derive a child route such as `/api/v1/logs/relay-events`, avoiding an artificial `/default` route.
+- A future server-preference handshake/config route can live below the same base (for example `/api/v1/logs/config`). Client-side defaults remain authoritative unless an explicit `allowServerConfiguration`-style opt-in is enabled; server values should be bounded hints (batch size, interval, etc.), cached with a TTL, and fall back to local defaults when unavailable.
+- Keep identity layers distinct: `ApplicationId` is the logical application; `ProcessId` plus a per-process-start `ProcessInstanceId` can disambiguate simultaneous processes; `MachineName` is useful optional Serilog enrichment; a stable `InstallationId` may be useful later. Do not silently equate any of these with a privacy-sensitive physical/hardware machine identifier.
+- The archived AxonInsight setup already reflected this separation imperfectly: applications explicitly enriched logs with machine name, while a persisted setup GUID was used in the logging URL and behaved more like an installation/client identifier than a physical-machine identity.
+- With the current application-level default spool, multiple same-application processes can share SQLite safely for writes, and F7 receiver idempotency prevents duplicate stored events. However, two sender loops can still race on the same unsent rows. A future multi-process improvement should prefer row claiming/leases (and a cross-process recovery lock) over making the default spool process-ID-specific, because process-specific files would weaken restart backlog recovery.
+
 ## Bring back better
 
 The following remain redesign goals rather than part of the initial functional migration:
 
 - Keep SQLite as the durable spool initially; avoid putting a lossy in-memory queue in front of persistence.
-- Define explicit behavior for SQLite busy/full/failure states and expose those failures through Serilog SelfLog or another observable diagnostic path.
+- Continue defining explicit behavior for non-corruption SQLite failure states such as full disk, open failures, and I/O errors, and expose those failures through Serilog SelfLog or another observable diagnostic path.
 - Support bearer tokens without making authentication mandatory for loopback/private deployments.
 - Replace unrestricted TLS bypass with explicit options suitable for self-signed/private infrastructure, such as opt-in self-signed acceptance or certificate pinning.
 - Use bounded retry/backoff with cancellation and reliable restart recovery.
