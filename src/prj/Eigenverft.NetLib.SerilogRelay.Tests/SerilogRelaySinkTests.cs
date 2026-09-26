@@ -183,6 +183,7 @@ LIMIT 1;";
                     TimeSpan.FromDays(1),
                     TimeSpan.FromDays(3));
 
+                SetPrivateField<string?>(sink, "_machineId", null);
                 SqliteConnection.ClearAllPools();
                 File.Delete(databasePath + "-wal");
                 File.Delete(databasePath + "-shm");
@@ -194,6 +195,7 @@ LIMIT 1;";
                     CancellationToken.None);
 
                 Assert.HasCount(1, entries);
+                Assert.IsNull(entries[0].MachineId);
                 using JsonDocument properties = JsonDocument.Parse(entries[0].Properties!);
                 Assert.AreEqual(
                     "spool_corrupted",
@@ -407,6 +409,45 @@ LIMIT 1;";
         }
 
         [TestMethod]
+        public async Task MissingMachineIdPersistsAsNull()
+        {
+            string directory = CreateTemporaryDirectory();
+            string databasePath = Path.Combine(directory, "relay.db");
+            string connectionString = $"Data Source={databasePath}";
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    minBatchItems: 1,
+                    maxBatchItems: 10,
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromDays(1),
+                    TimeSpan.FromDays(3),
+                    applicationId: "NoMachine.App");
+
+                SetPrivateField<string?>(sink, "_machineId", null);
+                sink.Emit(CreateLogEvent("machine unavailable"));
+
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT ApplicationId, MachineId, ProcessId FROM SerilogRelayEvents ORDER BY Id LIMIT 1;";
+                using SqliteDataReader reader = command.ExecuteReader();
+
+                Assert.IsTrue(reader.Read());
+                Assert.AreEqual("NoMachine.App", reader.GetString(0));
+                Assert.IsTrue(reader.IsDBNull(1));
+                Assert.AreEqual(Environment.ProcessId, reader.GetInt32(2));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
         public void WriteToExtensionPersistsLocallyWithoutEndpoint()
         {
             string directory = CreateTemporaryDirectory();
@@ -420,6 +461,7 @@ LIMIT 1;";
                         endpoint: null,
                         spoolDirectory: directory,
                         spoolFileName: "relay.db",
+                        applicationId: "Test.App",
                         minimumBatchSize: 20,
                         maximumBatchSize: 100,
                         baseInterval: TimeSpan.FromMilliseconds(20))
@@ -432,15 +474,22 @@ LIMIT 1;";
                 connection.Open();
 
                 using var command = connection.CreateCommand();
-                command.CommandText = "SELECT EventId, Level, RenderMessage, MessageTemplate, Properties, Sent FROM SerilogRelayEvents ORDER BY Id LIMIT 1;";
+                command.CommandText = "SELECT EventId, ApplicationId, MachineId, ProcessId, Level, RenderMessage, MessageTemplate, Properties, Sent FROM SerilogRelayEvents ORDER BY Id LIMIT 1;";
 
                 using SqliteDataReader reader = command.ExecuteReader();
                 Assert.IsTrue(reader.Read());
                 Assert.IsTrue(Guid.TryParseExact(reader.GetString(0), "D", out _));
-                Assert.AreEqual("Information", reader.GetString(1));
-                Assert.AreEqual("Hello 42", reader.GetString(2));
-                Assert.AreEqual("Hello {Value}", reader.GetString(3));
-                StringAssert.Contains(reader.GetString(4), "\"Value\":\"42\"");
+                Assert.AreEqual("Test.App", reader.GetString(1));
+                if (PhysicalMachineBinding.TryGetFingerprint(out string expectedMachineId))
+                    Assert.AreEqual(expectedMachineId, reader.GetString(2));
+                else
+                    Assert.IsTrue(reader.IsDBNull(2));
+                Assert.AreEqual(Environment.ProcessId, reader.GetInt32(3));
+                Assert.AreEqual("Information", reader.GetString(4));
+                Assert.AreEqual("Hello 42", reader.GetString(5));
+                Assert.AreEqual("Hello {Value}", reader.GetString(6));
+                StringAssert.Contains(reader.GetString(7), "\"Value\":\"42\"");
+                Assert.AreEqual(0L, reader.GetInt64(8));
                 Assert.AreEqual(0L, reader.GetInt64(5));
                 Assert.IsFalse(reader.Read());
             }
@@ -514,7 +563,8 @@ LIMIT 1;";
                     maxBatchItems: 10,
                     TimeSpan.FromMilliseconds(20),
                     TimeSpan.FromDays(1),
-                    TimeSpan.FromDays(3));
+                    TimeSpan.FromDays(3),
+                    applicationId: "Wire.Test.App");
 
                 using Logger logger = new LoggerConfiguration().WriteTo.Sink(sink).CreateLogger();
                 logger.Information("Relay {Value}", 7);
@@ -523,8 +573,15 @@ LIMIT 1;";
                 using JsonDocument document = JsonDocument.Parse(body);
                 Assert.AreEqual(1, document.RootElement.GetProperty("count").GetInt32());
                 Assert.AreEqual(1, document.RootElement.GetProperty("protocolVersion").GetInt32());
-                Assert.IsTrue(Guid.TryParseExact(document.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString(), "D", out _));
-                Assert.AreEqual("Relay 7", document.RootElement.GetProperty("logs")[0].GetProperty("renderMessage").GetString());
+                JsonElement sentLog = document.RootElement.GetProperty("logs")[0];
+                Assert.IsTrue(Guid.TryParseExact(sentLog.GetProperty("eventId").GetString(), "D", out _));
+                Assert.AreEqual("Wire.Test.App", sentLog.GetProperty("applicationId").GetString());
+                if (PhysicalMachineBinding.TryGetFingerprint(out string expectedMachineId))
+                    Assert.AreEqual(expectedMachineId, sentLog.GetProperty("machineId").GetString());
+                else
+                    Assert.AreEqual(JsonValueKind.Null, sentLog.GetProperty("machineId").ValueKind);
+                Assert.AreEqual(Environment.ProcessId, sentLog.GetProperty("processId").GetInt32());
+                Assert.AreEqual("Relay 7", sentLog.GetProperty("renderMessage").GetString());
 
                 await WaitForSentStateAsync(connectionString, expectedSent: 1L, TimeSpan.FromSeconds(5));
                 await Task.Delay(200);
@@ -625,6 +682,15 @@ VALUES ('legacy', 'Information', 'legacy', 'legacy', 0);";
                 {
                     firstEventId = ReadSingleEventId(connectionString);
                     Assert.IsTrue(Guid.TryParseExact(firstEventId, "D", out _));
+                    using var identityConnection = new SqliteConnection(connectionString);
+                    identityConnection.Open();
+                    using var identityCommand = identityConnection.CreateCommand();
+                    identityCommand.CommandText = "SELECT ApplicationId, MachineId, ProcessId FROM SerilogRelayEvents ORDER BY Id LIMIT 1;";
+                    using SqliteDataReader identityReader = identityCommand.ExecuteReader();
+                    Assert.IsTrue(identityReader.Read());
+                    Assert.IsTrue(identityReader.IsDBNull(0));
+                    Assert.IsTrue(identityReader.IsDBNull(1));
+                    Assert.IsTrue(identityReader.IsDBNull(2));
                 }
 
                 await using (var secondSink = new SerilogRelaySink(

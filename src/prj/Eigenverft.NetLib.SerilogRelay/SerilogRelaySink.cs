@@ -73,7 +73,8 @@ namespace Eigenverft.NetLib.SerilogRelay
                 maximumBatchSize,
                 baseInterval ?? TimeSpan.FromSeconds(5),
                 sentRetention ?? TimeSpan.FromDays(1),
-                unsentRetention ?? TimeSpan.FromDays(3));
+                unsentRetention ?? TimeSpan.FromDays(3),
+                applicationId);
             return loggerConfiguration.Sink(sink, restrictedToMinimumLevel);
         }
 
@@ -161,6 +162,9 @@ namespace Eigenverft.NetLib.SerilogRelay
 CREATE TABLE IF NOT EXISTS {0} (
     Id              INTEGER PRIMARY KEY AUTOINCREMENT,
     EventId         TEXT,
+    ApplicationId   TEXT,
+    MachineId       TEXT,
+    ProcessId       INTEGER,
     Timestamp       TEXT    NOT NULL,
     Level           TEXT    NOT NULL,
     RenderMessage   TEXT    NOT NULL,
@@ -177,6 +181,9 @@ CREATE TABLE IF NOT EXISTS {0} (
         private readonly string? _databasePath;
         private readonly SemaphoreSlim _databaseGate = new SemaphoreSlim(1, 1);
         private readonly string? _endpoint;
+        private readonly string _applicationId;
+        private readonly string? _machineId;
+        private readonly int _processId;
         private readonly int _minBatchSize;
         private readonly int _maxBatchSize;
         private readonly TimeSpan _baseInterval;
@@ -206,6 +213,7 @@ CREATE TABLE IF NOT EXISTS {0} (
         /// <param name="baseInterval">Base delay interval between send attempts.</param>
         /// <param name="sentRetention">How long successfully sent entries remain in the local spool.</param>
         /// <param name="unsentRetention">How long unsent entries remain in the local spool.</param>
+        /// <param name="applicationId">Optional logical application identity stored with newly persisted events.</param>
         /// <remarks>
         /// Ensures <paramref name="minBatchItems"/> is at least 1 and not greater than <paramref name="maxBatchItems"/>.
         /// </remarks>
@@ -216,7 +224,8 @@ CREATE TABLE IF NOT EXISTS {0} (
             int maxBatchItems,
             TimeSpan baseInterval,
             TimeSpan sentRetention,
-            TimeSpan unsentRetention
+            TimeSpan unsentRetention,
+            string? applicationId = null
             )
         {
             if (minBatchItems < 1)
@@ -227,6 +236,9 @@ CREATE TABLE IF NOT EXISTS {0} (
             _connectionString = connectionString;
             _databasePath = ResolveDatabasePath(connectionString);
             _endpoint = endpoint;
+            _applicationId = LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(applicationId);
+            _machineId = ResolveMachineId();
+            _processId = Environment.ProcessId;
             _minBatchSize = minBatchItems;
             _maxBatchSize = maxBatchItems;
             _baseInterval = baseInterval;
@@ -250,6 +262,10 @@ CREATE TABLE IF NOT EXISTS {0} (
                 ? Task.Run(SenderLoopAsync, _cts.Token)
                 : Task.CompletedTask;
         }
+
+        [ExcludeFromCodeCoverage]
+        private static string? ResolveMachineId()
+            => PhysicalMachineBinding.TryGetFingerprint(out string machineId) ? machineId : null;
 
         /// <summary>
         /// Deletes log entries older than the specified retention periods.
@@ -328,11 +344,14 @@ DELETE FROM {TableName}
             cmd.Transaction = tx;
             cmd.CommandText = $@"
 INSERT INTO {TableName}
-  (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
+  (EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
 VALUES
-  ($eventId, $ts, $lvl, $rendered, $tmpl, $tid, $sid, $ex, $props, 0);";
+  ($eventId, $applicationId, $machineId, $processId, $ts, $lvl, $rendered, $tmpl, $tid, $sid, $ex, $props, 0);";
 
             cmd.Parameters.AddWithValue("$eventId", eventId);
+            cmd.Parameters.AddWithValue("$applicationId", _applicationId);
+            cmd.Parameters.AddWithValue("$machineId", (object?)_machineId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$processId", _processId);
             cmd.Parameters.AddWithValue("$ts", logEvent.Timestamp.UtcDateTime.ToString("o", CultureInfo.InvariantCulture));
             cmd.Parameters.AddWithValue("$lvl", logEvent.Level.ToString());
             cmd.Parameters.AddWithValue("$rendered", logEvent.RenderMessage(CultureInfo.InvariantCulture));
@@ -470,7 +489,7 @@ VALUES
                     ConfigurePragmas(conn);
                     using var cmd = conn.CreateCommand();
                     cmd.CommandText = $@"
-SELECT Id, EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties
+SELECT Id, EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties
 FROM {TableName}
 WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
                     using var reader = await cmd.ExecuteReaderAsync(token).ConfigureAwait(false);
@@ -480,14 +499,17 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
                         {
                             Id = reader.GetInt64(0),
                             EventId = reader.GetString(1),
-                            Timestamp = reader.GetString(2),
-                            Level = reader.GetString(3),
-                            RenderMessage = reader.GetString(4),
-                            MessageTemplate = reader.GetString(5),
-                            TraceId = reader.IsDBNull(6) ? null : reader.GetString(6),
-                            SpanId = reader.IsDBNull(7) ? null : reader.GetString(7),
-                            Exception = reader.IsDBNull(8) ? null : reader.GetString(8),
-                            Properties = reader.IsDBNull(9) ? null : reader.GetString(9),
+                            ApplicationId = reader.IsDBNull(2) ? null : reader.GetString(2),
+                            MachineId = reader.IsDBNull(3) ? null : reader.GetString(3),
+                            ProcessId = reader.IsDBNull(4) ? null : reader.GetInt32(4),
+                            Timestamp = reader.GetString(5),
+                            Level = reader.GetString(6),
+                            RenderMessage = reader.GetString(7),
+                            MessageTemplate = reader.GetString(8),
+                            TraceId = reader.IsDBNull(9) ? null : reader.GetString(9),
+                            SpanId = reader.IsDBNull(10) ? null : reader.GetString(10),
+                            Exception = reader.IsDBNull(11) ? null : reader.GetString(11),
+                            Properties = reader.IsDBNull(12) ? null : reader.GetString(12),
                         });
                     }
 
@@ -542,27 +564,19 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             conn.Open();
             ConfigurePragmas(conn);
 
-            bool hasEventId = false;
+            var columns = new HashSet<string>(StringComparer.Ordinal);
             using (var schema = conn.CreateCommand())
             {
                 schema.CommandText = $"PRAGMA table_info({TableName});";
                 using var reader = schema.ExecuteReader();
                 while (reader.Read())
-                {
-                    if (string.Equals(reader.GetString(1), "EventId", StringComparison.Ordinal))
-                    {
-                        hasEventId = true;
-                        break;
-                    }
-                }
+                    columns.Add(reader.GetString(1));
             }
 
-            if (!hasEventId)
-            {
-                using var alter = conn.CreateCommand();
-                alter.CommandText = $"ALTER TABLE {TableName} ADD COLUMN EventId TEXT;";
-                alter.ExecuteNonQuery();
-            }
+            EnsureColumn("EventId", "TEXT");
+            EnsureColumn("ApplicationId", "TEXT");
+            EnsureColumn("MachineId", "TEXT");
+            EnsureColumn("ProcessId", "INTEGER");
 
             var rowsWithoutEventId = new List<long>();
             using (var select = conn.CreateCommand())
@@ -591,6 +605,17 @@ WHERE Sent = 0 ORDER BY Id ASC LIMIT {limit}";
             using var index = conn.CreateCommand();
             index.CommandText = $"CREATE UNIQUE INDEX IF NOT EXISTS IX_{TableName}_EventId ON {TableName}(EventId);";
             index.ExecuteNonQuery();
+
+            void EnsureColumn(string columnName, string type)
+            {
+                if (columns.Contains(columnName))
+                    return;
+
+                using var alter = conn.CreateCommand();
+                alter.CommandText = $"ALTER TABLE {TableName} ADD COLUMN {columnName} {type};";
+                alter.ExecuteNonQuery();
+                columns.Add(columnName);
+            }
         }
 
         // Apply durable settings to SQLite connection
@@ -765,11 +790,14 @@ PRAGMA busy_timeout = 5000;";
             cmd.Transaction = tx;
             cmd.CommandText = $@"
 INSERT INTO {TableName}
-  (EventId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
+  (EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
 VALUES
-  ($eventId, $ts, $lvl, $rendered, $tmpl, NULL, NULL, $ex, $props, 0);";
+  ($eventId, $applicationId, $machineId, $processId, $ts, $lvl, $rendered, $tmpl, NULL, NULL, $ex, $props, 0);";
 
             cmd.Parameters.AddWithValue("$eventId", Guid.NewGuid().ToString("D"));
+            cmd.Parameters.AddWithValue("$applicationId", _applicationId);
+            cmd.Parameters.AddWithValue("$machineId", (object?)_machineId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$processId", _processId);
             cmd.Parameters.AddWithValue(
                 "$ts",
                 DateTimeOffset.UtcNow.UtcDateTime.ToString("o", CultureInfo.InvariantCulture));
@@ -971,6 +999,9 @@ VALUES
     {
         public long Id { get; set; }
         public string EventId { get; set; } = string.Empty;
+        public string? ApplicationId { get; set; }
+        public string? MachineId { get; set; }
+        public int? ProcessId { get; set; }
         public string Timestamp { get; set; } = string.Empty;
         public string Level { get; set; } = string.Empty;
         public string RenderMessage { get; set; } = string.Empty;

@@ -36,9 +36,12 @@ The migrated relay currently provides:
 
 - durable SQLite persistence before any network delivery attempt;
 - fire-and-forget client defaults that automatically choose the application identity, spool directory, spool filename, and internal table name;
+- automatic per-event producer identity: `ApplicationId`, `MachineId`, and `ProcessId` are persisted with each new spool row before delivery so shared-spool multi-process producers remain distinguishable after retries or sender handoff;
+- `MachineId` is a stable SHA-256 platform fingerprint derived locally from the system/platform UUID (SMBIOS on Windows, DMI on Linux, IOPlatformUUID on macOS). The raw platform UUID and `MachineName` are not transmitted by the relay;
 - `Sent = 0` pending rows that survive process restarts and network outages;
 - a stable per-event `EventId` persisted in the local spool before delivery and reused across retries/restarts;
 - automatic one-time `EventId` backfill for pre-F7 spool databases, followed by a unique local index;
+- automatic schema migration adds `ApplicationId`, `MachineId`, and `ProcessId` columns to older spools without fabricating identity for historical rows; those legacy identity values remain null;
 - an independent background sender that loads and posts pending rows in batches;
 - protocol version `1` batches for `Eigenverft.Service.CentralLogging`, with `BatchId` used as per-attempt correlation and `EventId` as the idempotency key;
 - successful-delivery marking with `Sent = 1`;
