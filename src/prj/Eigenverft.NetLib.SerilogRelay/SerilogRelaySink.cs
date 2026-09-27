@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Channels;
@@ -40,6 +41,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <param name="baseInterval">The normal delay between background delivery attempts.</param>
         /// <param name="sentRetention">How long successfully sent events are retained in the shared application spool. This applies spool-wide across processes using the same spool path.</param>
         /// <param name="unsentRetention">Optional maximum age for unsent events in the shared application spool. This applies spool-wide across processes using the same spool path.</param>
+        /// <param name="bearerToken">Optional raw bearer token sent as <c>Authorization: Bearer &lt;token&gt;</c>. Null, empty, or whitespace disables the header.</param>
         /// <param name="restrictedToMinimumLevel">The minimum Serilog event level accepted by the sink.</param>
         public static LoggerConfiguration SerilogRelay(
             this LoggerSinkConfiguration loggerConfiguration,
@@ -53,7 +55,8 @@ namespace Eigenverft.NetLib.SerilogRelay
             TimeSpan? baseInterval = null,
             TimeSpan? sentRetention = null,
             TimeSpan? unsentRetention = null,
-            LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum)
+            LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
+            string? bearerToken = null)
         {
             var options = new SerilogRelayOptions();
             options.Delivery.MinimumBatchEvents = minimumBatchSize;
@@ -70,7 +73,8 @@ namespace Eigenverft.NetLib.SerilogRelay
                 spoolFileName,
                 applicationId,
                 dangerousAcceptAnyServerCertificate,
-                restrictedToMinimumLevel);
+                restrictedToMinimumLevel,
+                bearerToken);
         }
 
         /// <summary>
@@ -83,6 +87,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <param name="spoolFileName">Optional spool filename.</param>
         /// <param name="applicationId">Optional logical application identity.</param>
         /// <param name="dangerousAcceptAnyServerCertificate">Whether relay HTTP requests should bypass server-certificate validation.</param>
+        /// <param name="bearerToken">Optional raw bearer token sent as <c>Authorization: Bearer &lt;token&gt;</c>. Null, empty, or whitespace disables the header.</param>
         /// <param name="restrictedToMinimumLevel">The minimum Serilog event level accepted by the sink.</param>
         /// <returns>The original Serilog logger configuration.</returns>
         public static LoggerConfiguration SerilogRelay(
@@ -93,7 +98,8 @@ namespace Eigenverft.NetLib.SerilogRelay
             string spoolFileName = DefaultSpoolFileName,
             string? applicationId = null,
             bool dangerousAcceptAnyServerCertificate = false,
-            LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum)
+            LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
+            string? bearerToken = null)
         {
             ArgumentNullException.ThrowIfNull(options);
 
@@ -121,7 +127,8 @@ namespace Eigenverft.NetLib.SerilogRelay
                 endpoint,
                 options,
                 applicationId,
-                dangerousAcceptAnyServerCertificate);
+                dangerousAcceptAnyServerCertificate,
+                bearerToken);
             return loggerConfiguration.Sink(sink, restrictedToMinimumLevel);
         }
 
@@ -289,7 +296,8 @@ CREATE TABLE IF NOT EXISTS {0} (
             bool dangerousAcceptAnyServerCertificate = false,
             TimeSpan? maximumBatchWait = null,
             EndpointRetryOptions? retryOptions = null,
-            EmergencyMemoryBufferOptions? emergencyOptions = null)
+            EmergencyMemoryBufferOptions? emergencyOptions = null,
+            string? bearerToken = null)
             : this(
                 connectionString,
                 endpoint,
@@ -303,7 +311,8 @@ CREATE TABLE IF NOT EXISTS {0} (
                     retryOptions,
                     emergencyOptions),
                 applicationId,
-                dangerousAcceptAnyServerCertificate)
+                dangerousAcceptAnyServerCertificate,
+                bearerToken)
         {
         }
 
@@ -312,7 +321,8 @@ CREATE TABLE IF NOT EXISTS {0} (
             string? endpoint,
             SerilogRelayOptions options,
             string? applicationId = null,
-            bool dangerousAcceptAnyServerCertificate = false)
+            bool dangerousAcceptAnyServerCertificate = false,
+            string? bearerToken = null)
         {
             ArgumentNullException.ThrowIfNull(options);
             ValidateOptions(options);
@@ -341,6 +351,9 @@ CREATE TABLE IF NOT EXISTS {0} (
             {
                 Timeout = HttpRequestTimeout,
             };
+            if (!string.IsNullOrWhiteSpace(bearerToken))
+                _httpClient.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", bearerToken);
             _cts = new CancellationTokenSource();
             _emergencyChannel = Channel.CreateBounded<EmergencyEntry>(
                 new BoundedChannelOptions(_emergencyBufferCapacity)

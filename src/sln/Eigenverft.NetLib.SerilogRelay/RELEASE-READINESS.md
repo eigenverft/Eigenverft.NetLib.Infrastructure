@@ -81,15 +81,19 @@ README, XML docs, tests, and `RELIABILITY.md` must use the same scope vocabulary
 
 ### Gate C - Bearer authentication
 
-**Intentionally last.**
+**Implemented.**
 
-Bearer authentication remains the final security feature after the multi-process/storage
-contract is settled.
+SerilogRelay accepts an optional raw `bearerToken` parameter and sends it as
+`Authorization: Bearer <token>`. CentralLogging accepts the matching
+`CentralLogging:BearerToken` configuration (for environment variables:
+`CentralLogging__BearerToken`) and returns `401 Unauthorized` with
+`WWW-Authenticate: Bearer` when a configured token is missing or incorrect.
 
-Until bearer authentication is implemented, an ingestion endpoint must remain inside a trusted
-boundary such as loopback/private network or behind a trusted proxy/gateway.
+No token configured means bearer authentication is disabled, preserving the private/trusted
+proxy deployment mode. The token is opaque; there is no JWT parsing, refresh protocol, or
+identity-provider abstraction.
 
-Producer identity fields are not authentication.
+Producer identity fields are still not authentication.
 
 ### Gate D - Final release validation
 
@@ -101,7 +105,7 @@ After functional blockers are closed:
 4. `dotnet pack`;
 5. inspect package contents and package README;
 6. smoke-test sender -> current CentralLogging receiver;
-7. repeat the smoke test with bearer authentication once Gate C is implemented.
+7. smoke-test the sender -> CentralLogging path with bearer authentication enabled.
 
 ## Not currently release blockers
 

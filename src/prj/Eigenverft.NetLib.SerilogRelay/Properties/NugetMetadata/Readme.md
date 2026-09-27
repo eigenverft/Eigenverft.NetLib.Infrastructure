@@ -25,8 +25,8 @@ Multiple active sinks can open and persist into that spool. Rows contain `Proces
 originating OS process is visible, but rows are not restricted to being sent by their original
 process. Another process may drain older backlog from the same application spool.
 
-Full multi-process sender coordination is still a pre-release work item; see repository
-`RELEASE-READINESS.md`.
+Shared-spool multi-process claim/lease coordination is implemented. Remaining pre-release
+questions are tracked in repository `RELEASE-READINESS.md`.
 
 ## Reliability options
 
@@ -127,11 +127,29 @@ The matched receiver is `Eigenverft.Service.CentralLogging` at:
 POST /api/v1/logs
 ```
 
-Bearer authentication is not implemented yet. Until it is added, keep the receiver inside a
-trusted boundary: loopback/private network or behind a trusted reverse proxy/gateway.
+Bearer authentication is supported with one optional opaque token.
 
-`ApplicationId`, `MachineId`, `ProcessId`, and other payload fields are diagnostic/protocol
-identity, not authenticated sender identity.
+Sender:
+
+```csharp
+.WriteTo.SerilogRelay(
+    endpoint: "https://logging.example/api/v1/logs",
+    bearerToken: "replace-with-secret")
+```
+
+Pass only the token value, not the `Bearer ` scheme prefix. Null, empty, or whitespace means no
+Authorization header is sent.
+
+The matching CentralLogging receiver reads `CentralLogging:BearerToken`; for environment
+configuration use `CentralLogging__BearerToken`. When the receiver token is configured,
+`POST /api/v1/logs` requires an exact `Authorization: Bearer <token>` match. When it is not
+configured, ingestion remains unauthenticated for private/proxy-protected deployments.
+
+The token is treated as an opaque shared secret; SerilogRelay does not parse JWT claims or
+perform token refresh.
+
+`ApplicationId`, `MachineId`, `ProcessId`, and other payload fields remain
+diagnostic/protocol identity, not authenticated sender identity.
 
 ## Current pre-release blockers
 
@@ -139,7 +157,7 @@ See repository `RELEASE-READINESS.md`. The remaining pre-release work is primari
 
 - final semantics for shared `ApplicationSpool` settings and the physical spool limit;
 - final separate-OS-process smoke validation of the implemented coordination;
-- bearer authentication last.
+- final sender -> CentralLogging smoke validation with bearer authentication enabled.
 
 Historical code is background/reference material; current behavior is defined by tests,
 `RELIABILITY.md`, and `RELEASE-READINESS.md`.

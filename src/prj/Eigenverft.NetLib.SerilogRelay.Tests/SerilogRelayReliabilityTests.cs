@@ -1657,6 +1657,41 @@ CREATE TABLE SerilogRelayEvents (
         }
 
         [TestMethod]
+        public async Task PublicBearerTokenParameterSendsAuthorizationHeader()
+        {
+            string directory = CreateTemporaryDirectory();
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+
+            try
+            {
+                Task<string?> authorizationTask =
+                    ReceiveAuthorizationHeaderAsync(listener, HttpStatusCode.OK);
+
+                using Logger logger = new LoggerConfiguration()
+                    .WriteTo.SerilogRelay(
+                        endpoint: $"http://127.0.0.1:{port}/logs",
+                        spoolDirectory: directory,
+                        minimumBatchSize: 1,
+                        baseInterval: TimeSpan.FromMilliseconds(10),
+                        bearerToken: "relay-secret-token")
+                    .CreateLogger();
+
+                logger.Information("bearer token test");
+
+                string? authorization =
+                    await authorizationTask.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.AreEqual("Bearer relay-secret-token", authorization);
+            }
+            finally
+            {
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
         public async Task ExistingSpoolAboveNewBudgetIsNotPurgedAtStartup()
         {
             string directory = CreateTemporaryDirectory();
@@ -1811,6 +1846,60 @@ SELECT ClaimOwnerId
             int port = ((IPEndPoint)listener.LocalEndpoint).Port;
             listener.Stop();
             return port;
+        }
+
+        private static async Task<string?> ReceiveAuthorizationHeaderAsync(
+            TcpListener listener,
+            HttpStatusCode statusCode)
+        {
+            using TcpClient client = await listener.AcceptTcpClientAsync();
+            using NetworkStream stream = client.GetStream();
+            using var reader = new StreamReader(
+                stream,
+                Encoding.ASCII,
+                detectEncodingFromByteOrderMarks: false,
+                bufferSize: 4096,
+                leaveOpen: true);
+
+            string? authorization = null;
+            int contentLength = 0;
+            while (true)
+            {
+                string? line = await reader.ReadLineAsync();
+                if (string.IsNullOrEmpty(line))
+                    break;
+
+                const string authorizationPrefix = "Authorization:";
+                if (line.StartsWith(authorizationPrefix, StringComparison.OrdinalIgnoreCase))
+                    authorization = line.Substring(authorizationPrefix.Length).Trim();
+
+                const string contentLengthPrefix = "Content-Length:";
+                if (line.StartsWith(contentLengthPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    contentLength = int.Parse(
+                        line.Substring(contentLengthPrefix.Length).Trim(),
+                        CultureInfo.InvariantCulture);
+                }
+            }
+
+            char[] bodyBuffer = new char[contentLength];
+            int totalRead = 0;
+            while (totalRead < contentLength)
+            {
+                int read = await reader.ReadAsync(
+                    bodyBuffer.AsMemory(totalRead, contentLength - totalRead));
+                if (read == 0)
+                    break;
+
+                totalRead += read;
+            }
+
+            string reason = statusCode == HttpStatusCode.OK ? "OK" : "Error";
+            byte[] response = Encoding.ASCII.GetBytes(
+                $"HTTP/1.1 {(int)statusCode} {reason}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+            await stream.WriteAsync(response);
+            await stream.FlushAsync();
+            return authorization;
         }
 
         private static async Task<string> ReceiveSingleRequestAsync(
