@@ -924,6 +924,211 @@ END;";
         }
 
         [TestMethod]
+        public async Task FailedSendWithBackoffLongerThanLeaseReleasesClaimImmediately()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            int port = ReserveAndReleasePort();
+            var listener = new TcpListener(IPAddress.Loopback, port);
+            listener.Start();
+
+            try
+            {
+                var options = new SerilogRelayOptions();
+                options.Delivery.MinimumBatchEvents = 1;
+                options.Delivery.PollInterval = TimeSpan.FromMilliseconds(25);
+                options.Delivery.MaximumBatchWait = TimeSpan.FromMilliseconds(25);
+                options.EndpointRetry.InitialDelay = TimeSpan.FromSeconds(40);
+                options.EndpointRetry.MaximumDelay = TimeSpan.FromMinutes(5);
+                options.EndpointRetry.JitterRatio = 0d;
+
+                await using var first = new SerilogRelaySink(
+                    connectionString,
+                    $"http://127.0.0.1:{port}/logs",
+                    options);
+                await using var second = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                Task<string> failedRequest =
+                    ReceiveSingleRequestAsync(listener, HttpStatusCode.InternalServerError);
+                first.Emit(CreateLogEvent("long process-local backoff"));
+                await failedRequest.WaitAsync(TimeSpan.FromSeconds(5));
+
+                await WaitUntilAsync(
+                    () => GetClaimOwnerId(connectionString) is null,
+                    TimeSpan.FromSeconds(5));
+
+                RetryGate gate = GetPrivateField<RetryGate>(first, "_retryGate");
+                Assert.IsTrue(gate.NextAttemptAt.HasValue);
+                Assert.IsGreaterThan(
+                    TimeSpan.FromSeconds(30),
+                    gate.NextAttemptAt.Value - DateTimeOffset.UtcNow);
+
+                ClaimedLogBatch takeover = await InvokePrivateTaskMethod<ClaimedLogBatch>(
+                    second,
+                    "ClaimPendingAsync",
+                    1,
+                    DateTimeOffset.UtcNow,
+                    CancellationToken.None);
+                Assert.AreEqual(1, takeover.Entries.Count);
+            }
+            finally
+            {
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task RetryAfterLongerThanMaximumBackoffDoesNotReserveSharedClaim()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            int port = ReserveAndReleasePort();
+            var listener = new TcpListener(IPAddress.Loopback, port);
+            listener.Start();
+
+            try
+            {
+                var options = new SerilogRelayOptions();
+                options.Delivery.MinimumBatchEvents = 1;
+                options.Delivery.PollInterval = TimeSpan.FromMilliseconds(25);
+                options.Delivery.MaximumBatchWait = TimeSpan.FromMilliseconds(25);
+                options.EndpointRetry.JitterRatio = 0d;
+                options.EndpointRetry.MaximumDelay = TimeSpan.FromMinutes(5);
+                options.EndpointRetry.RespectRetryAfter = true;
+
+                await using var first = new SerilogRelaySink(
+                    connectionString,
+                    $"http://127.0.0.1:{port}/logs",
+                    options);
+                await using var second = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    new SerilogRelayOptions());
+
+                Task<string> throttledRequest = ReceiveSingleRequestAsync(
+                    listener,
+                    HttpStatusCode.TooManyRequests,
+                    "Retry-After: 600\r\n");
+                first.Emit(CreateLogEvent("ten minute retry after"));
+                await throttledRequest.WaitAsync(TimeSpan.FromSeconds(5));
+
+                await WaitUntilAsync(
+                    () => GetClaimOwnerId(connectionString) is null,
+                    TimeSpan.FromSeconds(5));
+
+                RetryGate gate = GetPrivateField<RetryGate>(first, "_retryGate");
+                Assert.IsTrue(gate.NextAttemptAt.HasValue);
+                Assert.IsGreaterThan(
+                    TimeSpan.FromMinutes(9),
+                    gate.NextAttemptAt.Value - DateTimeOffset.UtcNow);
+
+                ClaimedLogBatch takeover = await InvokePrivateTaskMethod<ClaimedLogBatch>(
+                    second,
+                    "ClaimPendingAsync",
+                    1,
+                    DateTimeOffset.UtcNow,
+                    CancellationToken.None);
+                Assert.AreEqual(1, takeover.Entries.Count);
+            }
+            finally
+            {
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task RetryGateAlreadyInFlightDoesNotLeaveClaimOwned()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                var options = new SerilogRelayOptions();
+                options.Delivery.MinimumBatchEvents = 1;
+
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    "http://127.0.0.1:1/logs",
+                    options);
+
+                sink.Emit(CreateLogEvent("retry gate already in flight"));
+
+                RetryGate gate = GetPrivateField<RetryGate>(sink, "_retryGate");
+                Assert.IsTrue(gate.TryAcquire(DateTimeOffset.UtcNow));
+
+                bool didWork = await InvokePrivateTaskMethod<bool>(
+                    sink,
+                    "ProcessPendingAsync",
+                    true,
+                    CancellationToken.None);
+
+                Assert.IsFalse(didWork);
+                Assert.IsNull(GetClaimOwnerId(connectionString));
+                gate.CancelAttempt();
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task SenderLoopCompletesShortRetryDelayAndRetriesAfterReleasingClaim()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            int port = ReserveAndReleasePort();
+            var listener = new TcpListener(IPAddress.Loopback, port);
+            listener.Start();
+
+            try
+            {
+                var options = new SerilogRelayOptions();
+                options.Delivery.MinimumBatchEvents = 1;
+                options.Delivery.PollInterval = TimeSpan.FromMilliseconds(10);
+                options.Delivery.MaximumBatchWait = TimeSpan.FromMilliseconds(10);
+                options.EndpointRetry.InitialDelay = TimeSpan.FromMilliseconds(100);
+                options.EndpointRetry.MaximumDelay = TimeSpan.FromMilliseconds(100);
+                options.EndpointRetry.JitterRatio = 0d;
+
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    $"http://127.0.0.1:{port}/logs",
+                    options);
+
+                Task<string> failedRequest =
+                    ReceiveSingleRequestAsync(listener, HttpStatusCode.InternalServerError);
+
+                sink.Emit(CreateLogEvent("short retry completes"));
+
+                await failedRequest.WaitAsync(TimeSpan.FromSeconds(5));
+                await WaitUntilAsync(
+                    () => GetClaimOwnerId(connectionString) is null,
+                    TimeSpan.FromSeconds(2));
+
+                Task<string> successRequest =
+                    ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
+                string successBody = await successRequest.WaitAsync(TimeSpan.FromSeconds(5));
+                StringAssert.Contains(successBody, "short retry completes");
+
+                await WaitUntilAsync(
+                    () => GetUnsentCount(connectionString) == 0,
+                    TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
         public async Task GracefulDisposeReleasesOwnedClaimsImmediately()
         {
             string directory = CreateTemporaryDirectory();
@@ -1526,6 +1731,23 @@ CREATE TABLE SerilogRelayEvents (
             return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
 
+        private static string? GetClaimOwnerId(string connectionString)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT ClaimOwnerId
+  FROM SerilogRelayEvents
+ WHERE Sent = 0
+ ORDER BY Id
+ LIMIT 1;";
+            object? value = command.ExecuteScalar();
+            return value is null || value is DBNull
+                ? null
+                : Convert.ToString(value, CultureInfo.InvariantCulture);
+        }
+
         private static T GetPrivateField<T>(SerilogRelaySink sink, string name)
         {
             FieldInfo field = typeof(SerilogRelaySink).GetField(
@@ -1593,7 +1815,8 @@ CREATE TABLE SerilogRelayEvents (
 
         private static async Task<string> ReceiveSingleRequestAsync(
             TcpListener listener,
-            HttpStatusCode statusCode)
+            HttpStatusCode statusCode,
+            string? extraHeaders = null)
         {
             using TcpClient client = await listener.AcceptTcpClientAsync();
             using NetworkStream stream = client.GetStream();
@@ -1635,7 +1858,7 @@ CREATE TABLE SerilogRelayEvents (
             string body = new string(bodyBuffer, 0, totalRead);
             string reason = statusCode == HttpStatusCode.OK ? "OK" : "Error";
             byte[] response = Encoding.ASCII.GetBytes(
-                $"HTTP/1.1 {(int)statusCode} {reason}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                $"HTTP/1.1 {(int)statusCode} {reason}\r\n{extraHeaders ?? string.Empty}Content-Length: 0\r\nConnection: close\r\n\r\n");
             await stream.WriteAsync(response);
             await stream.FlushAsync();
             return body;

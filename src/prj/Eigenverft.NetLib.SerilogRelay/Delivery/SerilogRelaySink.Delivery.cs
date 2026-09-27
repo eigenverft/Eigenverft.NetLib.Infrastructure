@@ -20,7 +20,15 @@ namespace Eigenverft.NetLib.SerilogRelay
             {
                 try
                 {
-                    long pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
+                    DateTimeOffset now = DateTimeOffset.UtcNow;
+                    TimeSpan existingRetryDelay = _retryGate.GetDelay(now);
+                    if (existingRetryDelay > TimeSpan.Zero)
+                    {
+                        await Task.Delay(existingRetryDelay, token).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    long pending = RefreshClaimablePendingState(now);
                     bool startupDrain = pending > 0 && Volatile.Read(ref _startupBacklogPending) != 0;
                     bool partialBatchDue = pending > 0
                         && (startupDrain || IsMaximumBatchWaitElapsed(DateTimeOffset.UtcNow));
@@ -194,6 +202,7 @@ namespace Eigenverft.NetLib.SerilogRelay
 
                 if (!await SendBatchAsync(entries, token).ConfigureAwait(false))
                 {
+                    await ReleaseClaimAsync(claimed, token).ConfigureAwait(false);
                     pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
                     break;
                 }

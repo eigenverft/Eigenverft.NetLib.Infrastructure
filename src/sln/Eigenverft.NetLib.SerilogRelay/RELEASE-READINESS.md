@@ -24,14 +24,16 @@ Implemented behavior includes:
 - lease expiry and takeover by another sender;
 - stale claims cannot mark rows sent after takeover;
 - graceful shutdown releases owned claims immediately;
-- process-local `Delivery` and `EndpointRetry` behavior remains independent;
+- process-local `Delivery` and `EndpointRetry` behavior remains independent; failed HTTP
+  attempts release their row claims before that process waits for retry, so its backoff does not
+  reserve shared-spool rows;
 - each sender periodically discovers claimable rows written by other processes;
 - existing spools are migrated to claim columns/indexes under serialized schema migration;
 - physical corruption quarantine/recreate uses a short-lived cross-process recovery lock and
   rechecks whether another process already recovered the spool.
 
-No leader process, application-wide RetryGate, application-wide delivery budget, or
-lifetime-exclusive spool owner is used.
+No leader process, application-wide RetryGate, application-wide delivery budget, shared
+`Retry-After` cooldown, or lifetime-exclusive spool owner is used.
 
 The remaining Gate A work is the application-spool policy contract, not claim mechanics:
 

@@ -167,7 +167,8 @@ A sender atomically claims up to `Delivery.MaximumBatchEvents` from rows that ar
 - unsent and already owned by the same sender instance; or
 - unsent with an expired/missing lease timestamp.
 
-The default internal claim lease is 30 seconds.
+The default internal claim lease is 30 seconds. It is a crash/active-delivery safety window,
+not a retry-backoff timer.
 
 A process may claim rows created by another process of the same application spool. Only rows
 matching the current `ClaimOwnerId` and `ClaimBatchId` are marked sent after HTTP success.
@@ -179,10 +180,11 @@ Claims are leases, not permanent ownership:
 - successful delivery marks the still-owned claim sent and clears claim metadata;
 - an undersized batch that cannot yet satisfy the sender's minimum batch policy releases its
   claim immediately;
-- a transient HTTP failure keeps the claim so the same process can retry without immediately
-  bouncing the row between processes;
-- the same sender may refresh its own unexpired claim on retry;
-- after the lease expires, another sender may take over;
+- a failed HTTP attempt releases the claim immediately; the failing process then observes its own
+  process-local `EndpointRetry` delay without reserving that row;
+- another sender whose own retry gate permits an attempt may claim that row immediately;
+- if a process crashes or stalls while an active claim is still held, another sender may take over
+  after the 30-second lease expires;
 - graceful shutdown releases all claims owned by that sink immediately.
 
 Receiver-side `EventId` idempotency remains the final protection for unavoidable at-least-once
@@ -197,6 +199,8 @@ The process currently sending a claimed row uses its own runtime configuration:
 - its shutdown deadline.
 
 The shared spool coordinates row ownership only; process-local runtime policies are not merged.
+In particular, one process's exponential backoff or server-provided `Retry-After` does not become
+a shared cooldown for the application spool.
 
 ### Shared-spool backlog discovery
 

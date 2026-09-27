@@ -200,6 +200,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         private const int MaxBusyRetries = 5;
         private const int BusyRetryDelayMs = 100;
         private const int EmergencyRetryDelayMs = 250;
+        private static readonly TimeSpan HttpRequestTimeout = TimeSpan.FromSeconds(2);
         private static readonly TimeSpan ClaimLeaseDuration = TimeSpan.FromSeconds(30);
         private static readonly TimeSpan RecoveryLockTimeout = TimeSpan.FromSeconds(5);
         private const string TableName = "SerilogRelayEvents";
@@ -338,7 +339,7 @@ CREATE TABLE IF NOT EXISTS {0} (
                 GetHttpClientHandler(dangerousAcceptAnyServerCertificate),
                 disposeHandler: false)
             {
-                Timeout = TimeSpan.FromSeconds(2),
+                Timeout = HttpRequestTimeout,
             };
             _cts = new CancellationTokenSource();
             _emergencyChannel = Channel.CreateBounded<EmergencyEntry>(
