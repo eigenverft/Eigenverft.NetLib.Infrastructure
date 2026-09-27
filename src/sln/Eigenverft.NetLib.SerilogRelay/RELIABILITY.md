@@ -62,34 +62,40 @@ The spool schema already records both `ApplicationId` and `ProcessId` on every e
 Multiple active sinks can open and persist into the same file-backed spool. There is no
 lifetime-exclusive owner lock.
 
-### Spool-wide retention semantics
+### Spool-wide retention and capacity semantics
 
-`ApplicationSpool.SentEventRetention` and
-`ApplicationSpool.UnsentEventMaxAge` are intentionally named as spool settings.
+`ApplicationSpool.SentEventRetention`, `ApplicationSpool.UnsentEventMaxAge`, and
+`ApplicationSpool.MaxPhysicalBytes` are intentionally spool settings.
 
-Current cleanup queries are spool-wide:
+Their values are configured independently by each sink/process. Processes sharing a spool do
+not negotiate, merge, persist, or elect one authoritative `ApplicationSpool` configuration.
+When one process performs maintenance or capacity reclamation, that process applies its own
+configured values to the shared spool.
 
-- sent-event retention may remove sent rows created by any process sharing the spool;
-- an explicitly configured unsent maximum age may remove unsent rows created by any process
-  sharing the spool.
+Consequently:
 
-Likewise, capacity reclamation is spool-wide:
+- sent-event retention may remove eligible sent rows created by any process sharing the spool;
+- an explicitly configured unsent maximum age may remove eligible unsent rows created by any
+  process sharing the spool;
+- capacity reclamation may reclaim eligible rows created by any process;
+- row origin / `ProcessId` does not create a retention or capacity quota boundary.
 
-1. reclaim oldest sent rows first;
-2. if necessary, reclaim oldest unsent rows;
-3. row origin / `ProcessId` does not restrict reclamation.
+Active delivery claims are an exception: an unsent row with a still-active claim is not removed
+by `UnsentEventMaxAge` cleanup or unsent capacity reclamation. Once that claim is released or
+expires, the row becomes eligible again under whichever process next applies its local spool
+policy.
 
-This means process A may clean or send rows originally created by process B when both belong to
-the same application spool. That behavior is not treated as a problem by itself.
+`UnsentEventMaxAge` is enforced by periodic application-spool maintenance while the sink is
+running, including when no endpoint is configured and while a configured endpoint is in retry
+backoff. With an endpoint, startup backlog still receives its established initial delivery
+opportunity before the first unsent-age cleanup. The configured age is therefore the eligibility
+threshold, not a promise that physical deletion occurs at the exact instant the age is crossed;
+maintenance cadence and an active claim can defer removal. The current maintenance loop is
+scheduled at the shorter of this process's `Delivery.PollInterval` and one minute; transient
+database/recovery failures can defer a pass further.
 
-One unresolved configuration question remains: if processes sharing one application spool use
-different `ApplicationSpool` values, there is currently no defined precedence/ownership rule.
-That needs to be resolved as part of multi-process support.
-
-### Physical capacity
-
-`ApplicationSpool.MaxPhysicalBytes` currently means exactly what its name says: a physical
-ceiling for the shared spool/database, not a per-process quota.
+`ApplicationSpool.MaxPhysicalBytes` is the physical ceiling applied to the shared
+spool/database. It is not a quota for rows belonging to one process.
 
 Default:
 
@@ -97,17 +103,9 @@ Default:
 MaxPhysicalBytes = 64 MiB
 ```
 
-The current SQLite implementation enforces this through the physical database page budget.
-Therefore all processes sharing the same spool also share this physical ceiling.
-
-This is the main unresolved limit-scope question for multi-process operation. Before release we
-must decide whether:
-
-- the application spool intentionally has one shared physical ceiling;
-- a per-process logical quota is also required;
-- or both concepts are needed as separate settings.
-
-Do not silently describe the current 64 MiB value as a per-process limit.
+The SQLite implementation applies the configured physical page budget when a process opens the
+shared spool. Different processes may configure different values; this is intentionally not
+resolved through cross-process policy negotiation.
 
 An incoming event that cannot fit even in an otherwise empty spool under the configured
 physical ceiling is rejected before existing backlog is reclaimed.
@@ -187,8 +185,9 @@ Claims are leases, not permanent ownership:
   after the 30-second lease expires;
 - graceful shutdown releases all claims owned by that sink immediately.
 
-Receiver-side `EventId` idempotency remains the final protection for unavoidable at-least-once
-duplicates, for example if a sender response races with lease expiry.
+Transport remains at-least-once: if a sender cannot know whether a response was received, the
+same logical event may be delivered again. How a receiver stores or presents repeated
+`EventId` values is receiver-side behavior, not a requirement of this sink.
 
 ### Runtime-policy scope during takeover
 
@@ -267,28 +266,43 @@ Shutdown is process-local and bounded by a real cancellation deadline.
 Durable rows not sent before shutdown remain in the shared application spool. A later process
 may send them.
 
-## Remaining multi-process release questions
+## Shared-spool cross-version operating contract
 
-The functional shared-spool coordination layer is implemented: atomic claims, lease expiry and
-takeover, cross-sink backlog discovery, concurrent legacy-schema migration, graceful claim
-release, and cross-process corruption-recovery coordination are covered by regression tests.
+Old and new versions of the same logical application may use the same spool concurrently.
 
-The remaining questions are policy/contract questions rather than missing sender coordination:
+Pending rows are not bound to the endpoint or bearer token of the process that created them. The
+process that currently owns a claim sends those rows using its own configured endpoint and
+bearer token.
 
-1. explicit semantics when processes sharing one spool configure different
-   `ApplicationSpool` settings;
-2. final decision for `ApplicationSpool.MaxPhysicalBytes` versus any optional per-process
-   logical quota;
-3. final release validation should include a smoke test using separate OS processes in addition
-   to the in-process multi-sink concurrency regression suite.
+A non-2xx response releases the claim before that process enters its own retry delay. A different
+process/version can therefore claim the same row and attempt delivery through different current
+credentials or a different endpoint. A 2xx response received by the current claim owner marks
+the claimed row delivered regardless of which process originally wrote it.
 
-`ProcessId` remains available to distinguish row origin where useful. It is not an ownership
-barrier: another process may legitimately send older rows from the same application spool.
+This exact shape is covered by a separate-OS-process regression: the old sender remains alive
+after receiving non-2xx, its claim is released, and a second process sends the same `EventId`
+with its own endpoint/token and marks it sent after 2xx.
 
-## Receiver semantics
+`ProcessId` remains useful row-origin metadata. It is not an ownership, endpoint, retention, or
+capacity boundary.
 
-The matched receiver is `Eigenverft.Service.CentralLogging` at `POST /api/v1/logs`.
+## Dead-letter direction
 
-Transport is at-least-once and receiver storage is idempotent by `EventId`.
+The sink intentionally has no dead-letter path. A non-2xx response does not permanently classify
+or move the row; it remains unsent for later delivery attempts or takeover by an updated
+application version.
 
-Authentication/deployment scope is tracked separately in `RELEASE-READINESS.md`.
+Those rows are still subject to the configured shared-spool bounds:
+`ApplicationSpool.UnsentEventMaxAge` and capacity reclamation.
+
+## Receiver contract
+
+The sink targets a generic HTTP receiver rather than one mandatory server implementation.
+
+For normal delivery, any HTTP 2xx received by the current claim owner is treated as successful
+delivery. Non-2xx or transport failure leaves the row unsent and releases its claim before the
+process-local retry delay.
+
+Receiver persistence, duplicate presentation, and server-side storage policies remain receiver
+concerns. Optional bearer authentication only controls the Authorization header emitted by the
+sending process.

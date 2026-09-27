@@ -8,8 +8,8 @@ namespace Eigenverft.NetLib.SerilogRelay
     public sealed class SerilogRelayOptions
     {
         /// <summary>
-        /// Gets options that apply to the shared durable spool selected by ApplicationId/spool path.
-        /// Multiple processes of the same application may use this spool.
+        /// Gets options whose values this sink/process applies to the shared durable spool selected by ApplicationId/spool path.
+        /// Multiple processes may use the same spool; their ApplicationSpool values are not negotiated or merged.
         /// </summary>
         public ApplicationSpoolOptions ApplicationSpool { get; } = new ApplicationSpoolOptions();
 
@@ -30,25 +30,25 @@ namespace Eigenverft.NetLib.SerilogRelay
     }
 
     /// <summary>
-    /// Configures behavior of the durable application spool shared by processes that resolve to the same spool path.
+    /// Configures the spool-wide policies this sink/process applies to the durable application spool shared by processes that resolve to the same spool path.
     /// </summary>
     public sealed class ApplicationSpoolOptions
     {
         /// <summary>
         /// Gets or sets how long successfully delivered events remain in the shared application spool.
-        /// Cleanup is spool-wide, not limited to events created by the current process.
+        /// This process applies the value during spool-wide maintenance; cleanup is not limited to rows created by this process.
         /// </summary>
         public TimeSpan SentEventRetention { get; set; } = TimeSpan.FromDays(1);
 
         /// <summary>
         /// Gets or sets the maximum physical size of the shared application spool in bytes.
-        /// This is currently a spool-wide physical ceiling shared by all processes using the same spool path.
+        /// This process applies the value to the shared spool/database. It is a spool-wide physical ceiling, not a per-process row quota, and is not negotiated with other processes.
         /// </summary>
         public long MaxPhysicalBytes { get; set; } = 64L * 1024L * 1024L;
 
         /// <summary>
-        /// Gets or sets the maximum age of unsent events in the shared application spool.
-        /// A null value preserves unsent events regardless of age. Cleanup is spool-wide.
+        /// Gets or sets the maximum age at which unclaimed unsent events become eligible for spool-wide cleanup.
+        /// A null value disables age-based unsent cleanup. Maintenance is periodic, may affect rows created by any process, and defers rows while they have an active delivery claim. Capacity reclamation remains independent of this value.
         /// </summary>
         public TimeSpan? UnsentEventMaxAge { get; set; }
     }

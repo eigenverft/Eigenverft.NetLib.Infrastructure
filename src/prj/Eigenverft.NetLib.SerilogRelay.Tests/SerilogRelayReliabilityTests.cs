@@ -218,6 +218,197 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         }
 
         [TestMethod]
+        public async Task RunningSinkPeriodicallyExpiresUnsentEventsWithoutRestart()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                var options = new SerilogRelayOptions();
+                options.ApplicationSpool.UnsentEventMaxAge = TimeSpan.FromMilliseconds(100);
+                options.Delivery.PollInterval = TimeSpan.FromMilliseconds(25);
+
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    options);
+
+                sink.Emit(CreateLogEvent("periodic unsent expiry"));
+                Assert.AreEqual(1L, GetUnsentCount(connectionString));
+
+                await WaitUntilAsync(
+                    () => GetUnsentCount(connectionString) == 0,
+                    TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task UnsentAgeCleanupDefersActivelyClaimedRowUntilClaimRelease()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                var claimantOptions = new SerilogRelayOptions();
+                claimantOptions.Delivery.PollInterval = TimeSpan.FromMilliseconds(25);
+
+                await using var claimant = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    claimantOptions);
+                claimant.Emit(CreateLogEvent("claimed expiry"));
+
+                ClaimedLogBatch claimed = await InvokePrivateTaskMethod<ClaimedLogBatch>(
+                    claimant,
+                    "ClaimPendingAsync",
+                    1,
+                    DateTimeOffset.UtcNow,
+                    CancellationToken.None);
+                Assert.AreEqual(1, claimed.Entries.Count);
+
+                var cleanerOptions = new SerilogRelayOptions();
+                cleanerOptions.ApplicationSpool.UnsentEventMaxAge = TimeSpan.Zero;
+                cleanerOptions.Delivery.PollInterval = TimeSpan.FromMilliseconds(25);
+
+                await using var cleaner = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    cleanerOptions);
+
+                await Task.Delay(150);
+                Assert.AreEqual(1L, GetUnsentCount(connectionString));
+
+                await InvokePrivateTaskMethod(
+                    claimant,
+                    "ReleaseClaimAsync",
+                    claimed,
+                    CancellationToken.None);
+
+                await WaitUntilAsync(
+                    () => GetUnsentCount(connectionString) == 0,
+                    TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task CapacityReclamationDoesNotDeleteActivelyClaimedUnsentRow()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+
+            try
+            {
+                var options = new SerilogRelayOptions();
+                options.ApplicationSpool.MaxPhysicalBytes = 128L * 1024L;
+                options.Delivery.PollInterval = TimeSpan.FromMilliseconds(25);
+
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    endpoint: null,
+                    options);
+
+                string largeSuffix = new string('x', 4096);
+                sink.Emit(CreateLogEvent($"protected {largeSuffix}"));
+
+                ClaimedLogBatch claimed = await InvokePrivateTaskMethod<ClaimedLogBatch>(
+                    sink,
+                    "ClaimPendingAsync",
+                    1,
+                    DateTimeOffset.UtcNow,
+                    CancellationToken.None);
+                Assert.AreEqual(1, claimed.Entries.Count);
+                string protectedEventId = claimed.Entries[0].EventId;
+
+                for (int index = 0; index < 80; index++)
+                    sink.Emit(CreateLogEvent($"pressure {index:D2} {largeSuffix}"));
+
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText =
+                    "SELECT COUNT(*) FROM SerilogRelayEvents WHERE EventId = $eventId AND Sent = 0;";
+                command.Parameters.AddWithValue("$eventId", protectedEventId);
+
+                Assert.AreEqual(
+                    1L,
+                    Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture));
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task UnsentMaxAgeContinuesDuringEndpointRetryBackoff()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            int closedPort = ReserveAndReleasePort();
+
+            try
+            {
+                var options = new SerilogRelayOptions();
+                options.ApplicationSpool.UnsentEventMaxAge =
+                    TimeSpan.FromHours(1);
+                options.Delivery.MinimumBatchEvents = 1;
+                options.Delivery.PollInterval = TimeSpan.FromMilliseconds(25);
+                options.Delivery.MaximumBatchWait = TimeSpan.FromMilliseconds(25);
+                options.EndpointRetry.InitialDelay = TimeSpan.FromSeconds(30);
+                options.EndpointRetry.MaximumDelay = TimeSpan.FromSeconds(30);
+                options.EndpointRetry.Multiplier = 1d;
+                options.EndpointRetry.JitterRatio = 0d;
+
+                await using var sink = new SerilogRelaySink(
+                    connectionString,
+                    $"http://127.0.0.1:{closedPort}/logs",
+                    options);
+
+                sink.Emit(CreateLogEvent("expire during retry backoff"));
+
+                RetryGate retryGate =
+                    GetPrivateField<RetryGate>(sink, "_retryGate");
+                await WaitUntilAsync(
+                    () => retryGate.ConsecutiveFailures > 0,
+                    TimeSpan.FromSeconds(5));
+
+                Assert.IsTrue(retryGate.NextAttemptAt.HasValue);
+                Assert.IsGreaterThan(
+                    TimeSpan.FromSeconds(20),
+                    retryGate.NextAttemptAt.Value - DateTimeOffset.UtcNow);
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using var command = connection.CreateCommand();
+                    command.CommandText =
+                        "UPDATE SerilogRelayEvents SET CreatedAt = datetime('now', '-2 hours') WHERE Sent = 0;";
+                    Assert.AreEqual(1, command.ExecuteNonQuery());
+                }
+
+                await WaitUntilAsync(
+                    () => GetUnsentCount(connectionString) == 0,
+                    TimeSpan.FromSeconds(5));
+
+                Assert.IsTrue(retryGate.NextAttemptAt.Value > DateTimeOffset.UtcNow);
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
         public async Task EndpointFailureKeepsHealthySpoolOutOfEmergencyPath()
         {
             string directory = CreateTemporaryDirectory();
@@ -761,6 +952,162 @@ END;";
             {
                 DeleteTemporaryDirectory(directory);
             }
+        }
+
+        [TestMethod]
+        public async Task SeparateProcessesAllowNewEndpointAndTokenToTakeOverFailedOldDelivery()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            string stopFile = Path.Combine(directory, "stop-old-sender");
+            string oldReadyFile = Path.Combine(directory, "old-ready");
+            string newReadyFile = Path.Combine(directory, "new-ready");
+            using var oldListener = new TcpListener(IPAddress.Loopback, 0);
+            using var newListener = new TcpListener(IPAddress.Loopback, 0);
+            Process? oldProcess = null;
+            Process? newProcess = null;
+
+            oldListener.Start();
+            newListener.Start();
+
+            try
+            {
+                string oldEndpoint =
+                    $"http://127.0.0.1:{((IPEndPoint)oldListener.LocalEndpoint).Port}/logs";
+                string newEndpoint =
+                    $"http://127.0.0.1:{((IPEndPoint)newListener.LocalEndpoint).Port}/logs";
+
+                Task<(string? Authorization, string Body)> oldRequest =
+                    ReceiveRequestAsync(oldListener, HttpStatusCode.Unauthorized);
+
+                oldProcess = StartSeparateProcessSender(
+                    role: "old",
+                    connectionString,
+                    oldEndpoint,
+                    bearerToken: "old-token",
+                    stopFile,
+                    readyFile: oldReadyFile);
+
+                await WaitForProcessReadyAsync(
+                    oldProcess,
+                    oldReadyFile,
+                    TimeSpan.FromSeconds(20));
+
+                (string? oldAuthorization, string oldBody) =
+                    await oldRequest.WaitAsync(TimeSpan.FromSeconds(15));
+                Assert.AreEqual("Bearer old-token", oldAuthorization);
+
+                string oldEventId = GetSingleRequestEventId(oldBody);
+
+                await WaitUntilAsync(
+                    () => GetUnsentCount(connectionString) == 1
+                        && GetClaimOwnerId(connectionString) is null,
+                    TimeSpan.FromSeconds(10));
+
+                Assert.IsFalse(oldProcess.HasExited);
+
+                Task<(string? Authorization, string Body)> newRequest =
+                    ReceiveRequestAsync(newListener, HttpStatusCode.OK);
+
+                newProcess = StartSeparateProcessSender(
+                    role: "new",
+                    connectionString,
+                    newEndpoint,
+                    bearerToken: "new-token",
+                    stopFile: null,
+                    readyFile: newReadyFile);
+
+                await WaitForProcessReadyAsync(
+                    newProcess,
+                    newReadyFile,
+                    TimeSpan.FromSeconds(20));
+
+                (string? newAuthorization, string newBody) =
+                    await newRequest.WaitAsync(TimeSpan.FromSeconds(15));
+                Assert.AreEqual("Bearer new-token", newAuthorization);
+                Assert.AreEqual(oldEventId, GetSingleRequestEventId(newBody));
+
+                await WaitForProcessExitAsync(newProcess, TimeSpan.FromSeconds(15));
+                Assert.AreEqual(0, newProcess.ExitCode);
+                Assert.AreEqual(0L, GetUnsentCount(connectionString));
+
+                File.WriteAllText(stopFile, "stop");
+                await WaitForProcessExitAsync(oldProcess, TimeSpan.FromSeconds(15));
+                Assert.AreEqual(0, oldProcess.ExitCode);
+            }
+            finally
+            {
+                StopProcessIfRunning(newProcess);
+                StopProcessIfRunning(oldProcess);
+                oldListener.Stop();
+                newListener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task SeparateProcessSenderRole()
+        {
+            string? role = Environment.GetEnvironmentVariable(
+                "SERILOG_RELAY_PROCESS_TEST_ROLE");
+            if (string.IsNullOrEmpty(role))
+                return;
+
+            string connectionString = GetRequiredProcessTestEnvironment(
+                "SERILOG_RELAY_PROCESS_TEST_CONNECTION");
+            string endpoint = GetRequiredProcessTestEnvironment(
+                "SERILOG_RELAY_PROCESS_TEST_ENDPOINT");
+            string bearerToken = GetRequiredProcessTestEnvironment(
+                "SERILOG_RELAY_PROCESS_TEST_TOKEN");
+
+            var options = new SerilogRelayOptions();
+            options.Delivery.MinimumBatchEvents = 1;
+            options.Delivery.MaximumBatchEvents = 10;
+            options.Delivery.PollInterval = TimeSpan.FromMilliseconds(25);
+            options.Delivery.MaximumBatchWait = TimeSpan.FromMilliseconds(25);
+            options.EndpointRetry.InitialDelay = TimeSpan.FromSeconds(30);
+            options.EndpointRetry.MaximumDelay = TimeSpan.FromSeconds(30);
+            options.EndpointRetry.Multiplier = 1d;
+            options.EndpointRetry.JitterRatio = 0d;
+
+            await using var sink = new SerilogRelaySink(
+                connectionString,
+                endpoint,
+                options,
+                applicationId: "ProcessSmoke.App",
+                bearerToken: bearerToken);
+
+            string readyFile = GetRequiredProcessTestEnvironment(
+                "SERILOG_RELAY_PROCESS_TEST_READY_FILE");
+            File.WriteAllText(readyFile, role);
+
+            if (string.Equals(role, "old", StringComparison.Ordinal))
+            {
+                sink.Emit(CreateLogEvent("separate process takeover"));
+
+                RetryGate retryGate = GetPrivateField<RetryGate>(sink, "_retryGate");
+                await WaitUntilAsync(
+                    () => retryGate.ConsecutiveFailures > 0
+                        && GetClaimOwnerId(connectionString) is null,
+                    TimeSpan.FromSeconds(10));
+
+                string stopFile = GetRequiredProcessTestEnvironment(
+                    "SERILOG_RELAY_PROCESS_TEST_STOP_FILE");
+                await WaitUntilAsync(
+                    () => File.Exists(stopFile),
+                    TimeSpan.FromSeconds(20));
+                return;
+            }
+
+            if (string.Equals(role, "new", StringComparison.Ordinal))
+            {
+                await WaitUntilAsync(
+                    () => GetUnsentCount(connectionString) == 0,
+                    TimeSpan.FromSeconds(10));
+                return;
+            }
+
+            Assert.Fail($"Unknown separate-process role '{role}'.");
         }
 
         [TestMethod]
@@ -1837,6 +2184,251 @@ SELECT ClaimOwnerId
                 BindingFlags.Instance | BindingFlags.NonPublic)
                 ?? throw new MissingFieldException(typeof(SerilogRelaySink).FullName, name);
             field.SetValue(sink, value);
+        }
+
+        private static Process StartSeparateProcessSender(
+            string role,
+            string connectionString,
+            string endpoint,
+            string bearerToken,
+            string? stopFile,
+            string readyFile)
+        {
+            string projectPath = FindCurrentTestProjectPath();
+            string targetFramework = $"net{Environment.Version.Major}.0";
+
+            var startInfo = new ProcessStartInfo(GetCurrentDotNetHostPath())
+            {
+                WorkingDirectory = Path.GetDirectoryName(projectPath)!,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+
+            startInfo.ArgumentList.Add("test");
+            startInfo.ArgumentList.Add(projectPath);
+            startInfo.ArgumentList.Add("-c");
+            startInfo.ArgumentList.Add("Release");
+            startInfo.ArgumentList.Add("--framework");
+            startInfo.ArgumentList.Add(targetFramework);
+            startInfo.ArgumentList.Add("--no-build");
+            startInfo.ArgumentList.Add("--no-restore");
+            startInfo.ArgumentList.Add("-p:CollectCoverage=false");
+            startInfo.ArgumentList.Add("-p:VSTestLogger=");
+            startInfo.ArgumentList.Add("--filter");
+            startInfo.ArgumentList.Add("Name=SeparateProcessSenderRole");
+
+            startInfo.Environment["SERILOG_RELAY_PROCESS_TEST_ROLE"] = role;
+            startInfo.Environment["SERILOG_RELAY_PROCESS_TEST_CONNECTION"] = connectionString;
+            startInfo.Environment["SERILOG_RELAY_PROCESS_TEST_ENDPOINT"] = endpoint;
+            startInfo.Environment["SERILOG_RELAY_PROCESS_TEST_TOKEN"] = bearerToken;
+            startInfo.Environment["SERILOG_RELAY_PROCESS_TEST_READY_FILE"] = readyFile;
+            if (stopFile is not null)
+            {
+                startInfo.Environment["SERILOG_RELAY_PROCESS_TEST_STOP_FILE"] =
+                    stopFile;
+            }
+
+            return Process.Start(startInfo)
+                ?? throw new InvalidOperationException(
+                    "Could not start separate SerilogRelay process test host.");
+        }
+
+        private static string GetCurrentDotNetHostPath()
+        {
+            string runtimeDirectory =
+                Path.GetDirectoryName(typeof(object).Assembly.Location)
+                ?? throw new InvalidOperationException(
+                    "Could not resolve the current .NET runtime directory.");
+
+            string hostPath = Path.GetFullPath(
+                Path.Combine(
+                    runtimeDirectory,
+                    "..",
+                    "..",
+                    "..",
+                    OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"));
+
+            return File.Exists(hostPath)
+                ? hostPath
+                : throw new FileNotFoundException(
+                    "Could not resolve the current .NET host.",
+                    hostPath);
+        }
+
+        private static string FindCurrentTestProjectPath()
+        {
+            DirectoryInfo? directory = new DirectoryInfo(AppContext.BaseDirectory);
+            while (directory is not null)
+            {
+                string candidate = Path.Combine(
+                    directory.FullName,
+                    "Eigenverft.NetLib.SerilogRelay.Tests.csproj");
+                if (File.Exists(candidate))
+                    return candidate;
+
+                directory = directory.Parent;
+            }
+
+            throw new FileNotFoundException(
+                "Could not locate Eigenverft.NetLib.SerilogRelay.Tests.csproj from the test output path.");
+        }
+
+        private static string GetRequiredProcessTestEnvironment(string name)
+        {
+            string? value = Environment.GetEnvironmentVariable(name);
+            return string.IsNullOrEmpty(value)
+                ? throw new InvalidOperationException(
+                    $"Required process-test environment variable '{name}' is missing.")
+                : value;
+        }
+
+        private static async Task WaitForProcessReadyAsync(
+            Process process,
+            string readyFile,
+            TimeSpan timeout)
+        {
+            DateTime deadline = DateTime.UtcNow + timeout;
+            while (DateTime.UtcNow < deadline)
+            {
+                if (File.Exists(readyFile))
+                    return;
+
+                if (process.HasExited)
+                {
+                    string stdout = await process.StandardOutput.ReadToEndAsync();
+                    string stderr = await process.StandardError.ReadToEndAsync();
+                    Assert.Fail(
+                        $"Separate SerilogRelay process exited before readiness. ExitCode={process.ExitCode}.{Environment.NewLine}STDOUT:{Environment.NewLine}{stdout}{Environment.NewLine}STDERR:{Environment.NewLine}{stderr}");
+                }
+
+                await Task.Delay(50);
+            }
+
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+                await process.WaitForExitAsync();
+            }
+
+            string timedOutStdout =
+                await process.StandardOutput.ReadToEndAsync();
+            string timedOutStderr =
+                await process.StandardError.ReadToEndAsync();
+            Assert.Fail(
+                $"Separate SerilogRelay process did not signal readiness within {timeout}.{Environment.NewLine}STDOUT:{Environment.NewLine}{timedOutStdout}{Environment.NewLine}STDERR:{Environment.NewLine}{timedOutStderr}");
+        }
+
+        private static async Task WaitForProcessExitAsync(
+            Process process,
+            TimeSpan timeout)
+        {
+            using var timeoutCts = new CancellationTokenSource(timeout);
+            try
+            {
+                await process.WaitForExitAsync(timeoutCts.Token);
+            }
+            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
+            {
+                StopProcessIfRunning(process);
+                Assert.Fail(
+                    $"Separate SerilogRelay process {process.Id} did not exit within {timeout}.");
+            }
+        }
+
+        private static void StopProcessIfRunning(Process? process)
+        {
+            if (process is null)
+                return;
+
+            try
+            {
+                if (!process.HasExited)
+                    process.Kill(entireProcessTree: true);
+            }
+            catch (InvalidOperationException)
+            {
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+
+        private static async Task<(string? Authorization, string Body)> ReceiveRequestAsync(
+            TcpListener listener,
+            HttpStatusCode statusCode)
+        {
+            using TcpClient client = await listener.AcceptTcpClientAsync();
+            using NetworkStream stream = client.GetStream();
+            using var reader = new StreamReader(
+                stream,
+                Encoding.ASCII,
+                detectEncodingFromByteOrderMarks: false,
+                bufferSize: 4096,
+                leaveOpen: true);
+
+            string? authorization = null;
+            int contentLength = 0;
+            while (true)
+            {
+                string? line = await reader.ReadLineAsync();
+                if (string.IsNullOrEmpty(line))
+                    break;
+
+                const string authorizationPrefix = "Authorization:";
+                if (line.StartsWith(
+                        authorizationPrefix,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    authorization =
+                        line.Substring(authorizationPrefix.Length).Trim();
+                }
+
+                const string contentLengthPrefix = "Content-Length:";
+                if (line.StartsWith(
+                        contentLengthPrefix,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    contentLength = int.Parse(
+                        line.Substring(contentLengthPrefix.Length).Trim(),
+                        CultureInfo.InvariantCulture);
+                }
+            }
+
+            char[] bodyBuffer = new char[contentLength];
+            int totalRead = 0;
+            while (totalRead < contentLength)
+            {
+                int read = await reader.ReadAsync(
+                    bodyBuffer.AsMemory(totalRead, contentLength - totalRead));
+                if (read == 0)
+                    break;
+
+                totalRead += read;
+            }
+
+            string body = new string(bodyBuffer, 0, totalRead);
+            string reason =
+                statusCode == HttpStatusCode.OK ? "OK" : "Error";
+            byte[] response = Encoding.ASCII.GetBytes(
+                $"HTTP/1.1 {(int)statusCode} {reason}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+            await stream.WriteAsync(response);
+            await stream.FlushAsync();
+
+            return (authorization, body);
+        }
+
+        private static string GetSingleRequestEventId(string body)
+        {
+            using JsonDocument document = JsonDocument.Parse(body);
+            return document.RootElement
+                .GetProperty("logs")[0]
+                .GetProperty("eventId")
+                .GetString()
+                ?? throw new InvalidOperationException(
+                    "The SerilogRelay request did not contain an eventId.");
         }
 
         private static int ReserveAndReleasePort()

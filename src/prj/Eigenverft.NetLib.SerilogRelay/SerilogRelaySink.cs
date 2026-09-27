@@ -30,8 +30,11 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <summary>
         /// Configures Serilog to persist events to a durable local spool and optionally relay pending events to an HTTP endpoint.
         /// </summary>
+        /// <remarks>
+        /// Processes sharing one application spool may send each other's pending rows. The process that owns the current claim uses its own endpoint and bearer token. A 2xx response marks the still-owned claim delivered; non-2xx releases the claim before process-local retry backoff so another process/version may take over.
+        /// </remarks>
         /// <param name="loggerConfiguration">The Serilog sink configuration.</param>
-        /// <param name="endpoint">The optional HTTP endpoint that receives batched log events.</param>
+        /// <param name="endpoint">The optional HTTP endpoint used by this sink/process for batched delivery of any shared-spool rows it claims. Pending rows do not retain the endpoint of their creating process.</param>
         /// <param name="spoolDirectory">Optional spool directory. Relative paths are resolved below the application-specific default directory.</param>
         /// <param name="spoolFileName">Optional spool filename. Defaults to <c>SerilogRelay.db</c>.</param>
         /// <param name="applicationId">Optional application identity used by the default spool directory. Defaults to the entry-assembly name.</param>
@@ -41,7 +44,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <param name="baseInterval">The normal delay between background delivery attempts.</param>
         /// <param name="sentRetention">How long successfully sent events are retained in the shared application spool. This applies spool-wide across processes using the same spool path.</param>
         /// <param name="unsentRetention">Optional maximum age for unsent events in the shared application spool. This applies spool-wide across processes using the same spool path.</param>
-        /// <param name="bearerToken">Optional raw bearer token sent as <c>Authorization: Bearer &lt;token&gt;</c>. Null, empty, or whitespace disables the header.</param>
+        /// <param name="bearerToken">Optional raw bearer token used by this sink/process for claimed-row HTTP delivery and sent as <c>Authorization: Bearer &lt;token&gt;</c>. The token is not persisted with spool rows. Null, empty, or whitespace disables the header.</param>
         /// <param name="restrictedToMinimumLevel">The minimum Serilog event level accepted by the sink.</param>
         public static LoggerConfiguration SerilogRelay(
             this LoggerSinkConfiguration loggerConfiguration,
@@ -80,6 +83,9 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <summary>
         /// Configures SerilogRelay with grouped reliability options while preserving the simple default overload.
         /// </summary>
+        /// <remarks>
+        /// Processes sharing one application spool may send each other's pending rows. Endpoint and bearer-token configuration belong to the sending process, not to the row that originally created the event.
+        /// </remarks>
         /// <param name="loggerConfiguration">The Serilog sink configuration.</param>
         /// <param name="endpoint">The optional HTTP endpoint that receives batched log events.</param>
         /// <param name="options">Relay behavior options. All nested option groups have complete defaults.</param>
@@ -394,6 +400,9 @@ CREATE TABLE IF NOT EXISTS {0} (
             }
 
             _emergencyTask = Task.Run(EmergencyLoopAsync, _cts.Token);
+            _applicationSpoolMaintenanceTask = Task.Run(
+                ApplicationSpoolMaintenanceLoopAsync,
+                _cts.Token);
 
             _senderTask = !string.IsNullOrEmpty(_endpoint)
                 ? Task.Run(SenderLoopAsync, _cts.Token)
@@ -598,7 +607,10 @@ CREATE TABLE IF NOT EXISTS {0} (
 
                 try
                 {
-                    await Task.WhenAll(_senderTask, _emergencyTask).ConfigureAwait(false);
+                    await Task.WhenAll(
+                        _senderTask,
+                        _emergencyTask,
+                        _applicationSpoolMaintenanceTask).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (_cts.IsCancellationRequested)
                 {

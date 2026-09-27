@@ -40,8 +40,16 @@ DELETE FROM {TableName}
             unsentCommand.CommandText = $@"
 DELETE FROM {TableName}
  WHERE Sent = 0
-   AND datetime(CreatedAt) <= datetime('now', $unsentOffset);";
+   AND datetime(CreatedAt) <= datetime('now', $unsentOffset)
+   AND (
+        ClaimOwnerId IS NULL
+        OR ClaimUntilUnixMs IS NULL
+        OR ClaimUntilUnixMs <= $now
+       );";
             unsentCommand.Parameters.AddWithValue("$unsentOffset", BuildSqliteOffset(unsentRetention.Value));
+            unsentCommand.Parameters.AddWithValue(
+                "$now",
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
             unsentCommand.ExecuteNonQuery();
         }
 
@@ -184,10 +192,19 @@ DELETE FROM {TableName}
      SELECT Id
        FROM {TableName}
       WHERE Sent = $sent
+        AND (
+             $sent = 1
+             OR ClaimOwnerId IS NULL
+             OR ClaimUntilUnixMs IS NULL
+             OR ClaimUntilUnixMs <= $now
+            )
       ORDER BY Id
       LIMIT $limit
  );";
             command.Parameters.AddWithValue("$sent", sent ? 1 : 0);
+            command.Parameters.AddWithValue(
+                "$now",
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
             command.Parameters.AddWithValue("$limit", limit);
             return command.ExecuteNonQuery();
         }

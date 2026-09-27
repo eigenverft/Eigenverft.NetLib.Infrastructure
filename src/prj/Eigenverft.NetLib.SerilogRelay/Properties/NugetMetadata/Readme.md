@@ -26,7 +26,7 @@ originating OS process is visible, but rows are not restricted to being sent by 
 process. Another process may drain older backlog from the same application spool.
 
 Shared-spool multi-process claim/lease coordination is implemented. Remaining pre-release
-questions are tracked in repository `RELEASE-READINESS.md`.
+validation is tracked in repository `RELEASE-READINESS.md`.
 
 ## Reliability options
 
@@ -68,18 +68,24 @@ var options = new SerilogRelayOptions
 
 ### Scope of the options
 
-`ApplicationSpool` applies to the shared durable spool:
+`ApplicationSpool` contains the spool-wide policies this sink/process applies to shared durable storage.
 
-- `SentEventRetention` is spool-wide;
-- `UnsentEventMaxAge` is spool-wide;
-- reclamation may remove rows from any process using that spool;
-- `MaxPhysicalBytes` is currently a physical ceiling for the whole shared spool.
+Processes sharing a spool do not negotiate or merge these settings. Each process applies its own
+configured values when it performs maintenance or reclamation:
 
-`Delivery`, `EndpointRetry`, and `EmergencyMemoryBuffer` are runtime settings/state of one
-sink/process.
+- `SentEventRetention` may remove eligible sent rows created by any process;
+- `UnsentEventMaxAge` may remove eligible unsent rows created by any process;
+- capacity reclamation may remove eligible rows created by any process;
+- `MaxPhysicalBytes` is the physical ceiling applied to the whole shared spool/database, not a
+  per-process row quota.
 
-The exact multi-process contract for the shared physical-capacity limit is still being finalized
-before release. Do not interpret `MaxPhysicalBytes` as a per-process quota.
+Actively claimed unsent rows are protected from age cleanup and unsent capacity reclamation.
+After claim release or lease expiry, they become eligible again. Age cleanup runs periodically
+while the sink remains active; the configured age is an eligibility threshold rather than an
+exact deletion timestamp.
+
+`Delivery`, `EndpointRetry`, endpoint/bearer configuration, and `EmergencyMemoryBuffer` are
+runtime settings/state of one sink/process.
 
 ## Current reliability behavior
 
@@ -87,15 +93,16 @@ The relay currently provides:
 
 - durable local persistence before normal network delivery;
 - stable `EventId` values reused across retries/restarts;
-- application-spool-wide sent retention and optional unsent age retention;
-- sent-first / oldest-unsent capacity reclamation;
+- application-spool-wide sent retention and periodic optional unsent age cleanup;
+- sent-first / oldest-eligible-unsent capacity reclamation;
+- active-claim protection from unsent age cleanup and capacity reclamation;
 - protection against one individually oversized event evicting existing backlog;
 - low-volume delivery after `MaximumBatchWait`;
 - immediate startup backlog delivery opportunity;
 - process-local exponential endpoint retry with jitter and HTTP `Retry-After`;
 - process-local Emergency memory bounds of 16384 events and 64 MiB payload bytes by default;
 - a real bounded shutdown deadline;
-- idempotent receiver storage by `EventId`.
+- at-least-once HTTP delivery without imposing receiver-side storage/deduplication semantics.
 
 The implementation targets `net8.0` and `net10.0`.
 
@@ -108,6 +115,10 @@ Current behavior:
 
 - `ProcessId` remains row-origin metadata;
 - any process of the same application spool may send old rows from another process;
+- pending rows are not bound to the endpoint or bearer token of the process that created them;
+- the process owning the current claim sends with its own configured endpoint and bearer token;
+- non-2xx releases the claim before that process enters retry backoff, allowing another version
+  to take over; a 2xx received by the current claim owner marks the claimed rows delivered;
 - only one sender owns a row's active claim at a time;
 - expired claims become available after process death;
 - the sending process uses its own `Delivery` and `EndpointRetry` settings;
@@ -121,15 +132,14 @@ expired claim.
 
 ## Receiver/security scope
 
-The matched receiver is `Eigenverft.Service.CentralLogging` at:
+SerilogRelay targets a generic HTTP receiver. The endpoint is supplied by the application and is
+not persisted with individual spool rows.
 
-```text
-POST /api/v1/logs
-```
+Any HTTP 2xx received by the current claim owner is treated as successful delivery. Non-2xx or
+transport failure keeps the rows unsent and releases the claim before process-local retry
+backoff.
 
-Bearer authentication is supported with one optional opaque token.
-
-Sender:
+Bearer authentication is supported with one optional opaque token:
 
 ```csharp
 .WriteTo.SerilogRelay(
@@ -138,26 +148,21 @@ Sender:
 ```
 
 Pass only the token value, not the `Bearer ` scheme prefix. Null, empty, or whitespace means no
-Authorization header is sent.
+Authorization header is sent. The token belongs to the sending sink/process and is not persisted
+with spool rows, so an updated process draining old backlog uses its own current token.
 
-The matching CentralLogging receiver reads `CentralLogging:BearerToken`; for environment
-configuration use `CentralLogging__BearerToken`. When the receiver token is configured,
-`POST /api/v1/logs` requires an exact `Authorization: Bearer <token>` match. When it is not
-configured, ingestion remains unauthenticated for private/proxy-protected deployments.
-
-The token is treated as an opaque shared secret; SerilogRelay does not parse JWT claims or
-perform token refresh.
+SerilogRelay does not parse JWT claims or perform token refresh. Receiver persistence,
+duplicate-handling, and server-side storage policies are receiver concerns.
 
 `ApplicationId`, `MachineId`, `ProcessId`, and other payload fields remain
 diagnostic/protocol identity, not authenticated sender identity.
 
 ## Current pre-release blockers
 
-See repository `RELEASE-READINESS.md`. The remaining pre-release work is primarily:
-
-- final semantics for shared `ApplicationSpool` settings and the physical spool limit;
-- final separate-OS-process smoke validation of the implemented coordination;
-- final sender -> CentralLogging smoke validation with bearer authentication enabled.
+See repository `RELEASE-READINESS.md`. Shared-spool configuration semantics, claim/lease
+coordination, bearer-token takeover behavior, and the separate-OS-process old/new-version smoke
+are covered. Remaining work is the normal final release validation/packaging and the intended
+end-to-end smoke against the receiver used by the release environment.
 
 Historical code is background/reference material; current behavior is defined by tests,
 `RELIABILITY.md`, and `RELEASE-READINESS.md`.

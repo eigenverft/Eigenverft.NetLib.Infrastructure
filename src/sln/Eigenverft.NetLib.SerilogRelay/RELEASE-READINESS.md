@@ -11,119 +11,117 @@ narrower v1 promise merely to remove it from the blocker list.
 
 ### Gate A - Shared application-spool multi-process support
 
-**Core coordination implemented; policy semantics still open.**
+**Implemented and process-boundary validated.**
 
-Multiple processes of the same application can open/write the same default spool and now
-coordinate delivery through atomic row claims with a 30-second lease.
+Multiple processes of the same application can open/write the same default spool and coordinate
+delivery through atomic row claims with a 30-second lease.
 
-Implemented behavior includes:
+The operating contract is:
 
-- stable `ProcessId` row-origin metadata without owner-only delivery restrictions;
-- per-sink claim-owner identity that is not ambiguous under PID reuse;
-- atomic claims with per-batch claim ids;
-- lease expiry and takeover by another sender;
-- stale claims cannot mark rows sent after takeover;
-- graceful shutdown releases owned claims immediately;
-- process-local `Delivery` and `EndpointRetry` behavior remains independent; failed HTTP
-  attempts release their row claims before that process waits for retry, so its backoff does not
-  reserve shared-spool rows;
-- each sender periodically discovers claimable rows written by other processes;
-- existing spools are migrated to claim columns/indexes under serialized schema migration;
-- physical corruption quarantine/recreate uses a short-lived cross-process recovery lock and
-  rechecks whether another process already recovered the spool.
+- `ProcessId` records row origin; it is not an ownership barrier.
+- Pending rows are not bound to the endpoint or bearer token of the process that created them.
+- The process that currently claims a row sends it with that process's own endpoint and bearer
+  token.
+- A non-2xx response releases the claim before that process enters its local retry delay, allowing
+  another process/version to take over immediately.
+- A 2xx response received by the current claim owner marks those rows delivered, even when they
+  were originally written by another process/version.
+- Lease expiry permits takeover after process death/stall; stale claim owners cannot later mark a
+  taken-over row sent.
+- Graceful shutdown releases owned claims immediately.
+- Each sender periodically discovers claimable rows written by other processes.
+- Existing spools are migrated to claim columns/indexes under serialized schema migration.
+- Physical corruption quarantine/recreate uses separate short-lived cross-process recovery
+  coordination.
+
+A separate-OS-process regression now covers the cross-version shape directly: an old process
+sends through an old endpoint/token and receives non-2xx, releases the row, remains alive, and a
+second process sharing the spool sends the same `EventId` through its own endpoint/token and
+marks it delivered after 2xx.
 
 No leader process, application-wide RetryGate, application-wide delivery budget, shared
 `Retry-After` cooldown, or lifetime-exclusive spool owner is used.
 
-The remaining Gate A work is the application-spool policy contract, not claim mechanics:
+#### Application-spool configuration scope
 
-- define semantics when processes sharing a spool configure different `ApplicationSpool`
-  settings;
-- decide whether `ApplicationSpool.MaxPhysicalBytes` remains only one shared physical ceiling,
-  whether an additional per-process logical quota is required, or both;
-- run the final release smoke test with separate OS processes as process-boundary validation.
+`ApplicationSpool` settings are configured by each sink/process. Processes sharing a spool do
+not negotiate, merge, elect, or persist one authoritative configuration.
 
-A process is not required to send only rows it originally created. Draining backlog from an
-older/dead process of the same logical application is supported behavior.
+Each process applies its own configured values when it performs spool-wide work. Consequently:
 
-#### Application-spool limit scope
+- `SentEventRetention` cleanup can remove eligible sent rows created by any process.
+- `UnsentEventMaxAge` cleanup can remove eligible unsent rows created by any process.
+- capacity reclamation can reclaim eligible rows created by any process.
+- `MaxPhysicalBytes` is the physical ceiling applied to the shared spool/database; it is not a
+  quota for rows belonging to the configuring process.
 
-Retention/reclaim settings are spool-wide and are named accordingly:
+Active unsent delivery claims are protected from age cleanup and capacity reclamation. Once a
+claim is released or expires, the row is again eligible for the locally configured spool-wide
+policies.
 
-- `ApplicationSpool.SentEventRetention`;
-- `ApplicationSpool.UnsentEventMaxAge`.
+`UnsentEventMaxAge` is enforced during periodic application-spool maintenance while the sink is
+running. The configured age is the eligibility threshold; actual deletion can occur on the next
+maintenance pass and is deferred while a row has an active delivery claim.
 
-The main unresolved limit question is:
-
-```text
-ApplicationSpool.MaxPhysicalBytes = 64 MiB
-```
-
-Today this is a physical ceiling for the whole shared spool. It is not a per-process quota.
-
-Before release we must decide whether the product contract needs:
-
-- one shared physical application-spool ceiling;
-- an additional logical per-process quota;
-- or both as separate concepts.
-
-This decision must be explicit in API naming and documentation.
+This intentionally permits two versions sharing a spool to use different local
+`ApplicationSpool` values. Whichever process performs cleanup/reclamation applies its values to
+the shared spool. There is no additional per-process physical quota.
 
 ### Gate B - Operating-contract/documentation consistency
 
-**Open until the remaining ApplicationSpool policy semantics are settled.**
+**Implemented for the current shared-spool contract.**
 
-README, XML docs, tests, and `RELIABILITY.md` must use the same scope vocabulary:
+README, XML docs, tests, and `RELIABILITY.md` use the same scope vocabulary:
 
-- Application spool = shared durable storage for processes using the same spool path;
-- Delivery / EndpointRetry / EmergencyMemoryBuffer = process-local runtime behavior;
-- `ProcessId` = row origin/diagnostic process identity, not an ownership barrier.
+- Application spool = shared durable storage for processes using the same spool path.
+- `ApplicationSpool` values are process-local configuration with spool-wide effects.
+- `Delivery`, `EndpointRetry`, endpoint/bearer configuration, and
+  `EmergencyMemoryBuffer` are process-local runtime behavior.
+- `ProcessId` = row origin/diagnostic process identity, not delivery ownership.
 
 ### Gate C - Bearer authentication
 
 **Implemented.**
 
 SerilogRelay accepts an optional raw `bearerToken` parameter and sends it as
-`Authorization: Bearer <token>`. CentralLogging accepts the matching
-`CentralLogging:BearerToken` configuration (for environment variables:
-`CentralLogging__BearerToken`) and returns `401 Unauthorized` with
-`WWW-Authenticate: Bearer` when a configured token is missing or incorrect.
+`Authorization: Bearer <token>`.
 
-No token configured means bearer authentication is disabled, preserving the private/trusted
-proxy deployment mode. The token is opaque; there is no JWT parsing, refresh protocol, or
-identity-provider abstraction.
+The token belongs to the sending sink/process. A process draining shared-spool rows uses its own
+configured token; rows do not persist or inherit credentials from the process that created them.
 
-Producer identity fields are still not authentication.
+No token configured means no Authorization header is emitted. The token is opaque; SerilogRelay
+does not parse JWT claims, perform token refresh, or require a specific receiver implementation.
+
+Producer identity fields are not authentication.
 
 ### Gate D - Final release validation
 
-After functional blockers are closed:
+The functional shared-spool/authentication blockers above are implemented. Remaining release
+work is the normal final validation pass:
 
 1. clean restore/build;
 2. execute supported target-framework tests in release CI;
 3. pass repository coverage gates;
 4. `dotnet pack`;
 5. inspect package contents and package README;
-6. smoke-test sender -> current CentralLogging receiver;
-7. smoke-test the sender -> CentralLogging path with bearer authentication enabled.
+6. perform the intended end-to-end sender -> deployed receiver smoke for the release environment.
 
-## Not currently release blockers
+The separate-OS-process shared-spool takeover smoke is already part of the regression suite.
+
+## Intentional non-features / deferred work
 
 Unless new evidence changes priority:
 
-- alternate storage backends / ORM abstraction;
+- alternate spool storage backends / ORM abstraction;
 - a general provider framework;
 - richer health/status APIs beyond current diagnostics;
 - server-driven configuration/handshake;
 - post-recovery global rate limiting;
-- a general dead-letter subsystem for heterogeneous receivers;
 - exact process-RSS accounting for Emergency memory.
 
-## Known follow-up
-
-A permanently rejected oldest event/batch is not yet isolated into a dead-letter path. This
-remains worth addressing before broad heterogeneous receiver support, but it is separate from
-the current shared-spool multi-process blocker.
+A dead-letter path is intentionally not part of the current sink design. Non-2xx deliveries remain
+unsent so a later retry or updated application version can deliver them, subject to configured
+`UnsentEventMaxAge` and shared-spool capacity reclamation.
 
 ## Historical origin
 
