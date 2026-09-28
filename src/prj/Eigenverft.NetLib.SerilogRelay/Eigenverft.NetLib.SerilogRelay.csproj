@@ -82,7 +82,6 @@
   <PropertyGroup>
     <Authors>Eigenverft</Authors>
     <Owners>Eigenverft</Owners>
-    <Company>Eigenverft</Company>
     <Copyright>Copyright © 2026 Eigenverft</Copyright>
     <PackageId>Eigenverft.NetLib.SerilogRelay</PackageId>
     <PackageTags>dotnet;logging;serilog;relay;durable;sqlite;eigenverft</PackageTags>
@@ -117,7 +116,7 @@
 		<PublishTrimmed>false</PublishTrimmed>
 	</PropertyGroup>
 
-  <!-- Publish behavior for executable future useage program main etc -->
+  <!-- Executable-only publish settings remain inactive while this project is a library. -->
 	<PropertyGroup Condition="'$(_IsPublishing)' == 'true' and '$(OutputType)' != 'Library'">
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
 		<PublishSelfContained>true</PublishSelfContained>

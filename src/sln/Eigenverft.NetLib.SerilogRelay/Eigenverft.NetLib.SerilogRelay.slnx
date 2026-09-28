@@ -1,10 +1,7 @@
 <Solution>
-  <!-- Paths are relative to this file's final location.
-       PlaceSolution SlnFolder      → src/sln/Eigenverft.NetLib.SerilogRelay/Eigenverft.NetLib.SerilogRelay.slnx
-       PlaceSolution BesideCsproj  → src/prj/Eigenverft.NetLib.SerilogRelay/Eigenverft.NetLib.SerilogRelay.slnx
-       PlaceSolution RepoRoot       → repo root, so src/prj/ and src/sln/. -->
   <Folder Name="/sln/Eigenverft.NetLib.SerilogRelay/">
     <File Path="Readme.md" />
+    <File Path="RELIABILITY.md" />
   </Folder>
   <Folder Name="/prj/">
     <Project Path="../../prj/Eigenverft.NetLib.SerilogRelay.Tests/Eigenverft.NetLib.SerilogRelay.Tests.csproj" />

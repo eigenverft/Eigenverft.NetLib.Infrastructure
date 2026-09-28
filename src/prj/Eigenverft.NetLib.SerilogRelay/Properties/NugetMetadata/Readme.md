@@ -3,6 +3,17 @@
 Durable Serilog relay for forwarding application logs over HTTP while keeping a bounded local
 persistent spool.
 
+## Supported frameworks
+
+- .NET 8 (`net8.0`)
+- .NET 10 (`net10.0`)
+
+## Install
+
+```bash
+dotnet add package Eigenverft.NetLib.SerilogRelay
+```
+
 ## Quick start
 
 ```csharp
@@ -25,8 +36,7 @@ Multiple active sinks can open and persist into that spool. Rows contain `Proces
 originating OS process is visible, but rows are not restricted to being sent by their original
 process. Another process may drain older backlog from the same application spool.
 
-Shared-spool multi-process claim/lease coordination is implemented. Remaining pre-release
-validation is tracked in repository `RELEASE-READINESS.md`.
+Shared-spool multi-process claim/lease coordination is implemented.
 
 ## Reliability options
 
@@ -104,7 +114,6 @@ The relay currently provides:
 - a real bounded shutdown deadline;
 - at-least-once HTTP delivery without imposing receiver-side storage/deduplication semantics.
 
-The implementation targets `net8.0` and `net10.0`.
 
 ## Multi-process coordination
 
@@ -157,12 +166,17 @@ duplicate-handling, and server-side storage policies are receiver concerns.
 `ApplicationId`, `MachineId`, `ProcessId`, and other payload fields remain
 diagnostic/protocol identity, not authenticated sender identity.
 
-## Current pre-release blockers
+## Scope boundaries
 
-See repository `RELEASE-READINESS.md`. Shared-spool configuration semantics, claim/lease
-coordination, bearer-token takeover behavior, and the separate-OS-process old/new-version smoke
-are covered. Remaining work is the normal final release validation/packaging and the intended
-end-to-end smoke against the receiver used by the release environment.
+SerilogRelay intentionally does not define receiver-side persistence, duplicate presentation, or
+server-side storage policy.
 
-Historical code is background/reference material; current behavior is defined by tests,
-`RELIABILITY.md`, and `RELEASE-READINESS.md`.
+The current sink design also does not introduce:
+
+- alternate spool storage backends or an ORM/provider abstraction;
+- a server-driven configuration/handshake protocol;
+- an application-wide retry gate or shared `Retry-After` cooldown across processes;
+- a dead-letter queue for non-2xx responses.
+
+Non-2xx deliveries remain unsent for later retry or takeover by another process/version, subject
+to configured `UnsentEventMaxAge` and shared-spool capacity reclamation.
