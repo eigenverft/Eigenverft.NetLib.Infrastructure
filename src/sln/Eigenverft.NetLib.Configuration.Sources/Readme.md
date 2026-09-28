@@ -1,61 +1,37 @@
 # Eigenverft.NetLib.Configuration.Sources
 
-The `.slnx` and this readme live in this folder. Open a terminal here for the commands below. The CLI finds the one solution in this directory; you do not pass a `.slnx` or `.csproj` path. Other libraries keep their own `.slnx` under `src/sln/<name>/`, so `dotnet` does not ask you to specify a solution.
+[![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Configuration.Sources?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Sources) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Configuration.Sources?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Sources) [![Repository CI](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=repository%20CI)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-net8.0%20%7C%20net10.0-512BD4?logo=dotnet&logoColor=white)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Sources) [![License](https://img.shields.io/badge/license-MIT-blue.svg?logo=mit)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE)
 
-```text
-./                         you are here (this readme + Eigenverft.NetLib.Configuration.Sources.slnx)
-../../prj/Eigenverft.NetLib.Configuration.Sources/    packable class library
-../../prj/Eigenverft.NetLib.Configuration.Sources.Tests/  tests (not packed)
+Replace the Generic Host's default configuration providers with a minimal set of environment variables and optional process command-line arguments.
+
+| Package | Primary API | Target frameworks |
+| --- | --- | --- |
+| `Eigenverft.NetLib.Configuration.Sources` | `ResetToMinimalConfigurationSources(...)` | .NET 8, .NET 10 |
+
+```csharp
+using Eigenverft.NetLib.Configuration.Sources;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+builder.ResetToMinimalConfigurationSources(
+    includeCommandLineArguments: true);
+
+builder.Configuration.AddJsonFile(
+    "appsettings.json",
+    optional: true,
+    reloadOnChange: true);
+
+using IHost host = builder.Build();
+await host.RunAsync();
 ```
 
-Package metadata, license, icon, and release notes live in `src/prj/Eigenverft.NetLib.Configuration.Sources/NugetAssets/`.
+The reset clears all existing providers, so call it before adding application sources you want to retain. Command-line arguments are optional and disabled by default; when enabled, they take precedence over environment variables, while later custom providers can take precedence over both. To inspect the final precedence after this reset and subsequent registrations, use [Configuration.Diagnostics](../Eigenverft.NetLib.Configuration.Diagnostics/Readme.md). See the [NuGet package guide](../../prj/Eigenverft.NetLib.Configuration.Sources/NugetAssets/Readme.md) for argument details.
 
-`--tl:off` is optional. Without it the CLI shows the compact terminal logger. Add `--tl:off` for the classic per-project log. The commands work either way.
+## Development
 
-## Restore and build
-
-```bash
-dotnet restore
-dotnet build
-```
-
-## Test
-
-Run the tests for all target frameworks:
+Run package tests for both target frameworks from this directory:
 
 ```bash
 dotnet test
-```
-
-## Pack
-
-```bash
-dotnet pack
-```
-
-Creates one `.nupkg` in `src/prj/Eigenverft.NetLib.Configuration.Sources/bin/Pack/` containing the library for all selected target frameworks. Test and optional benchmark projects are not packed.
-
-Optional: copy the package to a local feed by setting `LocalPackagesDir` in the library project, or:
-
-```bash
-dotnet pack -p:LocalPackagesDir="path/to/local/packages"
-```
-
-## Publish
-
-```bash
-dotnet publish
-```
-
-Writes library output to `src/prj/Eigenverft.NetLib.Configuration.Sources/bin/Publish/` for the highest selected target framework. This is a class library, not an executable.
-
-## CI
-
-Use `-m:1` for the build so a pipeline does not depend on machine load. It avoids occasional file locks when the library is built as a solution project and as a test `ProjectReference` at the same time. Run these commands from this folder so each library has exactly one `.slnx` in the working directory.
-
-```bash
-dotnet restore
-dotnet build --no-restore -m:1
-dotnet test --no-build
-dotnet pack
 ```

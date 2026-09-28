@@ -1,61 +1,42 @@
 # Eigenverft.NetLib.Logging.Deferred
 
-The `.slnx` and this readme live in this folder. Open a terminal here for the commands below. The CLI finds the one solution in this directory; you do not pass a `.slnx` or `.csproj` path. Other libraries keep their own `.slnx` under `src/sln/<name>/`, so `dotnet` does not ask you to specify a solution.
+[![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Logging.Deferred?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Logging.Deferred) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Logging.Deferred?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Logging.Deferred) [![Repository CI](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=repository%20CI)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-net8.0%20%7C%20net10.0-512BD4?logo=dotnet&logoColor=white)](https://www.nuget.org/packages/Eigenverft.NetLib.Logging.Deferred) [![License](https://img.shields.io/badge/license-MIT-blue.svg?logo=mit)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE)
 
-```text
-./                         you are here (this readme + Eigenverft.NetLib.Logging.Deferred.slnx)
-../../prj/Eigenverft.NetLib.Logging.Deferred/    packable class library
-../../prj/Eigenverft.NetLib.Logging.Deferred.Tests/  tests (not packed)
+Lazy adapters for Microsoft logging that skip message and argument-factory work when the underlying log level is disabled.
+
+| Package | Primary APIs | Target frameworks |
+| --- | --- | --- |
+| Eigenverft.NetLib.Logging.Deferred | IDeferredLogger<TCategoryName>, AddDeferredLogging(), ToDeferred() | .NET 8, .NET 10 |
+
+```csharp
+using System.IO;
+using Eigenverft.NetLib.Logging.Deferred;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddDeferredLogging();
+
+using IHost host = builder.Build();
+IDeferredLogger<Program> logger =
+    host.Services.GetRequiredService<IDeferredLogger<Program>>();
+
+string settingsDirectory = Path.Combine(
+    builder.Environment.ContentRootPath,
+    "settings");
+logger.LogDebug(
+    "Discovered {FileCount} files",
+    () => Directory.GetFiles(settingsDirectory).Length);
+logger.LogInformation(
+    () => $"Loaded settings from {settingsDirectory}.");
 ```
 
-Package metadata, license, icon, and release notes live in `src/prj/Eigenverft.NetLib.Logging.Deferred/NugetAssets/`.
+The factories run only when the underlying logger enables the level, so the file scan and interpolated message are deferred—not buffered. `ToDeferred()` wraps an existing logger immediately; [Logging.Bootstrap](../Eigenverft.NetLib.Logging.Bootstrap/Readme.md) documents startup logger setup. See the [NuGet package guide](../../prj/Eigenverft.NetLib.Logging.Deferred/NugetAssets/Readme.md) for registration and evaluation limits.
 
-`--tl:off` is optional. Without it the CLI shows the compact terminal logger. Add `--tl:off` for the classic per-project log. The commands work either way.
+## Development
 
-## Restore and build
-
-```bash
-dotnet restore
-dotnet build
-```
-
-## Test
-
-Run the tests for all target frameworks:
+Run package tests for both target frameworks from this directory:
 
 ```bash
 dotnet test
-```
-
-## Pack
-
-```bash
-dotnet pack
-```
-
-Creates one `.nupkg` in `src/prj/Eigenverft.NetLib.Logging.Deferred/bin/Pack/` containing the library for all selected target frameworks. Test and optional benchmark projects are not packed.
-
-Optional: copy the package to a local feed by setting `LocalPackagesDir` in the library project, or:
-
-```bash
-dotnet pack -p:LocalPackagesDir="path/to/local/packages"
-```
-
-## Publish
-
-```bash
-dotnet publish
-```
-
-Writes library output to `src/prj/Eigenverft.NetLib.Logging.Deferred/bin/Publish/` for the highest selected target framework. This is a class library, not an executable.
-
-## CI
-
-Use `-m:1` for the build so a pipeline does not depend on machine load. It avoids occasional file locks when the library is built as a solution project and as a test `ProjectReference` at the same time. Run these commands from this folder so each library has exactly one `.slnx` in the working directory.
-
-```bash
-dotnet restore
-dotnet build --no-restore -m:1
-dotnet test --no-build
-dotnet pack
 ```

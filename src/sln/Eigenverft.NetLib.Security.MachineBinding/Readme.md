@@ -1,61 +1,35 @@
 # Eigenverft.NetLib.Security.MachineBinding
 
-The `.slnx` and this readme live in this folder. Open a terminal here for the commands below. The CLI finds the one solution in this directory; you do not pass a `.slnx` or `.csproj` path. Other libraries keep their own `.slnx` under `src/sln/<name>/`, so `dotnet` does not ask you to specify a solution.
+[![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Security.MachineBinding?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Security.MachineBinding) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Security.MachineBinding?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Security.MachineBinding) [![Repository CI](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=repository%20CI)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-net8.0%20%7C%20net10.0-512BD4?logo=dotnet&logoColor=white)](https://www.nuget.org/packages/Eigenverft.NetLib.Security.MachineBinding) [![License](https://img.shields.io/badge/license-MIT-blue.svg?logo=mit)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE)
 
-```text
-./                         you are here (this readme + Eigenverft.NetLib.Security.MachineBinding.slnx)
-../../prj/Eigenverft.NetLib.Security.MachineBinding/    packable class library
-../../prj/Eigenverft.NetLib.Security.MachineBinding.Tests/  tests (not packed)
+Derive a stable, non-secret machine fingerprint from the platform UUID exposed by the operating system.
+
+## At a glance
+
+| Need | API |
+| --- | --- |
+| Try to get a fingerprint when a UUID is available | `PhysicalMachineBinding.TryGetFingerprint(...)` |
+| Require a fingerprint or handle an error | `PhysicalMachineBinding.GetFingerprint()` |
+| Read the normalized source UUID | `PhysicalMachineBinding.TryGetSystemPlatformUuid(...)` |
+
+## Quick start
+
+```csharp
+using System;
+using Eigenverft.NetLib.Security.MachineBinding;
+
+if (PhysicalMachineBinding.TryGetFingerprint(out string fingerprint))
+{
+    Console.WriteLine(fingerprint);
+}
+else
+{
+    Console.WriteLine("No supported platform UUID is available.");
+}
 ```
 
-Package metadata, license, icon, and release notes live in `src/prj/Eigenverft.NetLib.Security.MachineBinding/NugetAssets/`.
+The fingerprint is machine information, not a secret or hardware-backed security boundary. Windows uses the SMBIOS system UUID, Linux the DMI product UUID, and macOS `IOPlatformUUID`; a virtual machine therefore binds to its hypervisor-exposed identity. The separate [Transformations](https://www.nuget.org/packages/Eigenverft.NetLib.Transformations) package uses it for `PhysicalMachineBoundAes()`, with a convenience codec also available from Configuration.Values; this package itself has no dependency on either. It does not bind Data Protection key rings or TLS certificates. See the [NuGet README](../../prj/Eigenverft.NetLib.Security.MachineBinding/NugetAssets/Readme.md) for support and security limits.
 
-`--tl:off` is optional. Without it the CLI shows the compact terminal logger. Add `--tl:off` for the classic per-project log. The commands work either way.
+## Development
 
-## Restore and build
-
-```bash
-dotnet restore
-dotnet build
-```
-
-## Test
-
-Run the tests for all target frameworks:
-
-```bash
-dotnet test
-```
-
-## Pack
-
-```bash
-dotnet pack
-```
-
-Creates one `.nupkg` in `src/prj/Eigenverft.NetLib.Security.MachineBinding/bin/Pack/` containing the library for all selected target frameworks. Test and optional benchmark projects are not packed.
-
-Optional: copy the package to a local feed by setting `LocalPackagesDir` in the library project, or:
-
-```bash
-dotnet pack -p:LocalPackagesDir="path/to/local/packages"
-```
-
-## Publish
-
-```bash
-dotnet publish
-```
-
-Writes library output to `src/prj/Eigenverft.NetLib.Security.MachineBinding/bin/Publish/` for the highest selected target framework. This is a class library, not an executable.
-
-## CI
-
-Use `-m:1` for the build so a pipeline does not depend on machine load. It avoids occasional file locks when the library is built as a solution project and as a test `ProjectReference` at the same time. Run these commands from this folder so each library has exactly one `.slnx` in the working directory.
-
-```bash
-dotnet restore
-dotnet build --no-restore -m:1
-dotnet test --no-build
-dotnet pack
-```
+Run `dotnet test` from this directory to test the package for all target frameworks.

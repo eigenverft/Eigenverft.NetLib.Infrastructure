@@ -1,61 +1,36 @@
 # Eigenverft.NetLib.Networking
 
-The `.slnx` and this readme live in this folder. Open a terminal here for the commands below. The CLI finds the one solution in this directory; you do not pass a `.slnx` or `.csproj` path. Other libraries keep their own `.slnx` under `src/sln/<name>/`, so `dotnet` does not ask you to specify a solution.
+[![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Networking?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Networking) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Networking?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Networking) [![Repository CI](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=repository%20CI)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-net8.0%20%7C%20net10.0-512BD4?logo=dotnet&logoColor=white)](https://www.nuget.org/packages/Eigenverft.NetLib.Networking) [![License](https://img.shields.io/badge/license-MIT-blue.svg?logo=mit)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE)
 
-```text
-./                         you are here (this readme + Eigenverft.NetLib.Networking.slnx)
-../../prj/Eigenverft.NetLib.Networking/    packable class library
-../../prj/Eigenverft.NetLib.Networking.Tests/  tests (not packed)
+Host-independent IP address normalization, CIDR parsing, and cached IPv4/IPv6 matching. The package has no ASP.NET Core dependency.
+
+| Package | Primary APIs | Target frameworks |
+| --- | --- | --- |
+| `Eigenverft.NetLib.Networking` | `Normalize()`, `CidrNetwork.Parse(...)`, `IPAddress.Matches(...)` | .NET 8, .NET 10 |
+
+```csharp
+using System;
+using System.Net;
+using Eigenverft.NetLib.Networking;
+
+IPAddress canonical = IPAddress.Parse("::ffff:192.168.1.25").Normalize();
+Console.WriteLine(canonical.ToCanonicalString());
+// 192.168.1.25
+
+CidrNetwork network = CidrNetwork.Parse("192.168.1.123/24");
+// normalized to 192.168.1.0/24
+
+bool contained = network.Contains(canonical);
+bool allowed = canonical.Matches(
+    new[] { "10.0.0.0/8", "192.168.1.123/24" });
 ```
 
-Package metadata, license, icon, and release notes live in `src/prj/Eigenverft.NetLib.Networking/NugetAssets/`.
+IPv4-mapped IPv6 addresses use IPv4 matching semantics; CIDR host bits are normalized to the network. See the [NuGet package guide](../../prj/Eigenverft.NetLib.Networking/NugetAssets/Readme.md) for scope-ID and wildcard behavior.
 
-`--tl:off` is optional. Without it the CLI shows the compact terminal logger. Add `--tl:off` for the classic per-project log. The commands work either way.
+## Development
 
-## Restore and build
-
-```bash
-dotnet restore
-dotnet build
-```
-
-## Test
-
-Run the tests for all target frameworks:
+Run package tests for both target frameworks from this directory:
 
 ```bash
 dotnet test
-```
-
-## Pack
-
-```bash
-dotnet pack
-```
-
-Creates one `.nupkg` in `src/prj/Eigenverft.NetLib.Networking/bin/Pack/` containing the library for all selected target frameworks. Test and optional benchmark projects are not packed.
-
-Optional: copy the package to a local feed by setting `LocalPackagesDir` in the library project, or:
-
-```bash
-dotnet pack -p:LocalPackagesDir="path/to/local/packages"
-```
-
-## Publish
-
-```bash
-dotnet publish
-```
-
-Writes library output to `src/prj/Eigenverft.NetLib.Networking/bin/Publish/` for the highest selected target framework. This is a class library, not an executable.
-
-## CI
-
-Use `-m:1` for the build so a pipeline does not depend on machine load. It avoids occasional file locks when the library is built as a solution project and as a test `ProjectReference` at the same time. Run these commands from this folder so each library has exactly one `.slnx` in the working directory.
-
-```bash
-dotnet restore
-dotnet build --no-restore -m:1
-dotnet test --no-build
-dotnet pack
 ```

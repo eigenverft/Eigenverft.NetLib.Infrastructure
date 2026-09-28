@@ -2,18 +2,50 @@
 
 <!-- Maintenance note: Keep README.NUGET.md aligned with this README for shared prose, examples, headings, badges, and feature descriptions. Use absolute NuGet/GitHub URLs there where this README can use repository-relative links; otherwise keep shared content in sync. -->
 
-[![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Infrastructure?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Infrastructure?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure) [![Build Status](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=build)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-.NET%208%20%7C%2010-512BD4?logo=dotnet&logoColor=white)](#-target-frameworks) [![License](https://img.shields.io/github/license/eigenverft/Eigenverft.NetLib.Infrastructure?logo=mit)](LICENSE)
+[![Repository CI](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=repository%20CI)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-net8.0%20%7C%20net10.0-512BD4?logo=dotnet&logoColor=white)](#-target-frameworks) [![License](https://img.shields.io/badge/license-MIT-blue.svg?logo=mit)](LICENSE)
 
-Host-independent operational infrastructure for .NET applications and Generic Host-based services.
+> **Legacy monolith notice:** `Eigenverft.NetLib.Infrastructure` is a frozen legacy package.
+> The repository itself is not frozen: new development and installation should use the independently
+> versioned capability packages below. Any compatibility release of the monolith remains a legacy path.
 
-NetLib gives an application predictable writable storage and a safe way to load, validate, protect,
-reload, and coordinate operational configuration. It is useful when a bad JSON edit must not replace
-live settings, several files must move to one reviewed profile together, or certificates and startup
-diagnostics must be available before the normal host lifecycle is ready.
+This repository publishes 16 independently versioned, host-independent capability packages for .NET applications and Generic Host-based services.
+
+The packages provide predictable writable storage and safe ways to load, validate, protect, reload,
+and coordinate operational configuration. They also cover startup logging, certificates, machine
+binding, IP networking, and other focused infrastructure capabilities.
+
+## 📦 Capability packages
+
+The version and download badges are package-specific. The repository CI badge above reports the shared workflow, not an individual package build.
+
+| Capability package | Problem it solves / when to use it | Version | Downloads | Guide |
+| --- | --- | --- | --- | --- |
+| [`Eigenverft.NetLib.Configuration.Binding`](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Binding) | Configuration binding would otherwise append to or merge with initialized collection defaults; replace configured lists and dictionaries deliberately, including explicit empty values. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Configuration.Binding?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Binding) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Configuration.Binding?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Binding) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Configuration.Binding/Readme.md) |
+| [`Eigenverft.NetLib.Configuration.Diagnostics`](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Diagnostics) | Configuration precedence is opaque at startup; see which provider wins and where keys are shadowed without logging values. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Configuration.Diagnostics?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Diagnostics) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Configuration.Diagnostics?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Diagnostics) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Configuration.Diagnostics/Readme.md) |
+| [`Eigenverft.NetLib.Configuration.Sets`](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Sets) | Several configuration files must change as one profile; prepare every participant before committing the switch so partial activation is rejected. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Configuration.Sets?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Sets) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Configuration.Sets?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Sets) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Configuration.Sets/Readme.md) |
+| [`Eigenverft.NetLib.Configuration.Sources`](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Sources) | A service needs a deliberately minimal configuration stack; reset Generic Host sources to environment variables and optional process arguments. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Configuration.Sources?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Sources) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Configuration.Sources?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Sources) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Configuration.Sources/Readme.md) |
+| [`Eigenverft.NetLib.Configuration.SwitchableJson`](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.SwitchableJson) | A missing, invalid, or rejected JSON edit must not replace live settings; prepare candidates and keep the last-known-good snapshot. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Configuration.SwitchableJson?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.SwitchableJson) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Configuration.SwitchableJson?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.SwitchableJson) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Configuration.SwitchableJson/Readme.md) |
+| [`Eigenverft.NetLib.Configuration.Values`](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Values) | Selected persisted settings need self-describing reversible encoding or protection while remaining usable in configuration pipelines. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Configuration.Values?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Values) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Configuration.Values?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Values) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Configuration.Values/Readme.md) |
+| [`Eigenverft.NetLib.Configuration.WritebackJson`](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.WritebackJson) | An application needs editable JSON with durable current state, an initial rollback snapshot, and an isolated runtime working copy. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Configuration.WritebackJson?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.WritebackJson) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Configuration.WritebackJson?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.WritebackJson) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Configuration.WritebackJson/Readme.md) |
+| [`Eigenverft.NetLib.Hosting.DirectoryLayout`](https://www.nuget.org/packages/Eigenverft.NetLib.Hosting.DirectoryLayout) | A service needs predictable writable folders anchored to the executable and the host environment before builder creation. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Hosting.DirectoryLayout?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Hosting.DirectoryLayout) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Hosting.DirectoryLayout?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Hosting.DirectoryLayout) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Hosting.DirectoryLayout/Readme.md) |
+| [`Eigenverft.NetLib.Hosting.SelfHttpWarmup`](https://www.nuget.org/packages/Eigenverft.NetLib.Hosting.SelfHttpWarmup) | First-request costs should be paid after startup and before normal traffic; call selected local HTTP endpoints once the host is ready. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Hosting.SelfHttpWarmup?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Hosting.SelfHttpWarmup) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Hosting.SelfHttpWarmup?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Hosting.SelfHttpWarmup) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Hosting.SelfHttpWarmup/Readme.md) |
+| [`Eigenverft.NetLib.Logging.Bootstrap`](https://www.nuget.org/packages/Eigenverft.NetLib.Logging.Bootstrap) | Startup failures and configuration diagnostics must be logged before the host and its normal logging pipeline exist. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Logging.Bootstrap?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Logging.Bootstrap) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Logging.Bootstrap?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Logging.Bootstrap) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Logging.Bootstrap/Readme.md) |
+| [`Eigenverft.NetLib.Logging.Deferred`](https://www.nuget.org/packages/Eigenverft.NetLib.Logging.Deferred) | Expensive log messages or structured arguments should not be computed when their log level is disabled. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Logging.Deferred?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Logging.Deferred) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Logging.Deferred?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Logging.Deferred) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Logging.Deferred/Readme.md) |
+| [`Eigenverft.NetLib.Networking`](https://www.nuget.org/packages/Eigenverft.NetLib.Networking) | IP input must compare consistently across IPv4, IPv4-mapped IPv6, IPv6 scope IDs, and CIDR ranges. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Networking?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Networking) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Networking?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Networking) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Networking/Readme.md) |
+| [`Eigenverft.NetLib.Security.Certificates`](https://www.nuget.org/packages/Eigenverft.NetLib.Security.Certificates) | A service must load a PFX or create a controlled self-signed recovery certificate under explicit policy. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Security.Certificates?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Security.Certificates) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Security.Certificates?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Security.Certificates) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Security.Certificates/Readme.md) |
+| [`Eigenverft.NetLib.Security.DataProtection`](https://www.nuget.org/packages/Eigenverft.NetLib.Security.DataProtection) | ASP.NET Core Data Protection must participate in reversible transforms and persisted configuration-value codecs. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Security.DataProtection?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Security.DataProtection) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Security.DataProtection?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Security.DataProtection) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Security.DataProtection/Readme.md) |
+| [`Eigenverft.NetLib.Security.MachineBinding`](https://www.nuget.org/packages/Eigenverft.NetLib.Security.MachineBinding) | A deployment needs a stable, non-secret machine factor derived from the operating-system platform UUID. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Security.MachineBinding?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Security.MachineBinding) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Security.MachineBinding?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Security.MachineBinding) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Security.MachineBinding/Readme.md) |
+| [`Eigenverft.NetLib.Transformations`](https://www.nuget.org/packages/Eigenverft.NetLib.Transformations) | String transformations must be composed and reversed independently of configuration, storage, or hosting. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Transformations?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Transformations) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Transformations?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Transformations) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Transformations/Readme.md) |
+
+## Legacy monolith reference
+
+The historical overview and examples below describe the consolidated package surface. They are kept
+for existing consumers; package-specific guides above are authoritative for current installation,
+APIs, behavior, and caveats.
 
 ---
 
-## ✨ At a glance
+## ✨ Legacy monolith at a glance
 
 | Capability | Problem solved | Starting point |
 | --- | --- | --- |
@@ -25,9 +57,12 @@ diagnostics must be available before the normal host lifecycle is ready.
 | Startup diagnostics | Explain configuration precedence and log before the host is built | `LogConfigurationResolution(...)` and `BootstrapLogger<T>` |
 | Early host environment | Resolve the host environment before a Generic Host or ASP.NET Core builder exists | `StaticHostEnvironment.EnvironmentName` |
 
-The package targets .NET 8 and .NET 10 and is licensed under MIT.
+The frozen monolith targets .NET 8 and .NET 10 and is licensed under MIT.
 
-## 📦 Installation
+## 📦 Legacy monolith installation
+
+> For new applications, install the required capability package(s) from the table above. The
+> commands below are retained only for existing consumers of the frozen monolith.
 
 ```shell
 dotnet add package Eigenverft.NetLib.Infrastructure
@@ -39,7 +74,10 @@ Or with the NuGet Package Manager:
 Install-Package Eigenverft.NetLib.Infrastructure
 ```
 
-## 🚀 Quick start
+## 🚀 Legacy monolith quick start
+
+> The following namespaces and examples preserve the old consolidated package surface. Use the
+> linked package guide above for current package-specific setup.
 
 ### Create the host foundation
 
@@ -911,13 +949,15 @@ dotnet test src/Eigenverft.NetLib.Infrastructure.slnx --configuration Release
 
 `main` is the production channel. Every accepted change is built, tested, documented, packed, and published by the repository CI/CD workflow.
 
-Package versions follow the Eigenverft Drydock timestamp-based versioning scheme. Published versions and download history are available on [NuGet.org](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure).
+The 16 capability packages are versioned and released independently. Use each package's badges in
+the overview above for its current NuGet version and download history; the frozen monolith remains
+a legacy path.
 
 ## 🤝 Contributing and support
 
 - 🐛 [Open an issue](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/issues)
 - 🔧 [Submit a pull request](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/pulls)
-- 📦 [View the package on NuGet.org](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure)
+- 📦 [View the legacy monolith package on NuGet.org](https://www.nuget.org/packages/Eigenverft.NetLib.Infrastructure)
 
 ## 📄 License
 
