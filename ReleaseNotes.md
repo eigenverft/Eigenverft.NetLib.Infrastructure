@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `1da2b00` — Stabilize the SerilogRelay partial-claim race reliability test by stopping and awaiting the sink's autonomous sender before the test manually drives `ProcessPendingAsync`. Hosted diagnostics showed the prior failure was independent of net8/net10 and TFM parallelism: the test could introduce an unintended second claim agent and observe one row reclaimed after the explicit release. Product delivery behavior is unchanged.
+
 - `7a65203` — Align SerilogRelay public documentation and NuGet metadata: make NuGet/Solution READMEs self-contained product documentation, retire the internal `RELEASE-READINESS.md` tracker while retaining `RELIABILITY.md`, remove `Company=Eigenverft`, keep established copyright/author metadata, and replace internal revival notes with public 0.1.0 package release notes. Validation: net8/net10 Release builds clean, net10 83/83 tests pass without coverage instrumentation for this docs-only change, and package generation succeeds.
 
 - `ff19bec` — Add optional opaque bearer-token authentication to `WriteTo.SerilogRelay(...)` via the trailing `bearerToken` parameter. A configured raw token is sent as `Authorization: Bearer <token>`; null/empty/whitespace sends no auth header. Update package/release-readiness docs for the matching CentralLogging `CentralLogging:BearerToken` / `CentralLogging__BearerToken` receiver configuration. Validation: net8/net10 build clean, net10 77/77 tests at 100% line/branch/method coverage, and package `0.1.0.22-gff19beca3d` builds successfully.
