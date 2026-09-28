@@ -1,61 +1,39 @@
 # Eigenverft.NetLib.Transformations
 
-The `.slnx` and this readme live in this folder. Open a terminal here for the commands below. The CLI finds the one solution in this directory; you do not pass a `.slnx` or `.csproj` path. Other libraries keep their own `.slnx` under `src/sln/<name>/`, so `dotnet` does not ask you to specify a solution.
+[![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Transformations?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Transformations) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Transformations?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Transformations) [![Repository CI](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=repository%20CI)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-net8.0%20%7C%20net10.0-512BD4?logo=dotnet&logoColor=white)](https://www.nuget.org/packages/Eigenverft.NetLib.Transformations) [![License](https://img.shields.io/badge/license-MIT-blue.svg?logo=mit)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE)
 
-```text
-./                         you are here (this readme + Eigenverft.NetLib.Transformations.slnx)
-../../prj/Eigenverft.NetLib.Transformations/    packable class library
-../../prj/Eigenverft.NetLib.Transformations.Tests/  tests (not packed)
+Apply reusable reversible transforms to strings, or compose them into a pipeline. The library stays persistence-neutral: it does not frame values or select configuration keys. See the [package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/tree/main/src/prj/Eigenverft.NetLib.Transformations/NugetAssets/Readme.md) for API details, platform behavior, and security caveats.
+
+| Capability | Entry point |
+| --- | --- |
+| Apply or reverse a transform | `ReversibleStringTransform` |
+| Built-in transforms and ordered composition | `ReversibleStringTransforms` |
+| Self-describing persisted configuration values | [Configuration.Values](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Values) |
+
+```csharp
+using System;
+using System.IO;
+using Eigenverft.NetLib.Transformations;
+
+ReversibleStringTransform pipeline = ReversibleStringTransforms.Compose(
+    ReversibleStringTransforms.Rot13,
+    ReversibleStringTransforms.Base64);
+
+string payload = pipeline.Apply("Hello");
+if (!pipeline.TryReverse(payload, out string original))
+{
+    throw new InvalidDataException("The payload could not be reversed.");
+}
+
+Console.WriteLine(original);
 ```
 
-Package metadata, license, icon, and release notes live in `src/prj/Eigenverft.NetLib.Transformations/NugetAssets/`.
+Composition applies first-to-last and reverses in the opposite order. `TryReverse(...)` returns `false` with the transformed input unchanged if any stage fails; no partial reversal is returned. Base64 and ROT13 change representation, not confidentiality. For persisted configuration values that need a self-describing codec, see [Configuration.Values](../Eigenverft.NetLib.Configuration.Values/Readme.md); raw transforms do not frame values or choose configuration keys.
 
-`--tl:off` is optional. Without it the CLI shows the compact terminal logger. Add `--tl:off` for the classic per-project log. The commands work either way.
+## Development
 
-## Restore and build
-
-```bash
-dotnet restore
-dotnet build
-```
-
-## Test
-
-Run the tests for all target frameworks:
+Run package tests for both target frameworks from this directory:
 
 ```bash
 dotnet test
-```
-
-## Pack
-
-```bash
-dotnet pack
-```
-
-Creates one `.nupkg` in `src/prj/Eigenverft.NetLib.Transformations/bin/Pack/` containing the library for all selected target frameworks. Test and optional benchmark projects are not packed.
-
-Optional: copy the package to a local feed by setting `LocalPackagesDir` in the library project, or:
-
-```bash
-dotnet pack -p:LocalPackagesDir="path/to/local/packages"
-```
-
-## Publish
-
-```bash
-dotnet publish
-```
-
-Writes library output to `src/prj/Eigenverft.NetLib.Transformations/bin/Publish/` for the highest selected target framework. This is a class library, not an executable.
-
-## CI
-
-Use `-m:1` for the build so a pipeline does not depend on machine load. It avoids occasional file locks when the library is built as a solution project and as a test `ProjectReference` at the same time. Run these commands from this folder so each library has exactly one `.slnx` in the working directory.
-
-```bash
-dotnet restore
-dotnet build --no-restore -m:1
-dotnet test --no-build
-dotnet pack
 ```

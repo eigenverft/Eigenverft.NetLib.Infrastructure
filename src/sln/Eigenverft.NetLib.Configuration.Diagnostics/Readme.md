@@ -1,61 +1,41 @@
 # Eigenverft.NetLib.Configuration.Diagnostics
 
-The `.slnx` and this readme live in this folder. Open a terminal here for the commands below. The CLI finds the one solution in this directory; you do not pass a `.slnx` or `.csproj` path. Other libraries keep their own `.slnx` under `src/sln/<name>/`, so `dotnet` does not ask you to specify a solution.
+[![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Configuration.Diagnostics?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Diagnostics) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Configuration.Diagnostics?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Diagnostics) [![Repository CI](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=repository%20CI)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-net8.0%20%7C%20net10.0-512BD4?logo=dotnet&logoColor=white)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Diagnostics) [![License](https://img.shields.io/badge/license-MIT-blue.svg?logo=mit)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE)
 
-```text
-./                         you are here (this readme + Eigenverft.NetLib.Configuration.Diagnostics.slnx)
-../../prj/Eigenverft.NetLib.Configuration.Diagnostics/    packable class library
-../../prj/Eigenverft.NetLib.Configuration.Diagnostics.Tests/  tests (not packed)
+Log configuration-provider precedence and shadowed keys during Generic Host startup. The diagnostics report provider origins and key paths, never values.
+
+| Package | Primary API | Target frameworks |
+| --- | --- | --- |
+| `Eigenverft.NetLib.Configuration.Diagnostics` | `builder.LogConfigurationResolution(logger)` | .NET 8, .NET 10 |
+
+```csharp
+using Eigenverft.NetLib.Configuration.Diagnostics;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+builder.Configuration.AddJsonFile(
+    "other-settings.json",
+    optional: true,
+    reloadOnChange: true);
+
+using ILoggerFactory loggerFactory =
+    LoggerFactory.Create(logging => logging.AddConsole());
+ILogger startupLogger = loggerFactory.CreateLogger("ConfigurationStartup");
+
+builder.LogConfigurationResolution(startupLogger);
+
+using IHost host = builder.Build();
+await host.RunAsync();
 ```
 
-Package metadata, license, icon, and release notes live in `src/prj/Eigenverft.NetLib.Configuration.Diagnostics/NugetAssets/`.
+Call after all providers have been registered and before `Build()`. Provider order is reported highest precedence first; opaque providers may make the collision scan incomplete, and values are never logged. This package consumes an `ILogger` but does not create one: [Logging.Bootstrap](../Eigenverft.NetLib.Logging.Bootstrap/Readme.md) can provide startup logging before the host exists. If you intentionally reset host defaults first, see [Configuration.Sources](../Eigenverft.NetLib.Configuration.Sources/Readme.md), then add the providers to inspect. The [NuGet package guide](../../prj/Eigenverft.NetLib.Configuration.Diagnostics/NugetAssets/Readme.md) covers lower-level diagnostic calls.
 
-`--tl:off` is optional. Without it the CLI shows the compact terminal logger. Add `--tl:off` for the classic per-project log. The commands work either way.
+## Development
 
-## Restore and build
-
-```bash
-dotnet restore
-dotnet build
-```
-
-## Test
-
-Run the tests for all target frameworks:
+Run package tests for both target frameworks from this directory:
 
 ```bash
 dotnet test
-```
-
-## Pack
-
-```bash
-dotnet pack
-```
-
-Creates one `.nupkg` in `src/prj/Eigenverft.NetLib.Configuration.Diagnostics/bin/Pack/` containing the library for all selected target frameworks. Test and optional benchmark projects are not packed.
-
-Optional: copy the package to a local feed by setting `LocalPackagesDir` in the library project, or:
-
-```bash
-dotnet pack -p:LocalPackagesDir="path/to/local/packages"
-```
-
-## Publish
-
-```bash
-dotnet publish
-```
-
-Writes library output to `src/prj/Eigenverft.NetLib.Configuration.Diagnostics/bin/Publish/` for the highest selected target framework. This is a class library, not an executable.
-
-## CI
-
-Use `-m:1` for the build so a pipeline does not depend on machine load. It avoids occasional file locks when the library is built as a solution project and as a test `ProjectReference` at the same time. Run these commands from this folder so each library has exactly one `.slnx` in the working directory.
-
-```bash
-dotnet restore
-dotnet build --no-restore -m:1
-dotnet test --no-build
-dotnet pack
 ```

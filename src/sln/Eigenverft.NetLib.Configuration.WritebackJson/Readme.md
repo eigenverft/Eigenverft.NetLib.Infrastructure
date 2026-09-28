@@ -1,61 +1,36 @@
 # Eigenverft.NetLib.Configuration.WritebackJson
 
-The `.slnx` and this readme live in this folder. Open a terminal here for the commands below. The CLI finds the one solution in this directory; you do not pass a `.slnx` or `.csproj` path. Other libraries keep their own `.slnx` under `src/sln/<name>/`, so `dotnet` does not ask you to specify a solution.
+[![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Configuration.WritebackJson?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.WritebackJson) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Configuration.WritebackJson?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.WritebackJson) [![Repository CI](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=repository%20CI)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-net8.0%20%7C%20net10.0-512BD4?logo=dotnet&logoColor=white)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.WritebackJson) [![License](https://img.shields.io/badge/license-MIT-blue.svg?logo=mit)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE)
 
-```text
-./                         you are here (this readme + Eigenverft.NetLib.Configuration.WritebackJson.slnx)
-../../prj/Eigenverft.NetLib.Configuration.WritebackJson/    packable class library
-../../prj/Eigenverft.NetLib.Configuration.WritebackJson.Tests/  tests (not packed)
+Manage a typed JSON document with a file-backed current state, an initial rollback snapshot, and a separate runtime-only working copy.
+
+## At a glance
+
+| Need | API |
+| --- | --- |
+| Persist a mutation | `MutateCurrentAndSave(...)` |
+| Change runtime-only state | `MutateRuntimeWorkingCopy(...)` |
+| Resynchronize or restore branches | `Restore...` methods |
+
+## Quick start
+
+```csharp
+using Eigenverft.NetLib.Configuration.WritebackJson;
+
+using var store = new WritebackJsonStore<RuntimeSettings>(
+    "AppSettings/runtime-settings.json");
+
+store.MutateRuntimeWorkingCopy(settings => settings.Route = "Preview");
+store.MutateCurrentAndSave(settings => settings.Route = "Failover");
+
+public sealed class RuntimeSettings
+{
+    public string Route { get; set; } = "Primary";
+}
 ```
 
-Package metadata, license, icon, and release notes live in `src/prj/Eigenverft.NetLib.Configuration.WritebackJson/NugetAssets/`.
+The runtime branch remains `Preview`; persisting `Current` as `Failover` does not replace it. This store is not an `IConfiguration` provider. See the [NuGet README](../../prj/Eigenverft.NetLib.Configuration.WritebackJson/NugetAssets/Readme.md) for notifications, external-file watching, dependency-injection registration, and state semantics.
 
-`--tl:off` is optional. Without it the CLI shows the compact terminal logger. Add `--tl:off` for the classic per-project log. The commands work either way.
+## Development
 
-## Restore and build
-
-```bash
-dotnet restore
-dotnet build
-```
-
-## Test
-
-Run the tests for all target frameworks:
-
-```bash
-dotnet test
-```
-
-## Pack
-
-```bash
-dotnet pack
-```
-
-Creates one `.nupkg` in `src/prj/Eigenverft.NetLib.Configuration.WritebackJson/bin/Pack/` containing the library for all selected target frameworks. Test and optional benchmark projects are not packed.
-
-Optional: copy the package to a local feed by setting `LocalPackagesDir` in the library project, or:
-
-```bash
-dotnet pack -p:LocalPackagesDir="path/to/local/packages"
-```
-
-## Publish
-
-```bash
-dotnet publish
-```
-
-Writes library output to `src/prj/Eigenverft.NetLib.Configuration.WritebackJson/bin/Publish/` for the highest selected target framework. This is a class library, not an executable.
-
-## CI
-
-Use `-m:1` for the build so a pipeline does not depend on machine load. It avoids occasional file locks when the library is built as a solution project and as a test `ProjectReference` at the same time. Run these commands from this folder so each library has exactly one `.slnx` in the working directory.
-
-```bash
-dotnet restore
-dotnet build --no-restore -m:1
-dotnet test --no-build
-dotnet pack
-```
+Run `dotnet test` from this directory to test the package for all target frameworks.

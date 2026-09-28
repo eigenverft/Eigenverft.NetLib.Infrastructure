@@ -1,61 +1,36 @@
 # Eigenverft.NetLib.Configuration.Values
 
-The `.slnx` and this readme live in this folder. Open a terminal here for the commands below. The CLI finds the one solution in this directory; you do not pass a `.slnx` or `.csproj` path. Other libraries keep their own `.slnx` under `src/sln/<name>/`, so `dotnet` does not ask you to specify a solution.
+[![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Configuration.Values?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Values) [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Configuration.Values?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Values) [![Repository CI](https://img.shields.io/github/actions/workflow/status/eigenverft/Eigenverft.NetLib.Infrastructure/cicd.yml?branch=main&label=repository%20CI)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/workflows/cicd.yml) [![Targets](https://img.shields.io/badge/targets-net8.0%20%7C%20net10.0-512BD4?logo=dotnet&logoColor=white)](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.Values) [![License](https://img.shields.io/badge/license-MIT-blue.svg?logo=mit)](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/LICENSE)
 
-```text
-./                         you are here (this readme + Eigenverft.NetLib.Configuration.Values.slnx)
-../../prj/Eigenverft.NetLib.Configuration.Values/    packable class library
-../../prj/Eigenverft.NetLib.Configuration.Values.Tests/  tests (not packed)
+Encode selected persisted configuration values with self-describing codecs, or apply a codec to matching strings in an existing JSON file.
+
+## At a glance
+
+| Need | API |
+| --- | --- |
+| Encode or decode a persisted value | `ConfigurationValueCodec` |
+| Select a built-in codec or compose codecs | `ConfigurationValueCodecs` |
+| Encode matching JSON string values | `JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(...)` |
+
+## Quick start
+
+```csharp
+using System;
+using Eigenverft.NetLib.Configuration.Values;
+
+string password = Environment.GetEnvironmentVariable("CONFIGURATION_PROTECTION_SECRET")
+    ?? throw new InvalidOperationException("A protection secret is required.");
+var codec = ConfigurationValueCodecs.AesPassword(password);
+
+int changed = JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(
+    "AppSettings/PartnerSettings.json",
+    "PartnerApi:ApiToken",
+    codec);
+Console.WriteLine($"Encoded {changed} value(s).");
 ```
 
-Package metadata, license, icon, and release notes live in `src/prj/Eigenverft.NetLib.Configuration.Values/NugetAssets/`.
+The encoder selects values by full colon-separated configuration path, leaves recognized encoded envelopes unchanged, and reports how many values changed. Use the same codec and required factors when decoding. For JSON profiles loaded at startup or switched at runtime, the separate [SwitchableJson](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.SwitchableJson) package can apply a codec to selected keys while loading; Values itself does not load configuration. See the [NuGet README](../../prj/Eigenverft.NetLib.Configuration.Values/NugetAssets/Readme.md) for codec composition, matching, and security behavior.
 
-`--tl:off` is optional. Without it the CLI shows the compact terminal logger. Add `--tl:off` for the classic per-project log. The commands work either way.
+## Development
 
-## Restore and build
-
-```bash
-dotnet restore
-dotnet build
-```
-
-## Test
-
-Run the tests for all target frameworks:
-
-```bash
-dotnet test
-```
-
-## Pack
-
-```bash
-dotnet pack
-```
-
-Creates one `.nupkg` in `src/prj/Eigenverft.NetLib.Configuration.Values/bin/Pack/` containing the library for all selected target frameworks. Test and optional benchmark projects are not packed.
-
-Optional: copy the package to a local feed by setting `LocalPackagesDir` in the library project, or:
-
-```bash
-dotnet pack -p:LocalPackagesDir="path/to/local/packages"
-```
-
-## Publish
-
-```bash
-dotnet publish
-```
-
-Writes library output to `src/prj/Eigenverft.NetLib.Configuration.Values/bin/Publish/` for the highest selected target framework. This is a class library, not an executable.
-
-## CI
-
-Use `-m:1` for the build so a pipeline does not depend on machine load. It avoids occasional file locks when the library is built as a solution project and as a test `ProjectReference` at the same time. Run these commands from this folder so each library has exactly one `.slnx` in the working directory.
-
-```bash
-dotnet restore
-dotnet build --no-restore -m:1
-dotnet test --no-build
-dotnet pack
-```
+Run `dotnet test` from this directory to test the package for all target frameworks.
