@@ -1718,6 +1718,20 @@ END;";
                     "http://127.0.0.1:1/logs",
                     options);
 
+                // This test drives ProcessPendingAsync directly. Stop the autonomous sender first
+                // so it cannot reclaim the row between the explicit release and verification.
+                CancellationTokenSource senderCancellation =
+                    GetPrivateField<CancellationTokenSource>(sink, "_cts");
+                senderCancellation.Cancel();
+                try
+                {
+                    await GetPrivateField<Task>(sink, "_senderTask")
+                        .WaitAsync(TimeSpan.FromSeconds(5));
+                }
+                catch (OperationCanceledException) when (senderCancellation.IsCancellationRequested)
+                {
+                }
+
                 sink.Emit(CreateLogEvent("claim race first"));
                 sink.Emit(CreateLogEvent("claim race second"));
 
