@@ -2208,30 +2208,23 @@ SELECT ClaimOwnerId
             string? stopFile,
             string readyFile)
         {
-            string projectPath = FindCurrentTestProjectPath();
-            string targetFramework = $"net{Environment.Version.Major}.0";
+            string testAssemblyPath = typeof(SerilogRelayReliabilityTests).Assembly.Location;
 
             var startInfo = new ProcessStartInfo(GetCurrentDotNetHostPath())
             {
-                WorkingDirectory = Path.GetDirectoryName(projectPath)!,
+                WorkingDirectory = Path.GetDirectoryName(testAssemblyPath)!,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
             };
 
-            startInfo.ArgumentList.Add("test");
-            startInfo.ArgumentList.Add(projectPath);
-            startInfo.ArgumentList.Add("-c");
-            startInfo.ArgumentList.Add("Release");
-            startInfo.ArgumentList.Add("--framework");
-            startInfo.ArgumentList.Add(targetFramework);
-            startInfo.ArgumentList.Add("--no-build");
-            startInfo.ArgumentList.Add("--no-restore");
-            startInfo.ArgumentList.Add("-p:CollectCoverage=false");
-            startInfo.ArgumentList.Add("-p:VSTestLogger=");
-            startInfo.ArgumentList.Add("--filter");
-            startInfo.ArgumentList.Add("Name=SeparateProcessSenderRole");
+            // Execute the already-built test assembly directly. Using `dotnet test <csproj>`
+            // would still evaluate the project and share its obj directory with the parent
+            // test run, which can race with generated MSBuild props on hosted runners.
+            startInfo.ArgumentList.Add("vstest");
+            startInfo.ArgumentList.Add(testAssemblyPath);
+            startInfo.ArgumentList.Add("--Tests:SeparateProcessSenderRole");
 
             startInfo.Environment["SERILOG_RELAY_PROCESS_TEST_ROLE"] = role;
             startInfo.Environment["SERILOG_RELAY_PROCESS_TEST_CONNECTION"] = connectionString;
@@ -2271,23 +2264,6 @@ SELECT ClaimOwnerId
                     hostPath);
         }
 
-        private static string FindCurrentTestProjectPath()
-        {
-            DirectoryInfo? directory = new DirectoryInfo(AppContext.BaseDirectory);
-            while (directory is not null)
-            {
-                string candidate = Path.Combine(
-                    directory.FullName,
-                    "Eigenverft.NetLib.SerilogRelay.Tests.csproj");
-                if (File.Exists(candidate))
-                    return candidate;
-
-                directory = directory.Parent;
-            }
-
-            throw new FileNotFoundException(
-                "Could not locate Eigenverft.NetLib.SerilogRelay.Tests.csproj from the test output path.");
-        }
 
         private static string GetRequiredProcessTestEnvironment(string name)
         {
