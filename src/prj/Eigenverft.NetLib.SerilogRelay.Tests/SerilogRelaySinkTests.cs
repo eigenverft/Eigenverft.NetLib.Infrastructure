@@ -1348,7 +1348,7 @@ END;";
                 entry.Exception = null;
                 entry.Properties = null;
 
-                GetPrivateMethod("PersistLogEntryCore", isStatic: false)
+                GetPrivateMethod("TryPersistLogEntryCore", isStatic: false)
                     .Invoke(sink, new object[] { entry });
 
                 GetPrivateMethod("EnqueueEmergency", isStatic: false)

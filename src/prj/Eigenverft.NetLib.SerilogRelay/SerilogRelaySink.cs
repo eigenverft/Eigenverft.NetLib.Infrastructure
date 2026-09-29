@@ -503,10 +503,10 @@ CREATE TABLE IF NOT EXISTS {0} (
             {
                 try
                 {
-                    bool persisted = ExecuteDatabaseWithRecovery(() => PersistLogEntryCore(entry));
+                    bool persisted = ExecuteDatabaseWithRecovery(() => TryPersistLogEntryCore(entry));
                     if (!persisted)
                     {
-                        RecordApplicationSpoolCapacityRejected();
+                        RecordApplicationSpoolCapacityDrop();
                         return;
                     }
 

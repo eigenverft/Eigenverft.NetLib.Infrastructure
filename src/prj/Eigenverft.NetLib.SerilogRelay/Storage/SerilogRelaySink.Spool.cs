@@ -63,7 +63,9 @@ DELETE FROM {TableName}
                 ? "0 seconds"
                 : FormattableString.Invariant($"{-span.TotalSeconds:R} seconds");
 
-        private bool PersistLogEntryCore(LogEntry entry)
+        // A false result means the event is rejected by the spool capacity policy.
+        // Storage exceptions propagate so the caller can use the emergency buffer.
+        private bool TryPersistLogEntryCore(LogEntry entry)
         {
             int reclaimAttempts = 0;
             bool emptySpoolFitChecked = false;
@@ -80,7 +82,7 @@ DELETE FROM {TableName}
                     if (!emptySpoolFitChecked)
                     {
                         emptySpoolFitChecked = true;
-                        if (!CanPersistInEmptyApplicationSpoolCore(entry))
+                        if (!CanFitInEmptyApplicationSpoolCore(entry))
                             return false;
                     }
 
@@ -90,8 +92,9 @@ DELETE FROM {TableName}
             }
         }
 
-        private bool CanPersistInEmptyApplicationSpoolCore(LogEntry entry)
+        private bool CanFitInEmptyApplicationSpoolCore(LogEntry entry)
         {
+            // This disposable database only probes capacity; it stores no backlog.
             using var conn = new SqliteConnection("Data Source=:memory:");
             conn.Open();
             ConfigurePragmas(conn);
@@ -221,7 +224,7 @@ DELETE FROM {TableName}
         }
 
 
-        private void RecordApplicationSpoolCapacityRejected()
+        private void RecordApplicationSpoolCapacityDrop()
         {
             long dropped = Interlocked.Increment(ref _applicationSpoolDroppedCount);
             if (Interlocked.Exchange(ref _applicationSpoolOverflowReported, 1) != 0)

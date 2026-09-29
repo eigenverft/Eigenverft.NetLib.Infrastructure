@@ -91,11 +91,11 @@ namespace Eigenverft.NetLib.SerilogRelay
 
                             try
                             {
-                                bool persisted = ExecuteDatabaseWithRecovery(() => PersistLogEntryCore(entry));
+                                bool persisted = ExecuteDatabaseWithRecovery(() => TryPersistLogEntryCore(entry));
                                 if (!persisted)
                                 {
                                     MarkSpoolRecovered();
-                                    RecordApplicationSpoolCapacityRejected();
+                                    RecordApplicationSpoolCapacityDrop();
                                     CompleteEmergencyEntry(bufferedEntry);
                                     completed = true;
                                     continue;
