@@ -25,6 +25,7 @@ namespace Eigenverft.NetLib.SerilogRelay
     /// </summary>
     public static class LoggerConfigurationSerilogRelayExtensions
     {
+        private const int MaximumApplicationIdLength = 256;
         private const string DefaultSpoolFileName = "SerilogRelay.db";
 
         /// <summary>
@@ -37,7 +38,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <param name="endpoint">The optional HTTP endpoint used by this sink/process for batched delivery of any shared-spool rows it claims. Pending rows do not retain the endpoint of their creating process.</param>
         /// <param name="spoolDirectory">Optional spool directory. Relative paths are resolved below the application-specific default directory.</param>
         /// <param name="spoolFileName">Optional spool filename. Defaults to <c>SerilogRelay.db</c>.</param>
-        /// <param name="applicationId">Optional application identity used by the default spool directory. Defaults to the entry-assembly name.</param>
+        /// <param name="applicationId">Optional application identity used by the default spool directory. Defaults to the entry-assembly name. The normalized identity must not exceed 256 characters.</param>
         /// <param name="dangerousAcceptAnyServerCertificate">When <see langword="true"/>, disables server-certificate validation for relay HTTP requests. Defaults to <see langword="false"/> and should only be enabled deliberately for trusted private/development infrastructure.</param>
         /// <param name="minimumBatchSize">The minimum pending-event count required before normal background delivery starts.</param>
         /// <param name="maximumBatchSize">The maximum number of events included in one HTTP batch.</param>
@@ -91,7 +92,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <param name="options">Relay behavior options. All nested option groups have complete defaults.</param>
         /// <param name="spoolDirectory">Optional spool directory.</param>
         /// <param name="spoolFileName">Optional spool filename.</param>
-        /// <param name="applicationId">Optional logical application identity.</param>
+        /// <param name="applicationId">Optional logical application identity. The normalized identity must not exceed 256 characters.</param>
         /// <param name="dangerousAcceptAnyServerCertificate">Whether relay HTTP requests should bypass server-certificate validation.</param>
         /// <param name="bearerToken">Optional raw bearer token sent as <c>Authorization: Bearer &lt;token&gt;</c>. Null, empty, or whitespace disables the header.</param>
         /// <param name="restrictedToMinimumLevel">The minimum Serilog event level accepted by the sink.</param>
@@ -187,6 +188,9 @@ namespace Eigenverft.NetLib.SerilogRelay
                 : applicationId.Trim();
 
             string normalized = Regex.Replace(candidate, "[^A-Za-z0-9._-]+", "_").Trim('.', '_');
+            if (normalized.Length > MaximumApplicationIdLength)
+                throw new ArgumentException("ApplicationId must not exceed 256 characters after normalization.", nameof(applicationId));
+
             return string.IsNullOrWhiteSpace(normalized) ? "Application" : normalized;
         }
 

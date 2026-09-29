@@ -244,7 +244,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                 }
 
                 DateTimeOffset? retryAfter = null;
-                if ((int)resp.StatusCode == 429 && resp.Headers.RetryAfter is not null)
+                if (resp.Headers.RetryAfter is not null)
                 {
                     if (resp.Headers.RetryAfter.Delta.HasValue)
                         retryAfter = DateTimeOffset.UtcNow + resp.Headers.RetryAfter.Delta.Value;

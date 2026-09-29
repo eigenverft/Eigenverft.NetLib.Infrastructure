@@ -9,11 +9,11 @@ Initial public SerilogRelay package.
 - Supports shared application spools across multiple processes with atomic short-lived delivery claims and takeover after process failure.
 - Allows surviving or newer processes to drain backlog created by another process of the same application.
 - Provides configurable sent retention, optional unsent maximum age, and physical spool-size limits.
-- Adds process-local exponential endpoint retry with jitter and optional HTTP `Retry-After` handling.
+- Adds process-local exponential endpoint retry with jitter and optional HTTP `Retry-After` handling on every non-2xx response.
 - Adds a bounded emergency memory buffer for temporary local persistence failures.
 - Adds SQLite corruption quarantine/recovery and recreates the spool when corruption is detected.
 - Uses normal platform TLS certificate validation by default; accepting any server certificate requires an explicit dangerous opt-in.
 - Supports an optional opaque bearer token sent as `Authorization: Bearer <token>`.
-- Includes `ApplicationId`, `MachineId`, and `ProcessId` producer metadata in the relay payload.
+- Includes `ApplicationId`, `MachineId`, and `ProcessId` producer metadata in the relay payload; normalized ApplicationId values are limited to 256 characters.
 - Uses at-least-once HTTP delivery semantics: non-2xx/transport failures remain pending for later retry or takeover.
 - Keeps receiver persistence, duplicate presentation, and server-side storage policy outside the sink contract.

@@ -231,7 +231,7 @@ Default failed-attempt progression:
 
 with +/-20% jitter.
 
-A valid HTTP `Retry-After` is honored. A successful delivery resets that process's retry state
+A valid HTTP `Retry-After` is honored on every non-2xx response. A successful delivery resets that process's retry state
 immediately.
 
 Normal endpoint outages remain in durable storage and do not consume Emergency memory.

@@ -32,6 +32,8 @@ Without overrides, the durable spool is application based:
 <LocalApplicationData>/Eigenverft/SerilogRelay/<ApplicationId>/SerilogRelay.db
 ```
 
+The normalized ApplicationId is limited to 256 characters. Longer values fail during configuration rather than being truncated. Without an explicit value, the entry-assembly name is used.
+
 Processes of the same logical application therefore share the same default spool path.
 
 Multiple active sinks can open and persist into that spool. Rows contain `ProcessId`, so their
@@ -111,7 +113,7 @@ The relay currently provides:
 - protection against one individually oversized event evicting existing backlog;
 - low-volume delivery after `MaximumBatchWait`;
 - immediate startup backlog delivery opportunity;
-- process-local exponential endpoint retry with jitter and HTTP `Retry-After`;
+- process-local exponential endpoint retry with jitter and HTTP `Retry-After` on every non-2xx response;
 - process-local Emergency memory bounds of 16384 events and 64 MiB payload bytes by default;
 - a real bounded shutdown deadline;
 - at-least-once HTTP delivery without imposing receiver-side storage/deduplication semantics.
