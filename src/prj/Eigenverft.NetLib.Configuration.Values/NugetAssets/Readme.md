@@ -74,7 +74,7 @@ Base64, Base92, ROT13, and Caesar are representations or reversible transforms, 
 
 `EncodeMatchingValuesInPlace` matches case-insensitive glob patterns against complete, colon-separated configuration paths, including object and array indices. Only matching JSON strings are encoded; recognized NetLib envelopes are left alone, so repeating the operation is idempotent. JSON `null` is encoded as an empty string by default; pass `nullAsEmpty: false` to leave it unchanged.
 
-The file is rewritten only if a value changes. A rewrite uses formatted JSON and removes comments, trailing commas, and original whitespace. Encoding clear-text values requires write access to the file. The helper does not load configuration or decode values while binding them.
+The file is rewritten only if a value changes. In-place rewrites hold exclusive access for each read/transform/write cycle, retry brief Windows file-sharing conflicts, and re-read a newer external file state instead of restoring an older snapshot. A rewrite uses formatted JSON and removes comments, trailing commas, and original whitespace. Encoding clear-text values requires write access to the file. The helper does not load configuration or decode values while binding them.
 
 To apply protection and decoding as configuration sources are loaded, use [Eigenverft.NetLib.Configuration.SwitchableJson](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.SwitchableJson), which builds on this package. This package itself remains independent of SwitchableJson and Configuration Sets.
 

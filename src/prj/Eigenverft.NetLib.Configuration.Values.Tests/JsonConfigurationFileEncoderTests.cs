@@ -183,6 +183,54 @@ namespace Eigenverft.NetLib.Configuration.Values.Tests
         }
 
         [TestMethod]
+        public async Task TemporaryExclusiveFileUseIsRetriedWithoutLosingChangedCount()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return;
+            }
+
+            using var directory = new TemporaryDirectory();
+            string path = directory.Write("settings.json", "{ \"ApiKey\": \"secret\" }");
+            using var started = new ManualResetEventSlim();
+            Task<int> protection;
+
+            using (var blocker = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.ReadWrite,
+                FileShare.None))
+            {
+                protection = Task.Factory.StartNew(
+                    () =>
+                    {
+                        started.Set();
+                        return JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(
+                            path,
+                            "ApiKey",
+                            ConfigurationValueCodecs.Base64);
+                    },
+                    CancellationToken.None,
+                    TaskCreationOptions.LongRunning,
+                    TaskScheduler.Default);
+
+                Assert.IsTrue(started.Wait(TimeSpan.FromSeconds(5)), "Protection task did not start.");
+                Assert.IsFalse(
+                    SpinWait.SpinUntil(() => protection.IsCompleted, TimeSpan.FromMilliseconds(75)),
+                    "Protection stopped retrying while the file was still temporarily locked.");
+            }
+
+            int changed = await protection.WaitAsync(TimeSpan.FromSeconds(5));
+
+            Assert.AreEqual(1, changed);
+            string persisted = File.ReadAllText(path);
+            using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(persisted);
+            string encoded = document.RootElement.GetProperty("ApiKey").GetString()!;
+            Assert.IsTrue(ConfigurationValueCodecs.Base64.TryDecode(encoded, out string clearText));
+            Assert.AreEqual("secret", clearText);
+        }
+
+        [TestMethod]
         public async Task ConcurrentExternalWriterWinsWithoutBeingOverwrittenByOlderProtectionSnapshot()
         {
             using var directory = new TemporaryDirectory();
@@ -230,9 +278,10 @@ namespace Eigenverft.NetLib.Configuration.Values.Tests
                 concurrentAttempted.Wait(TimeSpan.FromSeconds(5)),
                 "Concurrent writer did not attempt the source while protection held its snapshot handle.");
             release.Set();
-            _ = await protection.WaitAsync(TimeSpan.FromSeconds(5));
+            int changed = await protection.WaitAsync(TimeSpan.FromSeconds(5));
             await writer.WaitAsync(TimeSpan.FromSeconds(5));
 
+            Assert.AreEqual(1, changed);
             string persisted = File.ReadAllText(path);
             using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(persisted);
             Assert.AreEqual("B", document.RootElement.GetProperty("Revision").GetString());

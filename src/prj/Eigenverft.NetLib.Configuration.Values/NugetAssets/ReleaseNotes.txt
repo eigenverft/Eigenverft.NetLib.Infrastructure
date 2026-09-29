@@ -1,1 +1,5 @@
-Initial capability package extracted from Eigenverft.NetLib.Infrastructure.
+Configuration value codecs and in-place JSON value encoding.
+
+- Harden in-place JSON rewrites against transient Windows file-sharing and lock races.
+- Preserve newer concurrent external writes instead of allowing an older protection snapshot to overwrite them.
+- Keep the reported changed-value count tied to the successful rewrite even when post-write verification temporarily encounters a sharing lock.

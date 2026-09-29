@@ -29,7 +29,7 @@ int changed = JsonConfigurationFileEncoder.EncodeMatchingValuesInPlace(
 Console.WriteLine($"Encoded {changed} value(s).");
 ```
 
-The encoder selects values by full colon-separated configuration path, leaves recognized encoded envelopes unchanged, and reports how many values changed. Use the same codec and required factors when decoding. For JSON profiles loaded at startup or switched at runtime, the separate [SwitchableJson](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.SwitchableJson) package can apply a codec to selected keys while loading; Values itself does not load configuration. See the [NuGet README](../../prj/Eigenverft.NetLib.Configuration.Values/NugetAssets/Readme.md) for codec composition, matching, and security behavior.
+The encoder selects values by full colon-separated configuration path, leaves recognized encoded envelopes unchanged, and reports how many values changed. In-place rewrites use exclusive file access, retry brief Windows sharing conflicts, and re-read newer external file content instead of overwriting it from an older snapshot. Use the same codec and required factors when decoding. For JSON profiles loaded at startup or switched at runtime, the separate [SwitchableJson](https://www.nuget.org/packages/Eigenverft.NetLib.Configuration.SwitchableJson) package can apply a codec to selected keys while loading; Values itself does not load configuration. See the [NuGet README](../../prj/Eigenverft.NetLib.Configuration.Values/NugetAssets/Readme.md) for codec composition, matching, and security behavior.
 
 ## Development
 

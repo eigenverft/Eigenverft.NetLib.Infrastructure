@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace Eigenverft.NetLib.Configuration.Values
 {
@@ -13,6 +14,8 @@ namespace Eigenverft.NetLib.Configuration.Values
     public static class JsonConfigurationFileEncoder
     {
         private const int MaxConcurrentRewriteAttempts = 3;
+        private const int MaxFileSharingRetryAttempts = 50;
+        private const int FileSharingRetryDelayMilliseconds = 10;
         private static readonly Encoding PersistedEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
         /// <summary>Encodes values whose complete configuration paths match any supplied glob pattern.</summary>
@@ -24,7 +27,8 @@ namespace Eigenverft.NetLib.Configuration.Values
         /// <remarks>
         /// The file is rewritten only when at least one value changes. The encoder holds exclusive access to the source for the
         /// read/transform/write cycle so a successful rewrite cannot overwrite a newer normal file write that occurred after its
-        /// snapshot was read. Rewriting uses formatted JSON and therefore removes comments, trailing commas and the original
+        /// snapshot was read. Transient Windows file-sharing or lock conflicts are retried briefly; a newer file state is re-read
+        /// rather than replaced from the older snapshot. Rewriting uses formatted JSON and therefore removes comments, trailing commas and the original
         /// whitespace. Recognized encoded wrappers are left untouched, including wrappers created by another codec; codec migration
         /// requires an explicit decode-and-rewrite operation.
         /// </remarks>
@@ -65,11 +69,13 @@ namespace Eigenverft.NetLib.Configuration.Values
 
             for (int attempt = 1; attempt <= MaxConcurrentRewriteAttempts; attempt++)
             {
-                EncodeAttemptResult result = EncodeUnderExclusiveAccess(
-                    jsonFilePath,
-                    matcher,
-                    codec,
-                    nullAsEmpty);
+                EncodeAttemptResult result = ExecuteWithFileSharingRetry(
+                    () => EncodeUnderExclusiveAccess(
+                        jsonFilePath,
+                        matcher,
+                        codec,
+                        nullAsEmpty),
+                    jsonFilePath);
                 if (result.Updated == 0)
                 {
                     return 0;
@@ -78,8 +84,11 @@ namespace Eigenverft.NetLib.Configuration.Values
                 // FileShare.None closes the ordinary read/modify/write race on platforms that enforce sharing semantics.
                 // Re-check the path after releasing the handle as well: platforms that allow an atomic rename over an open file
                 // can otherwise leave our protected write on an unlinked file while a newer replacement remains at the path.
-                if (File.Exists(jsonFilePath) &&
-                    File.ReadAllBytes(jsonFilePath).SequenceEqual(result.PersistedBytes!))
+                bool persistedBytesStillCurrent = ExecuteWithFileSharingRetry(
+                    () => File.Exists(jsonFilePath) &&
+                        File.ReadAllBytes(jsonFilePath).SequenceEqual(result.PersistedBytes!),
+                    jsonFilePath);
+                if (persistedBytesStillCurrent)
                 {
                     return result.Updated;
                 }
@@ -92,6 +101,44 @@ namespace Eigenverft.NetLib.Configuration.Values
             }
 
             throw new InvalidOperationException("The JSON protection rewrite loop completed unexpectedly.");
+        }
+
+        private static T ExecuteWithFileSharingRetry<T>(Func<T> action, string jsonFilePath)
+        {
+            for (int attempt = 1; attempt <= MaxFileSharingRetryAttempts; attempt++)
+            {
+                try
+                {
+                    return action();
+                }
+                catch (IOException exception) when (IsFileSharingViolation(exception))
+                {
+                    if (attempt == MaxFileSharingRetryAttempts)
+                    {
+                        throw new IOException(
+                            $"JSON configuration file '{jsonFilePath}' remained busy while value protection was accessing it.",
+                            exception);
+                    }
+
+                    Thread.Sleep(FileSharingRetryDelayMilliseconds);
+                }
+            }
+
+            throw new InvalidOperationException("The JSON file sharing retry loop completed unexpectedly.");
+        }
+
+        private static bool IsFileSharingViolation(IOException exception)
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return false;
+            }
+
+            const int ErrorSharingViolation = 32;
+            const int ErrorLockViolation = 33;
+
+            int errorCode = exception.HResult & 0xFFFF;
+            return errorCode == ErrorSharingViolation || errorCode == ErrorLockViolation;
         }
 
         private static EncodeAttemptResult EncodeUnderExclusiveAccess(
