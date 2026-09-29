@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `e24a8c8` — Harden `JsonConfigurationFileEncoder` against transient Windows file-sharing/lock races without weakening the concurrent writer contract. Sharing retries are now separate from logical content-rewrite retries, post-write verification can wait for a brief lock without re-running the encode operation, and the returned changed-value count remains tied to the successful rewrite. Strengthen split and legacy tests with deterministic temporary-lock coverage plus repeated writer/delete race validation; update Configuration.Values public docs and package release notes.
+
 - `1da2b00` — Stabilize the SerilogRelay partial-claim race reliability test by stopping and awaiting the sink's autonomous sender before the test manually drives `ProcessPendingAsync`. Hosted diagnostics showed the prior failure was independent of net8/net10 and TFM parallelism: the test could introduce an unintended second claim agent and observe one row reclaimed after the explicit release. Product delivery behavior is unchanged.
 
 - `ec522b3` — Stabilize the separate-process SerilogRelay reliability test by launching the already-built test assembly directly with `dotnet vstest` instead of recursively running `dotnet test` on the same project. This removes child-process MSBuild evaluation of the shared `obj` directory, which could race with generated `*.props` files during the parent test run. Product behavior is unchanged.
