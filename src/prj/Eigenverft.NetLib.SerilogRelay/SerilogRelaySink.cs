@@ -43,7 +43,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <param name="minimumBatchSize">The minimum pending-event count required before normal background delivery starts.</param>
         /// <param name="maximumBatchSize">The maximum number of events included in one HTTP batch.</param>
         /// <param name="baseInterval">The normal delay between background delivery attempts.</param>
-        /// <param name="sentRetention">How long successfully sent events are retained in the shared application spool. This applies spool-wide across processes using the same spool path.</param>
+        /// <param name="sentRetention">Optional retention for successfully sent events. The default is zero, which deletes acknowledged events immediately.</param>
         /// <param name="unsentRetention">Optional maximum age for unsent events in the shared application spool. This applies spool-wide across processes using the same spool path.</param>
         /// <param name="bearerToken">Optional raw bearer token used by this sink/process for claimed-row HTTP delivery and sent as <c>Authorization: Bearer &lt;token&gt;</c>. The token is not persisted with spool rows. Null, empty, or whitespace disables the header.</param>
         /// <param name="restrictedToMinimumLevel">The minimum Serilog event level accepted by the sink.</param>
@@ -66,7 +66,7 @@ namespace Eigenverft.NetLib.SerilogRelay
             options.Delivery.MinimumBatchEvents = minimumBatchSize;
             options.Delivery.MaximumBatchEvents = maximumBatchSize;
             options.Delivery.PollInterval = baseInterval ?? TimeSpan.FromSeconds(5);
-            options.ApplicationSpool.SentEventRetention = sentRetention ?? TimeSpan.FromDays(1);
+            options.ApplicationSpool.SentEventRetention = sentRetention ?? TimeSpan.Zero;
             options.ApplicationSpool.UnsentEventMaxAge = unsentRetention;
 
             return SerilogRelay(
@@ -258,6 +258,8 @@ CREATE TABLE IF NOT EXISTS {0} (
         private readonly int _maxBatchSize;
         private readonly TimeSpan _baseInterval;
         private readonly TimeSpan _maximumBatchWait;
+        private readonly TimeSpan _shutdownTimeout;
+        private readonly TimeSpan _shutdownRetryInterval;
         private readonly TimeSpan _applicationSpoolSentEventRetention;
         private readonly TimeSpan? _applicationSpoolUnsentEventMaxAge;
         private readonly long _maxApplicationSpoolPhysicalBytes;
@@ -289,6 +291,7 @@ CREATE TABLE IF NOT EXISTS {0} (
 
         private readonly object _disposeLock = new object();
         private Task? _disposeTask;
+        private Task? _shutdownCleanupTask;
         private int _disposeStarted;
 
         /// <summary>
@@ -348,6 +351,8 @@ CREATE TABLE IF NOT EXISTS {0} (
             _maxBatchSize = options.Delivery.MaximumBatchEvents;
             _baseInterval = options.Delivery.PollInterval;
             _maximumBatchWait = options.Delivery.MaximumBatchWait;
+            _shutdownTimeout = options.Delivery.ShutdownTimeout;
+            _shutdownRetryInterval = options.Delivery.ShutdownRetryInterval;
             _applicationSpoolSentEventRetention = options.ApplicationSpool.SentEventRetention;
             _applicationSpoolUnsentEventMaxAge = options.ApplicationSpool.UnsentEventMaxAge;
             _maxApplicationSpoolPhysicalBytes = options.ApplicationSpool.MaxPhysicalBytes;
@@ -368,7 +373,7 @@ CREATE TABLE IF NOT EXISTS {0} (
             _emergencyChannel = Channel.CreateBounded<EmergencyEntry>(
                 new BoundedChannelOptions(_emergencyBufferCapacity)
                 {
-                    SingleReader = true,
+                    SingleReader = false,
                     SingleWriter = false,
                     FullMode = BoundedChannelFullMode.Wait,
                     AllowSynchronousContinuations = false,
@@ -459,6 +464,12 @@ CREATE TABLE IF NOT EXISTS {0} (
                 throw new ArgumentOutOfRangeException(nameof(options), "Delivery poll interval must be greater than zero.");
             if (options.Delivery.MaximumBatchWait <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(options), "Maximum batch wait must be greater than zero.");
+            if (options.Delivery.ShutdownTimeout < TimeSpan.Zero
+                || options.Delivery.ShutdownTimeout.TotalMilliseconds > uint.MaxValue - 1L)
+                throw new ArgumentOutOfRangeException(nameof(options), "Shutdown timeout must be a finite, non-negative timer duration.");
+            if (options.Delivery.ShutdownRetryInterval <= TimeSpan.Zero
+                || options.Delivery.ShutdownRetryInterval.TotalMilliseconds > uint.MaxValue - 1L)
+                throw new ArgumentOutOfRangeException(nameof(options), "Shutdown retry interval must be a finite, positive timer duration.");
             if (options.ApplicationSpool.SentEventRetention < TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(options), "Sent retention must not be negative.");
             if (options.ApplicationSpool.UnsentEventMaxAge.HasValue && options.ApplicationSpool.UnsentEventMaxAge.Value < TimeSpan.Zero)
@@ -506,7 +517,7 @@ CREATE TABLE IF NOT EXISTS {0} (
                     bool persisted = ExecuteDatabaseWithRecovery(() => TryPersistLogEntryCore(entry));
                     if (!persisted)
                     {
-                        RecordApplicationSpoolCapacityDrop();
+                        EnqueueEmergency(entry, exception: null);
                         return;
                     }
 
@@ -568,7 +579,7 @@ CREATE TABLE IF NOT EXISTS {0} (
         // Load unsent log entries from SQLite
 
         /// <summary>
-        /// Synchronously disposes the sink, ensuring pending logs are flushed.
+        /// Synchronously attempts shutdown delivery within the configured time budget.
         /// </summary>
         public void Dispose()
         {
@@ -577,7 +588,7 @@ CREATE TABLE IF NOT EXISTS {0} (
         }
 
         /// <summary>
-        /// Flushes pending logs on shutdown, ensuring all writes and sends complete.
+        /// Attempts pending emergency and spool delivery within the configured shutdown time budget.
         /// </summary>
         public async ValueTask DisposeAsync()
         {
@@ -601,85 +612,96 @@ CREATE TABLE IF NOT EXISTS {0} (
         private async Task DisposeCoreAsync()
         {
             _emergencyChannel.Writer.TryComplete();
+            using var deadline = new CancellationTokenSource(_shutdownTimeout);
+            if (_shutdownTimeout == TimeSpan.Zero)
+                deadline.Cancel();
+            CancellationToken token = deadline.Token;
+
+            // SQLite work can finish synchronously after cancellation. Keep its resources alive
+            // until cleanup completes, while bounding how long the application waits for Dispose.
+            _shutdownCleanupTask = Task.Run(() => DrainAndCleanupAsync(token));
+            _ = _shutdownCleanupTask.ContinueWith(
+                task => SelfLog.WriteLine("SerilogRelay shutdown cleanup failed: {0}", task.Exception!.GetBaseException().Message),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
 
             try
             {
-                Task emergencyDrainDeadline = Task.Delay(TimeSpan.FromSeconds(3));
-                await Task.WhenAny(_emergencyTask, emergencyDrainDeadline).ConfigureAwait(false);
+                await _shutdownCleanupTask.WaitAsync(token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                SelfLog.WriteLine("SerilogRelay shutdown time budget expired; remaining durable events stay in the spool.");
+            }
+        }
 
-                _cts.Cancel();
-
-                try
-                {
-                    await Task.WhenAll(
-                        _senderTask,
-                        _emergencyTask,
-                        _applicationSpoolMaintenanceTask).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) when (_cts.IsCancellationRequested)
-                {
-                }
-
-                long volatileRemaining = Interlocked.Read(ref _emergencyBufferedCount);
-                long dropped = Interlocked.Read(ref _emergencyDroppedCount);
-                if (volatileRemaining > 0 || dropped > 0)
-                {
-                    SelfLog.WriteLine(
-                        "SerilogRelay shutdown with {0} volatile emergency events unresolved and {1} emergency events dropped because the bounded buffer was full.",
-                        volatileRemaining,
-                        dropped);
-                }
+        private async Task DrainAndCleanupAsync(CancellationToken token)
+        {
+            try
+            {
+                _cts.CancelAfter(_shutdownTimeout);
+                await _senderTask.WaitAsync(token).ConfigureAwait(false);
+                await _emergencyTask.WaitAsync(token).ConfigureAwait(false);
 
                 if (!string.IsNullOrEmpty(_endpoint))
                 {
-                    using var shutdownCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                    CancellationToken shutdownToken = shutdownCts.Token;
-                    try
+                    while (!token.IsCancellationRequested)
                     {
-                        while (!shutdownToken.IsCancellationRequested)
-                        {
-                            long count = ExecuteDatabaseWithRecovery(GetPendingCountCore);
-                            if (count == 0)
-                                break;
+                        if (ExecuteDatabaseWithRecovery(GetPendingCountCore) == 0)
+                            break;
 
-                            bool didWork = await ProcessPendingAsync(
-                                ignoreMinBatch: true,
-                                shutdownToken).ConfigureAwait(false);
-                            if (!didWork)
-                                await Task.Delay(100, shutdownToken).ConfigureAwait(false);
-                        }
-                    }
-                    catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested)
-                    {
-                    }
-                    catch (Exception ex)
-                    {
-                        SelfLog.WriteLine(
-                            "SerilogRelay could not complete durable spool drain during shutdown: {0}",
-                            ex.Message);
+                        bool didWork = await ProcessPendingAsync(ignoreMinBatch: true, token).ConfigureAwait(false);
+                        if (!didWork)
+                            await Task.Delay(_shutdownRetryInterval, token).ConfigureAwait(false);
                     }
                 }
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+            }
+            catch (Exception ex)
+            {
+                SelfLog.WriteLine("SerilogRelay could not complete shutdown delivery: {0}", ex.Message);
             }
             finally
             {
                 try
                 {
-                    await ReleaseAllOwnedClaimsAsync(CancellationToken.None).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    SelfLog.WriteLine(
-                        "SerilogRelay could not release owned delivery claims during shutdown: {0}",
-                        ex.Message);
-                }
+                    _cts.Cancel();
+                    try
+                    {
+                        await Task.WhenAll(_senderTask, _emergencyTask, _applicationSpoolMaintenanceTask).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+                    {
+                    }
 
-                _httpClient.Dispose();
-                _cts.Dispose();
-                _databaseGate.Dispose();
+                    try
+                    {
+                        await ReleaseAllOwnedClaimsAsync(token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (token.IsCancellationRequested)
+                    {
+                        // Claims that could not be released become available after lease expiry.
+                    }
+                    catch (Exception ex)
+                    {
+                        SelfLog.WriteLine("SerilogRelay could not release owned delivery claims during shutdown: {0}", ex.Message);
+                    }
+
+                    long remaining = Interlocked.Read(ref _emergencyBufferedCount);
+                    long dropped = Interlocked.Read(ref _emergencyDroppedCount);
+                    if (remaining > 0 || dropped > 0)
+                        SelfLog.WriteLine("SerilogRelay shutdown with {0} volatile emergency events unresolved and {1} emergency events dropped.", remaining, dropped);
+                }
+                finally
+                {
+                    _httpClient.Dispose();
+                    _cts.Dispose();
+                    _databaseGate.Dispose();
+                }
             }
         }
-
-
     }
-
 }

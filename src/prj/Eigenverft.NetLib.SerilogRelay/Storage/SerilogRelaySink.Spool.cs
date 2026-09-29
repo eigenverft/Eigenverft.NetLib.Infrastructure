@@ -67,28 +67,17 @@ DELETE FROM {TableName}
         // Storage exceptions propagate so the caller can use the emergency buffer.
         private bool TryPersistLogEntryCore(LogEntry entry)
         {
-            int reclaimAttempts = 0;
-            bool emptySpoolFitChecked = false;
-
-            while (true)
+            try
             {
-                try
-                {
-                    PersistLogEntryOnceCore(entry);
-                    return true;
-                }
-                catch (SqliteException ex) when (IsFullError(ex) && reclaimAttempts++ < 8)
-                {
-                    if (!emptySpoolFitChecked)
-                    {
-                        emptySpoolFitChecked = true;
-                        if (!CanFitInEmptyApplicationSpoolCore(entry))
-                            return false;
-                    }
+                PersistLogEntryOnceCore(entry);
+                return true;
+            }
+            catch (SqliteException ex) when (IsFullError(ex))
+            {
+                if (!CanFitInEmptyApplicationSpoolCore(entry))
+                    return false;
 
-                    if (!TryReclaimApplicationSpoolSpaceCore())
-                        return false;
-                }
+                return TryReclaimAndPersistApplicationSpoolCore(entry);
             }
         }
 
@@ -99,11 +88,7 @@ DELETE FROM {TableName}
             conn.Open();
             ConfigurePragmas(conn);
 
-            using (var createCommand = conn.CreateCommand())
-            {
-                createCommand.CommandText = TableSchema.Replace("{0}", TableName, StringComparison.Ordinal);
-                createCommand.ExecuteNonQuery();
-            }
+            EnsureTableSchemaCore(conn);
 
             try
             {
@@ -126,9 +111,15 @@ DELETE FROM {TableName}
 
         private static void InsertLogEntryCore(SqliteConnection conn, LogEntry entry)
         {
-            using var tx = conn.BeginTransaction();
+            using var transaction = conn.BeginTransaction();
+            InsertLogEntryCore(conn, entry, transaction);
+            transaction.Commit();
+        }
+
+        private static void InsertLogEntryCore(SqliteConnection conn, LogEntry entry, SqliteTransaction transaction)
+        {
             using var cmd = conn.CreateCommand();
-            cmd.Transaction = tx;
+            cmd.Transaction = transaction;
             cmd.CommandText = $@"
 INSERT INTO {TableName}
   (EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
@@ -149,36 +140,45 @@ VALUES
             cmd.Parameters.AddWithValue("$props", (object?)entry.Properties ?? DBNull.Value);
 
             cmd.ExecuteNonQuery();
-            tx.Commit();
         }
 
-        private bool TryReclaimApplicationSpoolSpaceCore()
+        private bool TryReclaimAndPersistApplicationSpoolCore(LogEntry entry)
         {
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
             ConfigurePragmas(conn);
-            using var tx = conn.BeginTransaction();
 
-            int deletedSent = DeleteOldestApplicationSpoolRowsCore(conn, tx, sent: true, limit: 256);
-            int deletedUnsent = deletedSent == 0
-                ? DeleteOldestApplicationSpoolRowsCore(conn, tx, sent: false, limit: 64)
-                : 0;
-            tx.Commit();
-
-            if (deletedUnsent > 0)
+            for (int unsentLimit = 0; unsentLimit <= 512; unsentLimit += 64)
             {
-                Interlocked.Add(ref _applicationSpoolDroppedCount, deletedUnsent);
-                Volatile.Write(ref _pendingCountNeedsRefresh, 1);
-                if (Interlocked.Exchange(ref _applicationSpoolOverflowReported, 1) == 0)
+                using var transaction = conn.BeginTransaction();
+                DeleteOldestApplicationSpoolRowsCore(conn, transaction, sent: true, limit: int.MaxValue);
+                int deletedUnsent = DeleteOldestApplicationSpoolRowsCore(conn, transaction, sent: false, limit: unsentLimit);
+
+                try
                 {
-                    SelfLog.WriteLine(
-                        "SerilogRelay spool reached its {0}-byte budget; {1} oldest unsent events were evicted to keep disk usage bounded.",
-                        _maxApplicationSpoolPhysicalBytes,
-                        deletedUnsent);
+                    InsertLogEntryCore(conn, entry, transaction);
+                    transaction.Commit();
                 }
+                catch (SqliteException ex) when (IsFullError(ex))
+                {
+                    // The transaction restores reclaimed rows when the replacement still does not fit.
+                    if (deletedUnsent < unsentLimit)
+                        return false;
+                    continue;
+                }
+
+                if (deletedUnsent > 0)
+                {
+                    Interlocked.Add(ref _applicationSpoolDroppedCount, deletedUnsent);
+                    Volatile.Write(ref _pendingCountNeedsRefresh, 1);
+                    if (Interlocked.Exchange(ref _applicationSpoolOverflowReported, 1) == 0)
+                        SelfLog.WriteLine("SerilogRelay spool reached its {0}-byte budget; {1} oldest unsent events were evicted to keep disk usage bounded.", _maxApplicationSpoolPhysicalBytes, deletedUnsent);
+                }
+
+                return true;
             }
 
-            return deletedSent + deletedUnsent > 0;
+            return false;
         }
 
         private static int DeleteOldestApplicationSpoolRowsCore(
@@ -223,18 +223,6 @@ DELETE FROM {TableName}
             return cmd.ExecuteScalar() is not null;
         }
 
-
-        private void RecordApplicationSpoolCapacityDrop()
-        {
-            long dropped = Interlocked.Increment(ref _applicationSpoolDroppedCount);
-            if (Interlocked.Exchange(ref _applicationSpoolOverflowReported, 1) != 0)
-                return;
-
-            SelfLog.WriteLine(
-                "SerilogRelay spool reached its {0}-byte budget; incoming events are being dropped because no retained rows can be reclaimed. Total spool-capacity loss: {1}.",
-                _maxApplicationSpoolPhysicalBytes,
-                dropped);
-        }
 
         private void MarkSpoolUnavailable(Exception exception)
         {
@@ -344,7 +332,7 @@ SELECT Id, EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, Rende
                 token).ConfigureAwait(false);
         }
 
-        private async Task MarkClaimedAsSentAsync(ClaimedLogBatch batch, CancellationToken token)
+        private async Task AcknowledgeClaimAsync(ClaimedLogBatch batch, CancellationToken token)
         {
             if (batch.Entries.Count == 0)
                 return;
@@ -356,7 +344,13 @@ SELECT Id, EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, Rende
                     await conn.OpenAsync(token).ConfigureAwait(false);
                     ConfigurePragmas(conn);
                     using var cmd = conn.CreateCommand();
-                    cmd.CommandText = $@"
+                    cmd.CommandText = _applicationSpoolSentEventRetention == TimeSpan.Zero
+                        ? $@"
+DELETE FROM {TableName}
+ WHERE Sent = 0
+   AND ClaimOwnerId = $owner
+   AND ClaimBatchId = $claimBatchId;"
+                        : $@"
 UPDATE {TableName}
    SET Sent = 1,
        ClaimOwnerId = NULL,
@@ -454,6 +448,11 @@ SELECT COUNT(*)
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
             ConfigurePragmas(conn);
+            EnsureTableSchemaCore(conn);
+        }
+
+        private static void EnsureTableSchemaCore(SqliteConnection conn)
+        {
             using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = TableSchema.Replace("{0}", TableName, StringComparison.Ordinal);

@@ -639,7 +639,7 @@ WHERE Sent = 0;";
         }
 
         [TestMethod]
-        public async Task SpoolCapacityRejectDoesNotEnterEmergency()
+        public async Task SpoolCapacityRejectUsesEmergencyMemory()
         {
             string directory = CreateTemporaryDirectory();
             string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
@@ -661,13 +661,11 @@ WHERE Sent = 0;";
                 sink.Emit(CreateLogEvent(oversized));
 
                 Assert.AreEqual(0L, GetUnsentCount(connectionString));
-                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
-                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
+                Assert.AreEqual(2L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.IsGreaterThan(0L, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
                 Assert.AreEqual(0, GetPrivateField<int>(sink, "_spoolUnavailable"));
-                Assert.AreEqual(2L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
-                StringAssert.Contains(
-                    selfLog.ToString(),
-                    "incoming events are being dropped because no retained rows can be reclaimed");
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
+                await DisposeAndWaitForCleanupAsync(sink);
             }
             finally
             {
@@ -677,7 +675,9 @@ WHERE Sent = 0;";
         }
 
         [TestMethod]
-        public async Task OversizedEventDoesNotEvictExistingUnsentBacklog()
+        [DataRow(22500)]
+        [DataRow(256 * 1024)]
+        public async Task OversizedEventDoesNotEvictExistingUnsentBacklog(int messageLength)
         {
             string directory = CreateTemporaryDirectory();
             string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
@@ -699,11 +699,11 @@ WHERE Sent = 0;";
                 Assert.AreEqual(3L, GetUnsentCount(connectionString));
                 Assert.AreEqual(0L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
 
-                sink.Emit(CreateLogEvent(new string('x', 256 * 1024)));
+                sink.Emit(CreateLogEvent(new string('x', messageLength)));
 
                 Assert.AreEqual(3L, GetUnsentCount(connectionString));
-                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
-                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
+                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
 
                 using var connection = new SqliteConnection(connectionString);
                 connection.Open();
@@ -716,6 +716,7 @@ SELECT COUNT(*)
                 Assert.AreEqual(
                     3L,
                     Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture));
+                await DisposeAndWaitForCleanupAsync(sink);
             }
             finally
             {
@@ -739,41 +740,15 @@ SELECT COUNT(*)
                     endpoint: null,
                     options);
 
-                using (var connection = new SqliteConnection(connectionString))
-                {
-                    connection.Open();
-                    int sequence = 0;
-
-                    foreach (int payloadSize in new[] { 4096, 512, 64, 1 })
-                    {
-                        while (true)
-                        {
-                            try
-                            {
-                                using var fill = connection.CreateCommand();
-                                fill.CommandText = @"
-INSERT INTO SerilogRelayEvents
-    (EventId, ApplicationId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, Sent)
-VALUES
-    ($eventId, 'capacity-filler', 0, '2026-01-01T00:00:00.0000000Z', 'Information', $payload, $payload, 2);";
-                                fill.Parameters.AddWithValue("$eventId", $"capacity-filler-{sequence++}");
-                                fill.Parameters.AddWithValue("$payload", new string('f', payloadSize));
-                                fill.ExecuteNonQuery();
-                            }
-                            catch (SqliteException ex) when (ex.SqliteErrorCode == SQLitePCL.raw.SQLITE_FULL)
-                            {
-                                break;
-                            }
-                        }
-                    }
-                }
+                FillSpoolWithNonReclaimableRows(connectionString);
 
                 sink.Emit(CreateLogEvent("small event still fits an empty spool"));
 
                 Assert.AreEqual(0L, GetUnsentCount(connectionString));
-                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
-                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
+                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
                 Assert.AreEqual(0, GetPrivateField<int>(sink, "_spoolUnavailable"));
+                await DisposeAndWaitForCleanupAsync(sink);
             }
             finally
             {
@@ -808,10 +783,11 @@ UPDATE SerilogRelayEvents
                     Assert.AreEqual(1, command.ExecuteNonQuery());
                 }
 
-                bool reclaimed = InvokePrivateMethod<bool>(sink, "TryReclaimApplicationSpoolSpaceCore");
+                LogEntry replacement = InvokePrivateMethod<LogEntry>(sink, "CreateLogEntry", CreateLogEvent("replacement"), Guid.NewGuid().ToString("D"));
+                bool reclaimed = InvokePrivateMethod<bool>(sink, "TryReclaimAndPersistApplicationSpoolCore", replacement);
 
                 Assert.IsTrue(reclaimed);
-                Assert.AreEqual(1L, GetUnsentCount(connectionString));
+                Assert.AreEqual(2L, GetUnsentCount(connectionString));
                 Assert.AreEqual(0L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
             }
             finally
@@ -867,7 +843,7 @@ UPDATE SerilogRelayEvents
         }
 
         [TestMethod]
-        public async Task EmergencyRecoveryDropsCapacityRejectedEventWithoutLeavingSpoolUnavailable()
+        public async Task EmergencyRecoveryRetainsCapacityRejectedEventWithoutLeavingSpoolUnavailable()
         {
             string directory = CreateTemporaryDirectory();
             string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
@@ -912,13 +888,15 @@ END;";
                 }
 
                 await WaitUntilAsync(
-                    () => GetPrivateField<long>(sink, "_emergencyBufferedCount") == 0,
+                    () => GetPrivateField<int>(sink, "_spoolUnavailable") == 0,
                     TimeSpan.FromSeconds(5));
 
-                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
-                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
+                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.IsGreaterThan(0L, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
                 Assert.AreEqual(0, GetPrivateField<int>(sink, "_spoolUnavailable"));
                 Assert.AreEqual(0L, GetUnsentCount(connectionString));
+                await DisposeAndWaitForCleanupAsync(sink);
             }
             finally
             {
@@ -1212,14 +1190,14 @@ END;";
 
                 await InvokePrivateTaskMethod(
                     first,
-                    "MarkClaimedAsSentAsync",
+                    "AcknowledgeClaimAsync",
                     original,
                     CancellationToken.None);
                 Assert.AreEqual(1L, GetUnsentCount(connectionString));
 
                 await InvokePrivateTaskMethod(
                     second,
-                    "MarkClaimedAsSentAsync",
+                    "AcknowledgeClaimAsync",
                     takeover,
                     CancellationToken.None);
                 Assert.AreEqual(0L, GetUnsentCount(connectionString));
@@ -1786,7 +1764,7 @@ SELECT COUNT(*)
             var empty = new ClaimedLogBatch("empty", new List<LogEntry>());
             await InvokePrivateTaskMethod(
                 sink,
-                "MarkClaimedAsSentAsync",
+                "AcknowledgeClaimAsync",
                 empty,
                 CancellationToken.None);
         }
@@ -2104,6 +2082,484 @@ CREATE TABLE SerilogRelayEvents (
             finally
             {
                 DeleteTemporaryDirectory(directory);
+            }
+        }
+
+
+        [TestMethod]
+        public async Task DefaultDeliveryDeletesAcknowledgedRows()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var options = new SerilogRelayOptions();
+            options.Delivery.MinimumBatchEvents = 1;
+            options.Delivery.PollInterval = TimeSpan.FromMilliseconds(25);
+            var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
+
+            try
+            {
+                Task<string> received = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent);
+                sink.Emit(CreateLogEvent("delete after acknowledgment"));
+                await received.WaitAsync(TimeSpan.FromSeconds(5));
+                await WaitUntilAsync(() => GetTotalRowCount(connectionString) == 0, TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                await DisposeAndWaitForCleanupAsync(sink);
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task ShutdownSendsVolatileEventsThenPartialSpoolWithoutNormalWaits()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var options = new SerilogRelayOptions();
+            options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
+            options.Delivery.MaximumBatchWait = TimeSpan.FromMinutes(1);
+            var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
+
+            try
+            {
+                GetPrivateField<RetryGate>(sink, "_retryGate").RecordFailure(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(5));
+                sink.Emit(CreateLogEvent("durable one"));
+                sink.Emit(CreateLogEvent("durable two"));
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using var command = connection.CreateCommand();
+                    command.CommandText = """
+CREATE TRIGGER reject_volatile
+BEFORE INSERT ON SerilogRelayEvents
+WHEN NEW.RenderMessage LIKE 'volatile%'
+BEGIN
+    SELECT RAISE(ABORT, 'temporary spool failure');
+END;
+""";
+                    command.ExecuteNonQuery();
+                }
+
+                sink.Emit(CreateLogEvent("volatile one"));
+                sink.Emit(CreateLogEvent("volatile two"));
+                Assert.AreEqual(2L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Task<List<string>> received = ReceiveRequestsAsync(listener, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK);
+
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                await sink.DisposeAsync();
+                stopwatch.Stop();
+                List<string> bodies = await received.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.IsLessThan(TimeSpan.FromSeconds(2), stopwatch.Elapsed);
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.AreEqual(0L, GetTotalRowCount(connectionString));
+
+                using JsonDocument first = JsonDocument.Parse(bodies[0]);
+                using JsonDocument second = JsonDocument.Parse(bodies[1]);
+                using JsonDocument third = JsonDocument.Parse(bodies[2]);
+                Assert.AreEqual("volatile one", first.RootElement.GetProperty("logs")[0].GetProperty("renderMessage").GetString());
+                Assert.AreEqual("volatile two", second.RootElement.GetProperty("logs")[0].GetProperty("renderMessage").GetString());
+                Assert.AreEqual(2, third.RootElement.GetProperty("count").GetInt32());
+            }
+            finally
+            {
+                await DisposeAndWaitForCleanupAsync(sink);
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task ShutdownRetriesFailedBatchWithinConfiguredBudget()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var options = new SerilogRelayOptions();
+            options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
+            options.Delivery.MaximumBatchWait = TimeSpan.FromMinutes(1);
+            options.Delivery.ShutdownTimeout = TimeSpan.FromSeconds(1);
+            options.Delivery.ShutdownRetryInterval = TimeSpan.FromMilliseconds(50);
+            var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
+
+            try
+            {
+                Task<List<string>> received = ReceiveRequestsAsync(listener, HttpStatusCode.ServiceUnavailable, HttpStatusCode.OK);
+                sink.Emit(CreateLogEvent("shutdown retry"));
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                await sink.DisposeAsync();
+                stopwatch.Stop();
+
+                List<string> bodies = await received.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.IsLessThan(options.Delivery.ShutdownTimeout, stopwatch.Elapsed);
+                Assert.IsGreaterThanOrEqualTo(options.Delivery.ShutdownRetryInterval, stopwatch.Elapsed);
+                Assert.AreEqual(0L, GetTotalRowCount(connectionString));
+                using JsonDocument first = JsonDocument.Parse(bodies[0]);
+                using JsonDocument second = JsonDocument.Parse(bodies[1]);
+                Assert.AreEqual(first.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString(),
+                    second.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString());
+            }
+            finally
+            {
+                await DisposeAndWaitForCleanupAsync(sink);
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DataRow(3, 10 * 1024 * 1024, 2)]
+        [DataRow(10, 1600 * 1024, 2)]
+        [DataRow(1, 10 * 1024 * 1024, 4)]
+        [DataRow(10, 600 * 1024, 4)]
+        public async Task EmergencyCapacityPreservesInFlightAndNewestQueuedEvents(int eventLimit, int byteLimit, int expectedDropped)
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var options = new SerilogRelayOptions();
+            options.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
+            options.EmergencyMemoryBuffer.MaxBufferedEvents = eventLimit;
+            options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = byteLimit;
+            options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
+            var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
+
+            try
+            {
+                GetPrivateField<RetryGate>(sink, "_retryGate").RecordFailure(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(5));
+                string suffix = new string('x', 256 * 1024);
+                sink.Emit(CreateLogEvent($"ram0 {suffix}"));
+                await WaitUntilAsync(() => GetPrivateField<object?>(sink, "_emergencyInFlight") is not null, TimeSpan.FromSeconds(5));
+
+                for (int index = 1; index <= 4; index++)
+                    sink.Emit(CreateLogEvent($"ram{index} {suffix}"));
+
+                Assert.AreEqual((long)expectedDropped, GetPrivateField<long>(sink, "_emergencyDroppedCount"));
+                Assert.AreEqual(5L - expectedDropped, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.IsLessThanOrEqualTo((long)byteLimit, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
+                HttpStatusCode[] responses = new HttpStatusCode[5 - expectedDropped];
+                Array.Fill(responses, HttpStatusCode.OK);
+                Task<List<string>> received = ReceiveRequestsAsync(listener, responses);
+                await sink.DisposeAsync();
+                List<string> bodies = await received.WaitAsync(TimeSpan.FromSeconds(5));
+
+                var messages = new List<string>();
+                foreach (string body in bodies)
+                {
+                    using JsonDocument document = JsonDocument.Parse(body);
+                    string message = document.RootElement.GetProperty("logs")[0].GetProperty("renderMessage").GetString()!;
+                    messages.Add(message[..4]);
+                }
+
+                CollectionAssert.AreEqual(expectedDropped == 2 ? new[] { "ram0", "ram3", "ram4" } : new[] { "ram0" }, messages.ToArray());
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
+            }
+            finally
+            {
+                await DisposeAndWaitForCleanupAsync(sink);
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DataRow(3, 8192)]
+        [DataRow(800, 100000)]
+        public async Task FailedReplacementPreservesBacklogWhenOtherRowsConsumeCapacity(int backlogRows, int messageLength)
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            var options = new SerilogRelayOptions();
+            options.ApplicationSpool.MaxPhysicalBytes = backlogRows == 3 ? 64L * 1024L : 256L * 1024L;
+            options.Delivery.ShutdownTimeout = TimeSpan.FromMilliseconds(100);
+            var sink = new SerilogRelaySink(connectionString, endpoint: null, options);
+
+            try
+            {
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using var transaction = connection.BeginTransaction();
+                    using var command = connection.CreateCommand();
+                    command.Transaction = transaction;
+                    command.CommandText = """
+INSERT INTO SerilogRelayEvents
+    (EventId, ApplicationId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate)
+VALUES
+    ($eventId, 'backlog', 1, 'x', 'Information', 'tiny', 'tiny');
+""";
+                    command.Parameters.AddWithValue("$eventId", string.Empty);
+                    for (int index = 0; index < backlogRows; index++)
+                    {
+                        command.Parameters["$eventId"].Value = Guid.NewGuid().ToString("D");
+                        command.ExecuteNonQuery();
+                    }
+                    transaction.Commit();
+                }
+
+                FillSpoolWithNonReclaimableRows(connectionString);
+                sink.Emit(CreateLogEvent(new string('x', messageLength)));
+                Assert.AreEqual((long)backlogRows, GetUnsentCount(connectionString));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
+                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+            }
+            finally
+            {
+                await DisposeAndWaitForCleanupAsync(sink);
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task ShutdownReturnsAtConfiguredDeadlineWhileSqliteIsLocked()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            var options = new SerilogRelayOptions();
+            options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
+            options.Delivery.MaximumBatchWait = TimeSpan.FromMinutes(1);
+            options.Delivery.ShutdownTimeout = TimeSpan.FromMilliseconds(200);
+            var sink = new SerilogRelaySink(connectionString, "http://127.0.0.1:1/logs", options);
+
+            try
+            {
+                sink.Emit(CreateLogEvent("locked shutdown"));
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+                using (var transaction = connection.BeginTransaction())
+                {
+                    using var command = connection.CreateCommand();
+                    command.Transaction = transaction;
+                    command.CommandText = "UPDATE SerilogRelayEvents SET RenderMessage = 'locked';";
+                    command.ExecuteNonQuery();
+
+                    Stopwatch stopwatch = Stopwatch.StartNew();
+                    await sink.DisposeAsync();
+                    stopwatch.Stop();
+                    Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(100), stopwatch.Elapsed);
+                    Assert.IsLessThan(TimeSpan.FromSeconds(1), stopwatch.Elapsed);
+                    transaction.Rollback();
+                }
+
+                await GetPrivateField<Task>(sink, "_shutdownCleanupTask").WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.AreEqual(1L, GetUnsentCount(connectionString));
+            }
+            finally
+            {
+                await DisposeAndWaitForCleanupAsync(sink);
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task EmptyShutdownReturnsWithoutWaitingForItsBudget()
+        {
+            string directory = CreateTemporaryDirectory();
+            var sink = new SerilogRelaySink($"Data Source={Path.Combine(directory, "relay.db")}", endpoint: null, new SerilogRelayOptions());
+            try
+            {
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                await sink.DisposeAsync();
+                stopwatch.Stop();
+                Assert.IsLessThan(TimeSpan.FromMilliseconds(500), stopwatch.Elapsed);
+            }
+            finally
+            {
+                await DisposeAndWaitForCleanupAsync(sink);
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+
+        [TestMethod]
+        public async Task EventAlreadyInProgressDuringShutdownDoesNotLeakEmergencyReservation()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            var options = new SerilogRelayOptions();
+            options.Delivery.ShutdownTimeout = TimeSpan.FromSeconds(1);
+            var sink = new SerilogRelaySink(connectionString, endpoint: null, options);
+            SemaphoreSlim gate = GetPrivateField<SemaphoreSlim>(sink, "_databaseGate");
+            bool gateHeld = false;
+
+            try
+            {
+                gate.Wait();
+                gateHeld = true;
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using var command = connection.CreateCommand();
+                    command.CommandText = "DROP TABLE SerilogRelayEvents;";
+                    command.ExecuteNonQuery();
+                }
+
+                var started = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                Task emit = Task.Run(() =>
+                {
+                    started.SetResult(true);
+                    sink.Emit(CreateLogEvent("event already in progress"));
+                });
+                await started.Task;
+                await Task.Delay(50);
+                Assert.IsFalse(emit.IsCompleted);
+
+                Task shutdown = sink.DisposeAsync().AsTask();
+                await WaitUntilAsync(() => GetPrivateField<object?>(sink, "_shutdownCleanupTask") is not null, TimeSpan.FromSeconds(5));
+                gate.Release();
+                gateHeld = false;
+                await emit.WaitAsync(TimeSpan.FromSeconds(5));
+                await shutdown;
+
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
+                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_emergencyDroppedCount"));
+            }
+            finally
+            {
+                if (gateHeld)
+                    gate.Release();
+                await DisposeAndWaitForCleanupAsync(sink);
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task ShutdownReleasesResourcesWhenDiagnosticOutputFails()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            var sink = new SerilogRelaySink(connectionString, "http://127.0.0.1:1/logs", new SerilogRelayOptions());
+            CancellationTokenSource cancellation = GetPrivateField<CancellationTokenSource>(sink, "_cts");
+
+            try
+            {
+                cancellation.Cancel();
+                try
+                {
+                    await Task.WhenAll(GetPrivateField<Task>(sink, "_senderTask"),
+                        GetPrivateField<Task>(sink, "_emergencyTask"), GetPrivateField<Task>(sink, "_applicationSpoolMaintenanceTask"));
+                }
+                catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+                {
+                }
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+                    using var command = connection.CreateCommand();
+                    command.CommandText = "DROP TABLE SerilogRelayEvents;";
+                    command.ExecuteNonQuery();
+                }
+
+                int diagnostics = 0;
+                SelfLog.Enable(_ =>
+                {
+                    if (Interlocked.Increment(ref diagnostics) == 1)
+                        throw new IOException("diagnostic output unavailable");
+                });
+
+                await Assert.ThrowsExactlyAsync<IOException>(async () => await sink.DisposeAsync());
+                Assert.ThrowsExactly<ObjectDisposedException>(() => _ = cancellation.Token);
+            }
+            finally
+            {
+                SelfLog.Disable();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+
+        [TestMethod]
+        public async Task ZeroShutdownBudgetLeavesPendingEventsForNextRun()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            var options = new SerilogRelayOptions();
+            options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
+            options.Delivery.MaximumBatchWait = TimeSpan.FromMinutes(1);
+            options.Delivery.ShutdownTimeout = TimeSpan.Zero;
+            var sink = new SerilogRelaySink(connectionString, "http://127.0.0.1:1/logs", options);
+
+            try
+            {
+                sink.Emit(CreateLogEvent("no shutdown wait"));
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                await DisposeAndWaitForCleanupAsync(sink);
+                stopwatch.Stop();
+                Assert.IsLessThan(TimeSpan.FromMilliseconds(500), stopwatch.Elapsed);
+                Assert.AreEqual(1L, GetUnsentCount(connectionString));
+                Assert.AreEqual(0, GetPrivateField<RetryGate>(sink, "_retryGate").ConsecutiveFailures);
+            }
+            finally
+            {
+                await DisposeAndWaitForCleanupAsync(sink);
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        private static async Task DisposeAndWaitForCleanupAsync(SerilogRelaySink sink)
+        {
+            await sink.DisposeAsync();
+            await GetPrivateField<Task>(sink, "_shutdownCleanupTask").WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        private static long GetTotalRowCount(string connectionString)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM SerilogRelayEvents;";
+            return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+        }
+
+        private static async Task<List<string>> ReceiveRequestsAsync(TcpListener listener, params HttpStatusCode[] statuses)
+        {
+            var bodies = new List<string>();
+            foreach (HttpStatusCode status in statuses)
+                bodies.Add(await ReceiveSingleRequestAsync(listener, status));
+            return bodies;
+        }
+
+        private static void FillSpoolWithNonReclaimableRows(string connectionString)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+            int sequence = 0;
+            foreach (int payloadSize in new[] { 4096, 512, 64, 1 })
+            {
+                while (true)
+                {
+                    try
+                    {
+                        using var command = connection.CreateCommand();
+                        command.CommandText = """
+INSERT INTO SerilogRelayEvents
+    (EventId, ApplicationId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, Sent)
+VALUES
+    ($eventId, 'capacity-filler', 0, 'x', 'Information', $payload, $payload, 2);
+""";
+                        command.Parameters.AddWithValue("$eventId", $"capacity-filler-{sequence++}");
+                        command.Parameters.AddWithValue("$payload", new string('f', payloadSize));
+                        command.ExecuteNonQuery();
+                    }
+                    catch (SqliteException ex) when (ex.SqliteErrorCode == SQLitePCL.raw.SQLITE_FULL)
+                    {
+                        break;
+                    }
+                }
             }
         }
 
@@ -2575,10 +3031,20 @@ SELECT ClaimOwnerId
 
         private static void DeleteTemporaryDirectory(string directory)
         {
-            SqliteConnection.ClearAllPools();
-
-            if (Directory.Exists(directory))
-                Directory.Delete(directory, recursive: true);
+            // Bounded Dispose can return before an already-running SQLite call releases its file.
+            for (int attempt = 0; Directory.Exists(directory); attempt++)
+            {
+                SqliteConnection.ClearAllPools();
+                try
+                {
+                    Directory.Delete(directory, recursive: true);
+                    return;
+                }
+                catch (IOException) when (attempt < 100)
+                {
+                    Thread.Sleep(50);
+                }
+            }
         }
     }
 }

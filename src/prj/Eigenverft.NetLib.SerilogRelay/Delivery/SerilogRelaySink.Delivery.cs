@@ -16,7 +16,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         private async Task SenderLoopAsync()
         {
             CancellationToken token = _cts.Token;
-            while (!token.IsCancellationRequested)
+            while (!token.IsCancellationRequested && Volatile.Read(ref _disposeStarted) == 0)
             {
                 try
                 {
@@ -24,7 +24,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                     TimeSpan existingRetryDelay = _retryGate.GetDelay(now);
                     if (existingRetryDelay > TimeSpan.Zero)
                     {
-                        await Task.Delay(existingRetryDelay, token).ConfigureAwait(false);
+                        await WaitForSenderDelayAsync(existingRetryDelay, token).ConfigureAwait(false);
                         continue;
                     }
 
@@ -54,7 +54,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                     TimeSpan retryDelay = _retryGate.GetDelay(DateTimeOffset.UtcNow);
                     if (retryDelay > TimeSpan.Zero)
                     {
-                        await Task.Delay(retryDelay, token).ConfigureAwait(false);
+                        await WaitForSenderDelayAsync(retryDelay, token).ConfigureAwait(false);
                         continue;
                     }
 
@@ -133,7 +133,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         private async Task WaitForSenderDelayAsync(TimeSpan delay, CancellationToken token)
         {
             Task deadline = Task.Delay(delay, token);
-            while (!token.IsCancellationRequested)
+            while (!token.IsCancellationRequested && Volatile.Read(ref _disposeStarted) == 0)
             {
                 lock (_signalLock)
                 {
@@ -207,11 +207,12 @@ namespace Eigenverft.NetLib.SerilogRelay
                     break;
                 }
 
-                await MarkClaimedAsSentAsync(claimed, token).ConfigureAwait(false);
+                await AcknowledgeClaimAsync(claimed, token).ConfigureAwait(false);
 
                 pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
                 sentCount += entries.Count;
-                await Task.Delay(100, token).ConfigureAwait(false);
+                if (Volatile.Read(ref _disposeStarted) == 0)
+                    await Task.Delay(100, token).ConfigureAwait(false);
             }
 
             return sentCount > 0;
@@ -220,7 +221,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         // Send one batch of logs over HTTP using AOT-compatible source-gen context.
         private async Task<bool> SendBatchAsync(List<LogEntry> entries, CancellationToken token)
         {
-            if (!_retryGate.TryAcquire(DateTimeOffset.UtcNow))
+            if (!_retryGate.TryAcquire(DateTimeOffset.UtcNow, ignoreBackoff: Volatile.Read(ref _disposeStarted) != 0))
                 return false;
 
             var payload = new LogBatchPayload

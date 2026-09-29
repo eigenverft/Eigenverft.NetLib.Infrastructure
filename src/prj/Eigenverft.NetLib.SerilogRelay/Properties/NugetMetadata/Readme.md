@@ -50,7 +50,7 @@ var options = new SerilogRelayOptions
     ApplicationSpool =
     {
         MaxPhysicalBytes = 64L * 1024L * 1024L,
-        SentEventRetention = TimeSpan.FromDays(1),
+        SentEventRetention = TimeSpan.Zero,
         UnsentEventMaxAge = null
     },
     Delivery =
@@ -58,7 +58,9 @@ var options = new SerilogRelayOptions
         MinimumBatchEvents = 20,
         MaximumBatchEvents = 100,
         PollInterval = TimeSpan.FromSeconds(5),
-        MaximumBatchWait = TimeSpan.FromSeconds(5)
+        MaximumBatchWait = TimeSpan.FromSeconds(5),
+        ShutdownTimeout = TimeSpan.FromSeconds(3),
+        ShutdownRetryInterval = TimeSpan.FromSeconds(1)
     },
     EndpointRetry =
     {
@@ -107,17 +109,33 @@ The relay currently provides:
 
 - durable local persistence before normal network delivery;
 - stable `EventId` values reused across retries/restarts;
-- application-spool-wide sent retention and periodic optional unsent age cleanup;
+- immediate deletion after successful acknowledgment by default, optional sent retention, and periodic optional unsent age cleanup;
 - sent-first / oldest-eligible-unsent capacity reclamation;
 - active-claim protection from unsent age cleanup and capacity reclamation;
-- protection against one individually oversized event evicting existing backlog;
+- full-schema capacity probing and transactional replacement, preserving backlog when a new event cannot be stored;
 - low-volume delivery after `MaximumBatchWait`;
 - immediate startup backlog delivery opportunity;
 - process-local exponential endpoint retry with jitter and HTTP `Retry-After` on every non-2xx response;
 - process-local Emergency memory bounds of 16384 events and 64 MiB payload bytes by default;
-- a real bounded shutdown deadline;
+- configurable shutdown delivery with a three-second total budget and one-second failure retry interval by default;
 - at-least-once HTTP delivery without imposing receiver-side storage/deduplication semantics.
 
+
+## Capacity and emergency behavior
+
+Normal delivery stores events in SQLite first. A successful HTTP 2xx deletes the still-owned claimed rows immediately by default. `SentEventRetention` greater than zero explicitly opts into keeping delivered rows locally.
+
+When SQLite reaches its configured capacity, the relay first checks whether the new event fits an empty spool with the complete schema, including claim indexes. It reclaims sent rows before the oldest eligible unsent rows. Reclamation and replacement commit together; a failed replacement rolls the deletions back.
+
+An event that cannot be stored enters the bounded emergency RAM buffer, whether storage failed with an exception or rejected it because of capacity. The worker retries durable storage and can send directly over HTTP. At either RAM limit, the oldest queued events are discarded to make room for newer ones. An event too large for the available budget is rejected without clearing the queue; an event already being processed retains its reservation.
+
+## Shutdown
+
+`Delivery.ShutdownTimeout` is an upper limit, not a fixed wait. Shutdown finishes as soon as the emergency buffer and durable spool have been handled. Set it to `TimeSpan.Zero` to skip shutdown delivery. The default is three seconds; `Delivery.ShutdownRetryInterval` defaults to one second and applies after failed attempts.
+
+Shutdown sends volatile emergency events first, then flushes the spool even below `MinimumBatchEvents`. Successful batches have no normal inter-batch pause. The final delivery attempts bypass the normal endpoint backoff, while only one HTTP attempt remains active at a time.
+
+When the budget expires, `Dispose` returns and pending durable rows remain available for a later run. SQLite calls already executing may finish afterward; their resources are released when background cleanup completes. Claims that cannot be released become available after their 30-second lease expires. Remaining RAM events are best-effort delivery only.
 
 ## Multi-process coordination
 
@@ -138,8 +156,8 @@ Current behavior:
 - the spool is periodically checked for work created by other processes;
 - physical corruption recovery receives separate short-lived cross-process coordination.
 
-Existing spools are upgraded in place with the claim columns/indexes. Graceful shutdown releases
-owned claims immediately; after an ungraceful process exit, expired claims become available to
+Existing spools are upgraded in place with the claim columns/indexes. Graceful shutdown attempts to release
+owned claims within its time budget; after an ungraceful process exit, expired claims become available to
 another sender. A stale sender cannot mark a row sent after another sender has taken over its
 expired claim.
 

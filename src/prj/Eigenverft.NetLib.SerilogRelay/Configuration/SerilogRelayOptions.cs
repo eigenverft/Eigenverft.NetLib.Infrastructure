@@ -35,10 +35,10 @@ namespace Eigenverft.NetLib.SerilogRelay
     public sealed class ApplicationSpoolOptions
     {
         /// <summary>
-        /// Gets or sets how long successfully delivered events remain in the shared application spool.
+        /// Gets or sets optional retention for successfully delivered events. Zero deletes acknowledged events immediately.
         /// This process applies the value during spool-wide maintenance; cleanup is not limited to rows created by this process.
         /// </summary>
-        public TimeSpan SentEventRetention { get; set; } = TimeSpan.FromDays(1);
+        public TimeSpan SentEventRetention { get; set; } = TimeSpan.Zero;
 
         /// <summary>
         /// Gets or sets the maximum physical size of the shared application spool in bytes.
@@ -77,6 +77,18 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// Gets or sets the maximum time a partial batch may wait before delivery is attempted.
         /// </summary>
         public TimeSpan MaximumBatchWait { get; set; } = TimeSpan.FromSeconds(5);
+
+        /// <summary>
+        /// Gets or sets the maximum total time allowed for shutdown delivery and claim release.
+        /// Shutdown finishes earlier when all pending work completes.
+        /// </summary>
+        public TimeSpan ShutdownTimeout { get; set; } = TimeSpan.FromSeconds(3);
+
+        /// <summary>
+        /// Gets or sets the delay between failed delivery attempts during shutdown.
+        /// Successful batches are sent without this delay.
+        /// </summary>
+        public TimeSpan ShutdownRetryInterval { get; set; } = TimeSpan.FromSeconds(1);
     }
 
     /// <summary>
@@ -116,7 +128,7 @@ namespace Eigenverft.NetLib.SerilogRelay
     public sealed class EmergencyMemoryBufferOptions
     {
         /// <summary>
-        /// Gets or sets the maximum number of events buffered in memory.
+        /// Gets or sets the maximum number of queued and in-flight emergency events. The oldest queued events are evicted when necessary.
         /// </summary>
         public int MaxBufferedEvents { get; set; } = 16384;
 

@@ -12,13 +12,15 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         {
             var options = new SerilogRelayOptions();
 
-            Assert.AreEqual(TimeSpan.FromDays(1), options.ApplicationSpool.SentEventRetention);
+            Assert.AreEqual(TimeSpan.Zero, options.ApplicationSpool.SentEventRetention);
             Assert.IsNull(options.ApplicationSpool.UnsentEventMaxAge);
             Assert.AreEqual(64L * 1024L * 1024L, options.ApplicationSpool.MaxPhysicalBytes);
             Assert.AreEqual(20, options.Delivery.MinimumBatchEvents);
             Assert.AreEqual(100, options.Delivery.MaximumBatchEvents);
             Assert.AreEqual(TimeSpan.FromSeconds(5), options.Delivery.PollInterval);
             Assert.AreEqual(TimeSpan.FromSeconds(5), options.Delivery.MaximumBatchWait);
+            Assert.AreEqual(TimeSpan.FromSeconds(3), options.Delivery.ShutdownTimeout);
+            Assert.AreEqual(TimeSpan.FromSeconds(1), options.Delivery.ShutdownRetryInterval);
             Assert.AreEqual(TimeSpan.FromSeconds(5), options.EndpointRetry.InitialDelay);
             Assert.AreEqual(2d, options.EndpointRetry.Multiplier);
             Assert.AreEqual(TimeSpan.FromMinutes(5), options.EndpointRetry.MaximumDelay);
@@ -34,6 +36,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             options.Delivery.MaximumBatchEvents = 9;
             options.Delivery.PollInterval = TimeSpan.FromSeconds(2);
             options.Delivery.MaximumBatchWait = TimeSpan.FromSeconds(7);
+            options.Delivery.ShutdownTimeout = TimeSpan.FromMilliseconds(500);
+            options.Delivery.ShutdownRetryInterval = TimeSpan.FromMilliseconds(100);
             options.EndpointRetry.InitialDelay = TimeSpan.FromSeconds(1);
             options.EndpointRetry.Multiplier = 3d;
             options.EndpointRetry.MaximumDelay = TimeSpan.FromSeconds(30);
@@ -49,6 +53,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             Assert.AreEqual(9, options.Delivery.MaximumBatchEvents);
             Assert.AreEqual(TimeSpan.FromSeconds(2), options.Delivery.PollInterval);
             Assert.AreEqual(TimeSpan.FromSeconds(7), options.Delivery.MaximumBatchWait);
+            Assert.AreEqual(TimeSpan.FromMilliseconds(500), options.Delivery.ShutdownTimeout);
+            Assert.AreEqual(TimeSpan.FromMilliseconds(100), options.Delivery.ShutdownRetryInterval);
             Assert.AreEqual(TimeSpan.FromSeconds(1), options.EndpointRetry.InitialDelay);
             Assert.AreEqual(3d, options.EndpointRetry.Multiplier);
             Assert.AreEqual(TimeSpan.FromSeconds(30), options.EndpointRetry.MaximumDelay);
@@ -171,6 +177,10 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 typeof(ArgumentException));
             AssertInvalid(options => options.Delivery.PollInterval = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.MaximumBatchWait = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.Delivery.ShutdownTimeout = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.Delivery.ShutdownTimeout = TimeSpan.FromDays(50), typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.Delivery.ShutdownRetryInterval = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.Delivery.ShutdownRetryInterval = TimeSpan.FromDays(50), typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.ApplicationSpool.SentEventRetention = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.ApplicationSpool.UnsentEventMaxAge = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.ApplicationSpool.MaxPhysicalBytes = 4095, typeof(ArgumentOutOfRangeException));

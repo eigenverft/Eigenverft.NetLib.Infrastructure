@@ -2053,11 +2053,19 @@ END;";
 
         private static void DeleteTemporaryDirectory(string directory)
         {
-            SqliteConnection.ClearAllPools();
-
-            if (Directory.Exists(directory))
+            // Bounded Dispose can return before an already-running SQLite call releases its file.
+            for (int attempt = 0; Directory.Exists(directory); attempt++)
             {
-                Directory.Delete(directory, recursive: true);
+                SqliteConnection.ClearAllPools();
+                try
+                {
+                    Directory.Delete(directory, recursive: true);
+                    return;
+                }
+                catch (IOException) when (attempt < 100)
+                {
+                    Thread.Sleep(50);
+                }
             }
         }
     }
