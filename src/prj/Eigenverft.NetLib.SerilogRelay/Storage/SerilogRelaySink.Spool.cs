@@ -306,28 +306,70 @@ SELECT Id, EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, Rende
                     select.Parameters.AddWithValue("$owner", _claimOwnerId);
                     select.Parameters.AddWithValue("$claimBatchId", claimBatchId);
 
-                    using var reader = await select.ExecuteReaderAsync(token).ConfigureAwait(false);
-                    while (await reader.ReadAsync(token).ConfigureAwait(false))
+                    long payloadBytes = JsonSerializer.SerializeToUtf8Bytes(CreateBatchPayload(entries), LogBatchJsonContext.Default.LogBatchPayload).Length;
+                    bool payloadTargetReached = false;
+                    using (var reader = await select.ExecuteReaderAsync(token).ConfigureAwait(false))
                     {
-                        entries.Add(new LogEntry
+                        while (await reader.ReadAsync(token).ConfigureAwait(false))
                         {
-                            Id = reader.GetInt64(0),
-                            EventId = reader.GetString(1),
-                            ApplicationId = reader.GetString(2),
-                            MachineId = reader.IsDBNull(3) ? null : reader.GetString(3),
-                            ProcessId = reader.GetInt32(4),
-                            Timestamp = reader.GetString(5),
-                            Level = reader.GetString(6),
-                            RenderMessage = reader.GetString(7),
-                            MessageTemplate = reader.GetString(8),
-                            TraceId = reader.IsDBNull(9) ? null : reader.GetString(9),
-                            SpanId = reader.IsDBNull(10) ? null : reader.GetString(10),
-                            Exception = reader.IsDBNull(11) ? null : reader.GetString(11),
-                            Properties = reader.IsDBNull(12) ? null : reader.GetString(12),
-                        });
+                            var entry = new LogEntry
+                            {
+                                Id = reader.GetInt64(0),
+                                EventId = reader.GetString(1),
+                                ApplicationId = reader.GetString(2),
+                                MachineId = reader.IsDBNull(3) ? null : reader.GetString(3),
+                                ProcessId = reader.GetInt32(4),
+                                Timestamp = reader.GetString(5),
+                                Level = reader.GetString(6),
+                                RenderMessage = reader.GetString(7),
+                                MessageTemplate = reader.GetString(8),
+                                TraceId = reader.IsDBNull(9) ? null : reader.GetString(9),
+                                SpanId = reader.IsDBNull(10) ? null : reader.GetString(10),
+                                Exception = reader.IsDBNull(11) ? null : reader.GetString(11),
+                                Properties = reader.IsDBNull(12) ? null : reader.GetString(12),
+                            };
+                            int entryBytes = JsonSerializer.SerializeToUtf8Bytes(entry, LogBatchJsonContext.Default.LogEntry).Length;
+                            int countDigitsAdded = (entries.Count + 1).ToString(CultureInfo.InvariantCulture).Length
+                                - entries.Count.ToString(CultureInfo.InvariantCulture).Length;
+                            long nextPayloadBytes = payloadBytes + entryBytes + countDigitsAdded + (entries.Count == 0 ? 0 : 1);
+
+                            if (entries.Count > 0 && nextPayloadBytes > _targetBatchPayloadBytes)
+                            {
+                                payloadTargetReached = true;
+                                break;
+                            }
+
+                            // Always include the first event so an oversized event can leave the spool.
+                            entries.Add(entry);
+                            payloadBytes = nextPayloadBytes;
+                            if (payloadBytes >= _targetBatchPayloadBytes)
+                            {
+                                payloadTargetReached = true;
+                                break;
+                            }
+                        }
                     }
 
-                    return new ClaimedLogBatch(claimBatchId, entries);
+                    if (payloadTargetReached)
+                    {
+                        // Release the unread suffix before HTTP; acknowledgment covers only this payload.
+                        using var release = conn.CreateCommand();
+                        release.CommandText = $@"
+UPDATE {TableName}
+   SET ClaimOwnerId = NULL,
+       ClaimBatchId = NULL,
+       ClaimUntilUnixMs = NULL
+ WHERE Sent = 0
+   AND ClaimOwnerId = $owner
+   AND ClaimBatchId = $claimBatchId
+   AND Id > $lastIncludedId;";
+                        release.Parameters.AddWithValue("$owner", _claimOwnerId);
+                        release.Parameters.AddWithValue("$claimBatchId", claimBatchId);
+                        release.Parameters.AddWithValue("$lastIncludedId", entries[entries.Count - 1].Id);
+                        await release.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+                    }
+
+                    return new ClaimedLogBatch(claimBatchId, entries, payloadTargetReached);
                 },
                 token).ConfigureAwait(false);
         }

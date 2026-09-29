@@ -5,6 +5,14 @@ persistent spool.
 
 For the matching ASP.NET Core receiver, use [`Eigenverft.WebLib.SerilogRelayReceiver`](https://www.nuget.org/packages/Eigenverft.WebLib.SerilogRelayReceiver).
 
+## Design intent
+
+The relay bridges periods when an HTTP receiver is unavailable. It stores events durably first, retries delivery in the background, and drains the backlog during normal operation when the receiver becomes available again. The spool is bounded: at capacity, older eligible events make room for newer events.
+
+Shutdown delivery handles the last events of a healthy application run, including batches below the preferred minimum count. It sends immediately and stops when empty or when the configured time budget expires. Outage recovery continues through the durable spool on a later run.
+
+The sender and receiver are deliberately loosely coupled. Any HTTP 2xx is the receiver's acknowledgment that the sender may release the events. The receiver owns its acceptance policy: it may persist, forward, filter, or deliberately discard an event and still acknowledge it. Acknowledgment does not require proof of remote persistence or a particular receiver package. The matching receiver's built-in EF Core handler saves the batch before acknowledgment.
+
 ## Supported frameworks
 
 - .NET 8 (`net8.0`)
@@ -57,6 +65,7 @@ var options = new SerilogRelayOptions
     {
         MinimumBatchEvents = 20,
         MaximumBatchEvents = 100,
+        TargetBatchPayloadBytes = 4 * 1024 * 1024,
         PollInterval = TimeSpan.FromSeconds(5),
         MaximumBatchWait = TimeSpan.FromSeconds(5),
         ShutdownTimeout = TimeSpan.FromSeconds(3),
@@ -113,6 +122,7 @@ The relay currently provides:
 - sent-first / oldest-eligible-unsent capacity reclamation;
 - active-claim protection from unsent age cleanup and capacity reclamation;
 - full-schema capacity probing and transactional replacement, preserving backlog when a new event cannot be stored;
+- byte-aware batching with a configurable 4 MiB UTF-8 JSON target, including batch metadata and escaping;
 - low-volume delivery after `MaximumBatchWait`;
 - immediate startup backlog delivery opportunity;
 - process-local exponential endpoint retry with jitter and HTTP `Retry-After` on every non-2xx response;
@@ -127,7 +137,13 @@ Normal delivery stores events in SQLite first. A successful HTTP 2xx deletes the
 
 When SQLite reaches its configured capacity, the relay first checks whether the new event fits an empty spool with the complete schema, including claim indexes. It reclaims sent rows before the oldest eligible unsent rows. Reclamation and replacement commit together; a failed replacement rolls the deletions back.
 
-An event that cannot be stored enters the bounded emergency RAM buffer, whether storage failed with an exception or rejected it because of capacity. The worker retries durable storage and can send directly over HTTP. At either RAM limit, the oldest queued events are discarded to make room for newer ones. An event too large for the available budget is rejected without clearing the queue; an event already being processed retains its reservation.
+An event that cannot be stored enters the bounded emergency RAM buffer, whether storage failed with an exception or rejected it because of capacity. The worker retries durable storage and can send directly over HTTP. At either RAM limit, the oldest waiting events are discarded to make room for newer ones, including an old event waiting for another retry. Only a currently executing storage or HTTP attempt retains its reservation. An event too large for the remaining budget after that active reservation is rejected without clearing the queue.
+
+## Batch payload target
+
+`Delivery.TargetBatchPayloadBytes` defaults to 4 MiB. The sender measures the serialized UTF-8 JSON, including escaping, commas, count digits, and batch metadata. It stops filling a batch before another event would exceed the target and releases unused claims before sending. A batch filled by bytes can be sent below `MinimumBatchEvents`; low-volume batches still use `MaximumBatchWait`.
+
+This is a batching target, not an event-size admission limit. An individual event larger than the target is sent alone and without truncation, so the target cannot strand it in the spool. The value belongs to the sender and does not negotiate or impose a receiver body limit. HTTP non-2xx responses retain the events for the existing retry policy.
 
 ## Shutdown
 

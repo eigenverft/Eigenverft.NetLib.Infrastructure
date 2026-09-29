@@ -2221,7 +2221,70 @@ END;
         [DataRow(10, 1600 * 1024, 2)]
         [DataRow(1, 10 * 1024 * 1024, 4)]
         [DataRow(10, 600 * 1024, 4)]
-        public async Task EmergencyCapacityPreservesInFlightAndNewestQueuedEvents(int eventLimit, int byteLimit, int expectedDropped)
+        public async Task EmergencyCapacityPreservesActiveRequestAndNewestQueuedEvents(int eventLimit, int byteLimit, int expectedDropped)
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var options = new SerilogRelayOptions();
+            options.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
+            options.EmergencyMemoryBuffer.MaxBufferedEvents = eventLimit;
+            options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = byteLimit;
+            options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
+            var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
+
+            try
+            {
+                var responseGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var requestStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                GetPrivateField<HttpClient>(sink, "_httpClient").Timeout = TimeSpan.FromSeconds(10);
+                Task<string> activeRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, responseGate: responseGate.Task, onReceived: () => requestStarted.SetResult(true));
+                string suffix = new string('x', 256 * 1024);
+                sink.Emit(CreateLogEvent($"ram0 {suffix}"));
+                await requestStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+                for (int index = 1; index <= 4; index++)
+                    sink.Emit(CreateLogEvent($"ram{index} {suffix}"));
+
+                Assert.AreEqual((long)expectedDropped, GetPrivateField<long>(sink, "_emergencyDroppedCount"));
+                Assert.AreEqual(5L - expectedDropped, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.IsLessThanOrEqualTo((long)byteLimit, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
+                HttpStatusCode[] responses = new HttpStatusCode[4 - expectedDropped];
+                Array.Fill(responses, HttpStatusCode.OK);
+                Task<List<string>> received = ReceiveRequestsAsync(listener, responses);
+                responseGate.SetResult(true);
+                await sink.DisposeAsync();
+                List<string> bodies = await received.WaitAsync(TimeSpan.FromSeconds(5));
+                bodies.Insert(0, await activeRequest.WaitAsync(TimeSpan.FromSeconds(5)));
+
+                var messages = new List<string>();
+                foreach (string body in bodies)
+                {
+                    using JsonDocument document = JsonDocument.Parse(body);
+                    string message = document.RootElement.GetProperty("logs")[0].GetProperty("renderMessage").GetString()!;
+                    messages.Add(message[..4]);
+                }
+
+                CollectionAssert.AreEqual(expectedDropped == 2 ? new[] { "ram0", "ram3", "ram4" } : new[] { "ram0" }, messages.ToArray());
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
+            }
+            finally
+            {
+                await DisposeAndWaitForCleanupAsync(sink);
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DataRow(3, 10 * 1024 * 1024, 2)]
+        [DataRow(10, 1600 * 1024, 2)]
+        [DataRow(1, 10 * 1024 * 1024, 4)]
+        [DataRow(10, 600 * 1024, 4)]
+        public async Task EmergencyCapacityEvictsRetryWaitingEventsBeforeNewerQueuedEvents(int eventLimit, int byteLimit, int expectedDropped)
         {
             string directory = CreateTemporaryDirectory();
             string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
@@ -2240,10 +2303,13 @@ END;
                 GetPrivateField<RetryGate>(sink, "_retryGate").RecordFailure(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(5));
                 string suffix = new string('x', 256 * 1024);
                 sink.Emit(CreateLogEvent($"ram0 {suffix}"));
-                await WaitUntilAsync(() => GetPrivateField<object?>(sink, "_emergencyInFlight") is not null, TimeSpan.FromSeconds(5));
+                await WaitUntilAsync(() => GetPrivateField<object?>(sink, "_emergencyRetryEntry") is not null, TimeSpan.FromSeconds(5));
 
-                for (int index = 1; index <= 4; index++)
-                    sink.Emit(CreateLogEvent($"ram{index} {suffix}"));
+                lock (GetPrivateField<object>(sink, "_emergencyBufferLock"))
+                {
+                    for (int index = 1; index <= 4; index++)
+                        sink.Emit(CreateLogEvent($"ram{index} {suffix}"));
+                }
 
                 Assert.AreEqual((long)expectedDropped, GetPrivateField<long>(sink, "_emergencyDroppedCount"));
                 Assert.AreEqual(5L - expectedDropped, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
@@ -2262,7 +2328,7 @@ END;
                     messages.Add(message[..4]);
                 }
 
-                CollectionAssert.AreEqual(expectedDropped == 2 ? new[] { "ram0", "ram3", "ram4" } : new[] { "ram0" }, messages.ToArray());
+                CollectionAssert.AreEqual(expectedDropped == 2 ? new[] { "ram2", "ram3", "ram4" } : new[] { "ram4" }, messages.ToArray());
                 Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
                 Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
             }
@@ -2506,6 +2572,160 @@ VALUES
             finally
             {
                 await DisposeAndWaitForCleanupAsync(sink);
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task PayloadTargetSplitsEscapedJsonAndDrainsEveryEvent(bool shutdown)
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var options = new SerilogRelayOptions();
+            options.Delivery.TargetBatchPayloadBytes = 4096;
+            options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
+            options.Delivery.MaximumBatchWait = TimeSpan.FromMinutes(1);
+            string suffix = new string('ä', 100) + "\"\\\n";
+            var expected = new List<string>();
+
+            try
+            {
+                using (var seed = new SerilogRelaySink(connectionString, endpoint: null, options))
+                {
+                    for (int index = 0; index < 12; index++)
+                    {
+                        string message = $"event {index} {suffix}";
+                        expected.Add(message);
+                        seed.Emit(CreateLogEvent(message));
+                    }
+                }
+
+                Task<List<string>> requests = ReceiveRequestsAsync(listener,
+                    HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK,
+                    HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK);
+                var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
+                try
+                {
+                    if (shutdown)
+                        await sink.DisposeAsync();
+                    List<string> bodies = await requests.WaitAsync(TimeSpan.FromSeconds(10));
+                    var received = new List<string>();
+                    foreach (string body in bodies)
+                    {
+                        Assert.IsLessThanOrEqualTo(options.Delivery.TargetBatchPayloadBytes, Encoding.UTF8.GetByteCount(body));
+                        using JsonDocument document = JsonDocument.Parse(body);
+                        JsonElement logs = document.RootElement.GetProperty("logs");
+                        Assert.AreEqual(2, logs.GetArrayLength());
+                        Assert.AreEqual(logs.GetArrayLength(), document.RootElement.GetProperty("count").GetInt32());
+                        foreach (JsonElement entry in logs.EnumerateArray())
+                            received.Add(entry.GetProperty("renderMessage").GetString()!);
+                    }
+                    CollectionAssert.AreEqual(expected, received);
+                    await WaitUntilAsync(() => GetTotalRowCount(connectionString) == 0, TimeSpan.FromSeconds(5));
+                }
+                finally
+                {
+                    await DisposeAndWaitForCleanupAsync(sink);
+                }
+            }
+            finally
+            {
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task SingleOversizedEventIsSentAloneAndDoesNotStrandFollowingEvents(bool emergency)
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var options = new SerilogRelayOptions();
+            if (emergency)
+                options.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
+            options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
+            options.Delivery.MaximumBatchWait = TimeSpan.FromMinutes(1);
+            Task<List<string>> requests = ReceiveRequestsAsync(listener, HttpStatusCode.OK, HttpStatusCode.OK);
+            var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
+            string oversized = new string('x', 2 * 1024 * 1024);
+
+            try
+            {
+                sink.Emit(CreateLogEvent(oversized));
+                sink.Emit(CreateLogEvent("following event"));
+                await sink.DisposeAsync();
+                List<string> bodies = await requests.WaitAsync(TimeSpan.FromSeconds(10));
+                using JsonDocument first = JsonDocument.Parse(bodies[0]);
+                Assert.IsGreaterThan(options.Delivery.TargetBatchPayloadBytes, Encoding.UTF8.GetByteCount(bodies[0]));
+                Assert.AreEqual(1, first.RootElement.GetProperty("count").GetInt32());
+                Assert.AreEqual(oversized, first.RootElement.GetProperty("logs")[0].GetProperty("renderMessage").GetString());
+                using JsonDocument second = JsonDocument.Parse(bodies[1]);
+                Assert.AreEqual("following event", second.RootElement.GetProperty("logs")[0].GetProperty("renderMessage").GetString());
+                Assert.AreEqual(0L, GetTotalRowCount(connectionString));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+            }
+            finally
+            {
+                await DisposeAndWaitForCleanupAsync(sink);
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DataRow(HttpStatusCode.OK)]
+        [DataRow(HttpStatusCode.ServiceUnavailable)]
+        public async Task ByteFilledBatchSendsBelowMinimumAndReleasesTheUnsentSuffix(HttpStatusCode status)
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var options = new SerilogRelayOptions();
+            options.Delivery.MinimumBatchEvents = 2;
+            options.Delivery.TargetBatchPayloadBytes = 1024;
+            options.Delivery.ShutdownTimeout = TimeSpan.Zero;
+            var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
+
+            try
+            {
+                CancellationTokenSource cancellation = GetPrivateField<CancellationTokenSource>(sink, "_cts");
+                cancellation.Cancel();
+                try
+                {
+                    await GetPrivateField<Task>(sink, "_senderTask").WaitAsync(TimeSpan.FromSeconds(5));
+                }
+                catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+                {
+                }
+
+                sink.Emit(CreateLogEvent("first " + new string('x', 100)));
+                sink.Emit(CreateLogEvent("second " + new string('x', 100)));
+                Task<string> request = ReceiveSingleRequestAsync(listener, status);
+                bool delivered = await InvokePrivateTaskMethod<bool>(sink, "ProcessPendingAsync", false, CancellationToken.None);
+                Assert.AreEqual(status == HttpStatusCode.OK, delivered);
+                string body = await request.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.IsLessThanOrEqualTo(options.Delivery.TargetBatchPayloadBytes, Encoding.UTF8.GetByteCount(body));
+                using JsonDocument document = JsonDocument.Parse(body);
+                Assert.AreEqual(1, document.RootElement.GetProperty("count").GetInt32());
+                Assert.AreEqual(status == HttpStatusCode.OK ? 1L : 2L, GetUnsentCount(connectionString));
+                Assert.IsNull(GetClaimOwnerId(connectionString));
+            }
+            finally
+            {
+                await DisposeAndWaitForCleanupAsync(sink);
+                listener.Stop();
                 DeleteTemporaryDirectory(directory);
             }
         }
@@ -2943,7 +3163,9 @@ SELECT ClaimOwnerId
         private static async Task<string> ReceiveSingleRequestAsync(
             TcpListener listener,
             HttpStatusCode statusCode,
-            string? extraHeaders = null)
+            string? extraHeaders = null,
+            Task? responseGate = null,
+            Action? onReceived = null)
         {
             using TcpClient client = await listener.AcceptTcpClientAsync();
             using NetworkStream stream = client.GetStream();
@@ -2983,6 +3205,9 @@ SELECT ClaimOwnerId
             }
 
             string body = new string(bodyBuffer, 0, totalRead);
+            onReceived?.Invoke();
+            if (responseGate is not null)
+                await responseGate;
             string reason = statusCode == HttpStatusCode.OK ? "OK" : "Error";
             byte[] response = Encoding.ASCII.GetBytes(
                 $"HTTP/1.1 {(int)statusCode} {reason}\r\n{extraHeaders ?? string.Empty}Content-Length: 0\r\nConnection: close\r\n\r\n");

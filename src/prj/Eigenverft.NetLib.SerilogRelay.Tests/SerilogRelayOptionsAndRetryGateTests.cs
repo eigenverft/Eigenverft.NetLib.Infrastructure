@@ -17,6 +17,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             Assert.AreEqual(64L * 1024L * 1024L, options.ApplicationSpool.MaxPhysicalBytes);
             Assert.AreEqual(20, options.Delivery.MinimumBatchEvents);
             Assert.AreEqual(100, options.Delivery.MaximumBatchEvents);
+            Assert.AreEqual(4 * 1024 * 1024, options.Delivery.TargetBatchPayloadBytes);
             Assert.AreEqual(TimeSpan.FromSeconds(5), options.Delivery.PollInterval);
             Assert.AreEqual(TimeSpan.FromSeconds(5), options.Delivery.MaximumBatchWait);
             Assert.AreEqual(TimeSpan.FromSeconds(3), options.Delivery.ShutdownTimeout);
@@ -34,6 +35,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             options.ApplicationSpool.MaxPhysicalBytes = 8192;
             options.Delivery.MinimumBatchEvents = 3;
             options.Delivery.MaximumBatchEvents = 9;
+            options.Delivery.TargetBatchPayloadBytes = 1024;
             options.Delivery.PollInterval = TimeSpan.FromSeconds(2);
             options.Delivery.MaximumBatchWait = TimeSpan.FromSeconds(7);
             options.Delivery.ShutdownTimeout = TimeSpan.FromMilliseconds(500);
@@ -51,6 +53,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             Assert.AreEqual(8192L, options.ApplicationSpool.MaxPhysicalBytes);
             Assert.AreEqual(3, options.Delivery.MinimumBatchEvents);
             Assert.AreEqual(9, options.Delivery.MaximumBatchEvents);
+            Assert.AreEqual(1024, options.Delivery.TargetBatchPayloadBytes);
             Assert.AreEqual(TimeSpan.FromSeconds(2), options.Delivery.PollInterval);
             Assert.AreEqual(TimeSpan.FromSeconds(7), options.Delivery.MaximumBatchWait);
             Assert.AreEqual(TimeSpan.FromMilliseconds(500), options.Delivery.ShutdownTimeout);
@@ -175,6 +178,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                     options.Delivery.MaximumBatchEvents = 1;
                 },
                 typeof(ArgumentException));
+            AssertInvalid(options => options.Delivery.TargetBatchPayloadBytes = 0, typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.PollInterval = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.MaximumBatchWait = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.ShutdownTimeout = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));

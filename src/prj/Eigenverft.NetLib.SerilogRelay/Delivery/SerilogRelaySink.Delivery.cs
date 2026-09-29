@@ -193,7 +193,8 @@ namespace Eigenverft.NetLib.SerilogRelay
                     break;
                 }
 
-                if (!ignoreMinBatch && entries.Count < _minBatchSize)
+                // A batch filled by bytes is ready even below the preferred event count.
+                if (!ignoreMinBatch && !claimed.PayloadTargetReached && entries.Count < _minBatchSize)
                 {
                     await ReleaseClaimAsync(claimed, token).ConfigureAwait(false);
                     pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
@@ -218,13 +219,9 @@ namespace Eigenverft.NetLib.SerilogRelay
             return sentCount > 0;
         }
 
-        // Send one batch of logs over HTTP using AOT-compatible source-gen context.
-        private async Task<bool> SendBatchAsync(List<LogEntry> entries, CancellationToken token)
+        private static LogBatchPayload CreateBatchPayload(List<LogEntry> entries)
         {
-            if (!_retryGate.TryAcquire(DateTimeOffset.UtcNow, ignoreBackoff: Volatile.Read(ref _disposeStarted) != 0))
-                return false;
-
-            var payload = new LogBatchPayload
+            return new LogBatchPayload
             {
                 ProtocolVersion = 1,
                 BatchId = Guid.NewGuid().ToString(),
@@ -232,6 +229,15 @@ namespace Eigenverft.NetLib.SerilogRelay
                 Count = entries.Count,
                 Logs = entries
             };
+        }
+
+        // Send one batch of logs over HTTP using AOT-compatible source-gen context.
+        private async Task<bool> SendBatchAsync(List<LogEntry> entries, CancellationToken token)
+        {
+            if (!_retryGate.TryAcquire(DateTimeOffset.UtcNow, ignoreBackoff: Volatile.Read(ref _disposeStarted) != 0))
+                return false;
+
+            LogBatchPayload payload = CreateBatchPayload(entries);
             var json = JsonSerializer.Serialize(payload, LogBatchJsonContext.Default.LogBatchPayload);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
 

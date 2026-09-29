@@ -69,6 +69,12 @@ namespace Eigenverft.NetLib.SerilogRelay
         public int MaximumBatchEvents { get; set; } = 100;
 
         /// <summary>
+        /// Gets or sets the target UTF-8 JSON payload size per send, including batch metadata.
+        /// An event larger than this target is sent alone, without truncation or size-based rejection.
+        /// </summary>
+        public int TargetBatchPayloadBytes { get; set; } = 4 * 1024 * 1024;
+
+        /// <summary>
         /// Gets or sets the normal sender polling interval.
         /// </summary>
         public TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(5);

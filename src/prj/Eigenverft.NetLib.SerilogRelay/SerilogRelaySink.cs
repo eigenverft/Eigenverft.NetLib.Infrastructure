@@ -256,6 +256,7 @@ CREATE TABLE IF NOT EXISTS {0} (
         private readonly string _claimOwnerId;
         private readonly int _minBatchSize;
         private readonly int _maxBatchSize;
+        private readonly int _targetBatchPayloadBytes;
         private readonly TimeSpan _baseInterval;
         private readonly TimeSpan _maximumBatchWait;
         private readonly TimeSpan _shutdownTimeout;
@@ -349,6 +350,7 @@ CREATE TABLE IF NOT EXISTS {0} (
             _claimOwnerId = FormattableString.Invariant($"{_processId}:{Guid.NewGuid():N}");
             _minBatchSize = options.Delivery.MinimumBatchEvents;
             _maxBatchSize = options.Delivery.MaximumBatchEvents;
+            _targetBatchPayloadBytes = options.Delivery.TargetBatchPayloadBytes;
             _baseInterval = options.Delivery.PollInterval;
             _maximumBatchWait = options.Delivery.MaximumBatchWait;
             _shutdownTimeout = options.Delivery.ShutdownTimeout;
@@ -460,6 +462,8 @@ CREATE TABLE IF NOT EXISTS {0} (
                 throw new ArgumentOutOfRangeException(nameof(options), "Minimum batch size must be at least 1.");
             if (options.Delivery.MaximumBatchEvents < options.Delivery.MinimumBatchEvents)
                 throw new ArgumentException("Minimum batch size must be less than or equal to maximum batch size.", nameof(options));
+            if (options.Delivery.TargetBatchPayloadBytes < 1)
+                throw new ArgumentOutOfRangeException(nameof(options), "Batch payload target must be at least 1 byte.");
             if (options.Delivery.PollInterval <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(options), "Delivery poll interval must be greater than zero.");
             if (options.Delivery.MaximumBatchWait <= TimeSpan.Zero)
