@@ -3,6 +3,8 @@
 Durable Serilog relay for forwarding application logs over HTTP while keeping a bounded local
 persistent spool.
 
+For the matching ASP.NET Core receiver, use [`Eigenverft.WebLib.SerilogRelayReceiver`](https://www.nuget.org/packages/Eigenverft.WebLib.SerilogRelayReceiver).
+
 ## Supported frameworks
 
 - .NET 8 (`net8.0`)
