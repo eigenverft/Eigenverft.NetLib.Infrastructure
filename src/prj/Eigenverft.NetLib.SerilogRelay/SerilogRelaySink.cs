@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
@@ -260,7 +261,9 @@ CREATE TABLE IF NOT EXISTS {0} (
         private readonly TimeSpan _baseInterval;
         private readonly TimeSpan _maximumBatchWait;
         private readonly TimeSpan _shutdownTimeout;
+        private readonly TimeSpan _shutdownRequestTimeout;
         private readonly TimeSpan _shutdownRetryInterval;
+        private long _lastHttpAttemptStartedTimestamp;
         private readonly TimeSpan _applicationSpoolSentEventRetention;
         private readonly TimeSpan? _applicationSpoolUnsentEventMaxAge;
         private readonly long _maxApplicationSpoolPhysicalBytes;
@@ -268,6 +271,7 @@ CREATE TABLE IF NOT EXISTS {0} (
         private readonly RetryGate _retryGate;
 
         private readonly CancellationTokenSource _cts;
+        private readonly CancellationTokenSource _shutdownSignal;
         private readonly Task _senderTask;
         private readonly Channel<EmergencyEntry> _emergencyChannel;
         private readonly Task _emergencyTask;
@@ -354,6 +358,7 @@ CREATE TABLE IF NOT EXISTS {0} (
             _baseInterval = options.Delivery.PollInterval;
             _maximumBatchWait = options.Delivery.MaximumBatchWait;
             _shutdownTimeout = options.Delivery.ShutdownTimeout;
+            _shutdownRequestTimeout = options.Delivery.ShutdownRequestTimeout;
             _shutdownRetryInterval = options.Delivery.ShutdownRetryInterval;
             _applicationSpoolSentEventRetention = options.ApplicationSpool.SentEventRetention;
             _applicationSpoolUnsentEventMaxAge = options.ApplicationSpool.UnsentEventMaxAge;
@@ -372,6 +377,7 @@ CREATE TABLE IF NOT EXISTS {0} (
                 _httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", bearerToken);
             _cts = new CancellationTokenSource();
+            _shutdownSignal = new CancellationTokenSource();
             _emergencyChannel = Channel.CreateBounded<EmergencyEntry>(
                 new BoundedChannelOptions(_emergencyBufferCapacity)
                 {
@@ -471,6 +477,9 @@ CREATE TABLE IF NOT EXISTS {0} (
             if (options.Delivery.ShutdownTimeout < TimeSpan.Zero
                 || options.Delivery.ShutdownTimeout.TotalMilliseconds > uint.MaxValue - 1L)
                 throw new ArgumentOutOfRangeException(nameof(options), "Shutdown timeout must be a finite, non-negative timer duration.");
+            if (options.Delivery.ShutdownRequestTimeout <= TimeSpan.Zero
+                || options.Delivery.ShutdownRequestTimeout.TotalMilliseconds > uint.MaxValue - 1L)
+                throw new ArgumentOutOfRangeException(nameof(options), "Shutdown request timeout must be a finite, positive timer duration.");
             if (options.Delivery.ShutdownRetryInterval <= TimeSpan.Zero
                 || options.Delivery.ShutdownRetryInterval.TotalMilliseconds > uint.MaxValue - 1L)
                 throw new ArgumentOutOfRangeException(nameof(options), "Shutdown retry interval must be a finite, positive timer duration.");
@@ -608,6 +617,7 @@ CREATE TABLE IF NOT EXISTS {0} (
                     return _disposeTask;
 
                 Volatile.Write(ref _disposeStarted, 1);
+                _shutdownSignal.Cancel();
                 _disposeTask = Task.Run(DisposeCoreAsync);
                 return _disposeTask;
             }
@@ -655,9 +665,10 @@ CREATE TABLE IF NOT EXISTS {0} (
                         if (ExecuteDatabaseWithRecovery(GetPendingCountCore) == 0)
                             break;
 
+                        long roundStarted = Stopwatch.GetTimestamp();
                         bool didWork = await ProcessPendingAsync(ignoreMinBatch: true, token, shutdownDrain: true).ConfigureAwait(false);
                         if (!didWork)
-                            await Task.Delay(_shutdownRetryInterval, token).ConfigureAwait(false);
+                            await WaitForShutdownRetryAsync(roundStarted, token).ConfigureAwait(false);
                     }
                 }
             }
@@ -703,6 +714,7 @@ CREATE TABLE IF NOT EXISTS {0} (
                 {
                     _httpClient.Dispose();
                     _cts.Dispose();
+                    _shutdownSignal.Dispose();
                     _databaseGate.Dispose();
                 }
             }

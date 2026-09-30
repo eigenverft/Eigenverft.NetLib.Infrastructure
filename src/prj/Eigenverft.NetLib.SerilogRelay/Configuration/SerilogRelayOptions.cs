@@ -91,8 +91,14 @@ namespace Eigenverft.NetLib.SerilogRelay
         public TimeSpan ShutdownTimeout { get; set; } = TimeSpan.FromSeconds(3);
 
         /// <summary>
-        /// Gets or sets the delay between failed delivery attempts during shutdown.
-        /// Successful batches are sent without this delay.
+        /// Gets or sets the additional HTTP request time limit during shutdown.
+        /// The normal HTTP timeout and remaining shutdown budget may end a request earlier.
+        /// </summary>
+        public TimeSpan ShutdownRequestTimeout { get; set; } = TimeSpan.FromSeconds(1);
+
+        /// <summary>
+        /// Gets or sets the minimum interval before retrying failed shutdown delivery.
+        /// Time spent in the failed request counts toward this interval; successful batches have no delay.
         /// </summary>
         public TimeSpan ShutdownRetryInterval { get; set; } = TimeSpan.FromSeconds(1);
     }

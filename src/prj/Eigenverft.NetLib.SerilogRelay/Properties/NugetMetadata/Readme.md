@@ -69,6 +69,7 @@ var options = new SerilogRelayOptions
         PollInterval = TimeSpan.FromSeconds(5),
         MaximumBatchWait = TimeSpan.FromSeconds(5),
         ShutdownTimeout = TimeSpan.FromSeconds(3),
+        ShutdownRequestTimeout = TimeSpan.FromSeconds(1),
         ShutdownRetryInterval = TimeSpan.FromSeconds(1)
     },
     EndpointRetry =
@@ -127,7 +128,7 @@ The relay currently provides:
 - immediate startup backlog delivery opportunity;
 - process-local exponential endpoint retry with jitter and HTTP `Retry-After` on every non-2xx response;
 - process-local Emergency memory bounds of 16384 events and 64 MiB payload bytes by default;
-- configurable shutdown delivery with a three-second total budget and one-second failure retry interval by default;
+- configurable shutdown delivery with a three-second total budget, one-second request cap, and one-second failure retry interval by default;
 - at-least-once HTTP delivery without imposing receiver-side storage/deduplication semantics.
 
 
@@ -151,7 +152,7 @@ This is a batching target, not an event-size admission limit. An individual even
 
 ## Slow responses and HTTP timeouts
 
-The sender currently uses a fixed two-second `HttpClient.Timeout` and a 30-second claim lease. The request timeout starts with HTTP delivery; the claim lease also covers the preceding local claim/read/payload preparation. Claims are not renewed by receiver activity.
+Normal delivery currently uses a fixed two-second `HttpClient.Timeout` and a 30-second claim lease. Shutdown adds `Delivery.ShutdownRequestTimeout`, defaulting to one second per request. The request timeout starts with HTTP delivery; the claim lease also covers the preceding local claim/read/payload preparation. Claims are not renewed by receiver activity.
 
 A receiver taking 10, 30, or 60 seconds to finish its response does not extend the client timeout. An HTTP timeout records an endpoint failure, leaves durable events unacknowledged, and releases the still-owned claim for retry. If claim release fails or the process exits first, the lease provides the fallback. Only one client HTTP attempt per sink is active at a time; a timed-out server operation may still overlap later retries or attempts from other processes.
 
@@ -161,9 +162,11 @@ A server can commit successfully after the client has timed out. Retries preserv
 
 ## Shutdown
 
-`Delivery.ShutdownTimeout` is an upper limit, not a fixed wait. Shutdown finishes as soon as the emergency buffer and durable spool have been handled. Set it to `TimeSpan.Zero` to skip shutdown delivery. The default is three seconds; `Delivery.ShutdownRetryInterval` defaults to one second and applies after failed attempts.
+`Delivery.ShutdownTimeout` is an upper limit, not a fixed wait. Shutdown finishes as soon as the emergency buffer and durable spool have been handled. Set it to `TimeSpan.Zero` to skip shutdown delivery. The default is three seconds. `Delivery.ShutdownRequestTimeout` adds a one-second request cap by default, also applied from shutdown start to a request already in progress. The normal two-second HTTP timeout and remaining total budget still apply; whichever expires first ends the request.
 
-If a normal sender batch is already in progress, shutdown lets that batch and its acknowledgment finish, then stops the normal round before another batch. Retry/error waits yield to shutdown as well. Emergency delivery waits for this handover before acquiring the HTTP gate.
+`Delivery.ShutdownRetryInterval` defaults to one second and sets the minimum retry interval after failure. Time already spent in the last failed HTTP attempt counts toward this interval; only the remainder is waited. A one-second timeout therefore does not incur another full second of retry delay. With the defaults, failed attempts can start approximately at zero, one, and two seconds within the three-second budget, subject to local work and scheduling. Faster successful requests continue immediately.
+
+If a normal sender batch is already in progress, shutdown lets the current attempt finish within the applicable limits and acknowledges it on success, then stops the normal round before another batch. Retry/error waits yield to shutdown as well. Emergency delivery waits for this handover before acquiring the HTTP gate.
 
 Shutdown then sends volatile emergency events first and flushes the spool even below `MinimumBatchEvents`. Successful batches have no normal inter-batch pause. The final delivery attempts bypass the normal endpoint backoff, while only one HTTP attempt remains active at a time.
 

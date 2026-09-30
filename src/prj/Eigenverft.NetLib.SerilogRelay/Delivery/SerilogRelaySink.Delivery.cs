@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -172,7 +173,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <param name="token">Cancellation token.</param>
         /// <param name="shutdownDrain">If true, drains after the normal sender has yielded to shutdown.</param>
         /// <param name="ignoreMinBatch">If true, skips the minimum batch-size check.</param>
-        /// <returns>True if any logs were successfully sent.</returns>
+        /// <returns>True if logs were sent and the round ended without a failed HTTP attempt.</returns>
         private async Task<bool> ProcessPendingAsync(bool ignoreMinBatch, CancellationToken token, bool shutdownDrain = false)
         {
             long pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
@@ -210,8 +211,9 @@ namespace Eigenverft.NetLib.SerilogRelay
                 if (!await SendBatchAsync(entries, token).ConfigureAwait(false))
                 {
                     await ReleaseClaimAsync(claimed, token).ConfigureAwait(false);
-                    pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
-                    break;
+                    RefreshClaimablePendingState(DateTimeOffset.UtcNow);
+                    // Preserve failure pacing even if earlier batches in this round succeeded.
+                    return false;
                 }
 
                 await AcknowledgeClaimAsync(claimed, token).ConfigureAwait(false);
@@ -226,6 +228,15 @@ namespace Eigenverft.NetLib.SerilogRelay
             }
 
             return sentCount > 0;
+        }
+
+        private async Task WaitForShutdownRetryAsync(long roundStarted, CancellationToken token)
+        {
+            // Count time spent in the failed request toward the retry interval.
+            long attemptStarted = Math.Max(roundStarted, Interlocked.Read(ref _lastHttpAttemptStartedTimestamp));
+            TimeSpan delay = _shutdownRetryInterval - Stopwatch.GetElapsedTime(attemptStarted);
+            if (delay > TimeSpan.Zero)
+                await Task.Delay(delay, token).ConfigureAwait(false);
         }
 
         private static LogBatchPayload CreateBatchPayload(List<LogEntry> entries)
@@ -252,7 +263,11 @@ namespace Eigenverft.NetLib.SerilogRelay
 
             try
             {
-                using var resp = await _httpClient.PostAsync(_endpoint, content, token).ConfigureAwait(false);
+                using var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
+                // Also shorten an HTTP attempt that was already running when shutdown began.
+                using var shutdownRegistration = _shutdownSignal.Token.Register(() => requestCancellation.CancelAfter(_shutdownRequestTimeout));
+                Interlocked.Exchange(ref _lastHttpAttemptStartedTimestamp, Stopwatch.GetTimestamp());
+                using var resp = await _httpClient.PostAsync(_endpoint, content, requestCancellation.Token).ConfigureAwait(false);
                 if (resp.IsSuccessStatusCode)
                 {
                     _retryGate.RecordSuccess();

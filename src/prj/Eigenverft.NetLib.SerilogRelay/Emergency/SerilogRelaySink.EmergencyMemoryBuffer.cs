@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -113,6 +114,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                     }
 
                     bool completed = false;
+                    long roundStarted = Stopwatch.GetTimestamp();
                     try
                     {
                         completed = await TryProcessEmergencyEntryAsync(bufferedEntry.Entry, token).ConfigureAwait(false);
@@ -136,7 +138,12 @@ namespace Eigenverft.NetLib.SerilogRelay
                     }
 
                     if (!completed)
-                        await Task.Delay(Volatile.Read(ref _disposeStarted) == 0 ? TimeSpan.FromMilliseconds(EmergencyRetryDelayMs) : _shutdownRetryInterval, token).ConfigureAwait(false);
+                    {
+                        if (Volatile.Read(ref _disposeStarted) == 0)
+                            await Task.Delay(EmergencyRetryDelayMs, token).ConfigureAwait(false);
+                        else
+                            await WaitForShutdownRetryAsync(roundStarted, token).ConfigureAwait(false);
+                    }
                 }
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)

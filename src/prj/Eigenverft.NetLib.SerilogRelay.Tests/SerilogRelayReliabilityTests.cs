@@ -576,6 +576,7 @@ WHERE Sent = 0;";
                 options.Delivery.MaximumBatchEvents = 100;
                 options.Delivery.PollInterval = TimeSpan.FromSeconds(5);
                 options.Delivery.MaximumBatchWait = TimeSpan.FromSeconds(10);
+                options.Delivery.ShutdownRequestTimeout = TimeSpan.FromSeconds(10);
                 options.EndpointRetry.JitterRatio = 0d;
 
                 var sink = new SerilogRelaySink(
@@ -3087,6 +3088,191 @@ VALUES
                     }
                 }
                 await DisposeAndWaitForCleanupAsync(sink);
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task ShutdownRetriesHangingResponsesAtOneSecondIntervals(bool emergency)
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var options = new SerilogRelayOptions();
+            if (emergency)
+                options.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
+            var sink = new SerilogRelaySink(connectionString, endpoint: null, options);
+            var responseGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var firstBody = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var secondBody = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Task<string>? firstRequest = null;
+            Task<string>? secondRequest = null;
+
+            try
+            {
+                // Keep normal delivery out of the way; exercise the public shutdown path.
+                GetPrivateField<RetryGate>(sink, "_retryGate").RecordFailure(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(1));
+                sink.Emit(CreateLogEvent(emergency ? new string('v', 128 * 1024) : "durable shutdown timeout"));
+                Assert.AreEqual(emergency ? 1L : 0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                SetPrivateField(sink, "_endpoint", $"http://127.0.0.1:{port}/logs");
+                firstRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, responseGate: responseGate.Task,
+                    onBodyReceived: body => firstBody.TrySetResult(body));
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                Task shutdown = sink.DisposeAsync().AsTask();
+                string first = await firstBody.Task.WaitAsync(TimeSpan.FromSeconds(2));
+                TimeSpan firstStarted = stopwatch.Elapsed;
+
+                secondRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, responseGate: responseGate.Task,
+                    onBodyReceived: body => secondBody.TrySetResult(body));
+                string second = await secondBody.Task.WaitAsync(TimeSpan.FromSeconds(2));
+                TimeSpan secondStarted = stopwatch.Elapsed;
+                Task<string> thirdRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent);
+                string third = await thirdRequest.WaitAsync(TimeSpan.FromSeconds(2));
+                TimeSpan thirdStarted = stopwatch.Elapsed;
+                await shutdown.WaitAsync(TimeSpan.FromSeconds(4));
+
+                Assert.IsFalse(firstRequest.IsCompleted);
+                Assert.IsFalse(secondRequest.IsCompleted);
+                Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(800), secondStarted - firstStarted);
+                Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(800), thirdStarted - secondStarted);
+                Assert.IsLessThan(options.Delivery.ShutdownTimeout, thirdStarted);
+                Assert.AreEqual(0L, GetTotalRowCount(connectionString));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                using JsonDocument firstDocument = JsonDocument.Parse(first);
+                using JsonDocument secondDocument = JsonDocument.Parse(second);
+                using JsonDocument thirdDocument = JsonDocument.Parse(third);
+                string? eventId = firstDocument.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString();
+                Assert.AreEqual(eventId, secondDocument.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString());
+                Assert.AreEqual(eventId, thirdDocument.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString());
+            }
+            finally
+            {
+                responseGate.TrySetResult(true);
+                listener.Stop();
+                foreach (Task<string>? request in new[] { firstRequest, secondRequest })
+                {
+                    if (request is null)
+                        continue;
+                    try
+                    {
+                        await request.WaitAsync(TimeSpan.FromSeconds(5));
+                    }
+                    catch (Exception exception) when (exception is IOException or SocketException)
+                    {
+                    }
+                }
+                await DisposeAndWaitForCleanupAsync(sink);
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task ShutdownShortensAnAlreadyRunningNormalHttpRequest()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var options = new SerilogRelayOptions();
+            options.Delivery.MinimumBatchEvents = 1;
+            options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
+            options.Delivery.ShutdownRequestTimeout = TimeSpan.FromMilliseconds(200);
+            options.Delivery.ShutdownRetryInterval = TimeSpan.FromMilliseconds(200);
+            var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
+            var responseGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var receivedBody = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Task<string>? activeRequest = null;
+
+            try
+            {
+                activeRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, responseGate: responseGate.Task,
+                    onBodyReceived: body => receivedBody.TrySetResult(body));
+                sink.Emit(CreateLogEvent("already running before shutdown"));
+                string originalBody = await receivedBody.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                await Task.Delay(350);
+                Assert.AreEqual(0, GetPrivateField<RetryGate>(sink, "_retryGate").ConsecutiveFailures);
+                Assert.IsNotNull(GetClaimOwnerId(connectionString));
+
+                Task<string> repeatedRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent);
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                await sink.DisposeAsync();
+                stopwatch.Stop();
+                string repeatedBody = await repeatedRequest.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.IsGreaterThanOrEqualTo(options.Delivery.ShutdownRequestTimeout, stopwatch.Elapsed);
+                Assert.IsLessThan(TimeSpan.FromSeconds(1.3), stopwatch.Elapsed);
+                Assert.IsFalse(activeRequest.IsCompleted);
+                Assert.AreEqual(0L, GetTotalRowCount(connectionString));
+                using JsonDocument original = JsonDocument.Parse(originalBody);
+                using JsonDocument repeated = JsonDocument.Parse(repeatedBody);
+                Assert.AreEqual(original.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString(),
+                    repeated.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString());
+            }
+            finally
+            {
+                responseGate.TrySetResult(true);
+                listener.Stop();
+                if (activeRequest is not null)
+                {
+                    try
+                    {
+                        await activeRequest.WaitAsync(TimeSpan.FromSeconds(5));
+                    }
+                    catch (Exception exception) when (exception is IOException or SocketException)
+                    {
+                    }
+                }
+                await DisposeAndWaitForCleanupAsync(sink);
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
+        public async Task ShutdownPacesFailureAfterAnEarlierBatchSucceeded()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var options = new SerilogRelayOptions();
+            options.Delivery.MinimumBatchEvents = 1;
+            options.Delivery.MaximumBatchEvents = 1;
+            options.Delivery.ShutdownRetryInterval = TimeSpan.FromMilliseconds(200);
+            var sink = new SerilogRelaySink(connectionString, endpoint: null, options);
+
+            try
+            {
+                sink.Emit(CreateLogEvent("first batch succeeds"));
+                sink.Emit(CreateLogEvent("second batch needs retry"));
+                SetPrivateField(sink, "_endpoint", $"http://127.0.0.1:{port}/logs");
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                var requestTimes = new List<TimeSpan>();
+                async Task<List<string>> ReceiveAsync()
+                {
+                    var bodies = new List<string>();
+                    foreach (HttpStatusCode status in new[] { HttpStatusCode.OK, HttpStatusCode.ServiceUnavailable, HttpStatusCode.NoContent })
+                        bodies.Add(await ReceiveSingleRequestAsync(listener, status, onReceived: () => requestTimes.Add(stopwatch.Elapsed)));
+                    return bodies;
+                }
+                Task<List<string>> received = ReceiveAsync();
+                await sink.DisposeAsync();
+                List<string> bodies = await received.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(180), requestTimes[2] - requestTimes[1]);
+                Assert.AreEqual(0L, GetTotalRowCount(connectionString));
+                using JsonDocument failed = JsonDocument.Parse(bodies[1]);
+                using JsonDocument repeated = JsonDocument.Parse(bodies[2]);
+                Assert.AreEqual(failed.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString(),
+                    repeated.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString());
+            }
+            finally
+            {
+                await DisposeAndWaitForCleanupAsync(sink);
+                listener.Stop();
                 DeleteTemporaryDirectory(directory);
             }
         }
