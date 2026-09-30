@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `3ca5e82` — Promote the SerilogRelay reliability hardening discovered while building the runnable sender/receiver examples: honor Retry-After on non-2xx responses, bound normalized ApplicationId values, distinguish spool-capacity rejection from storage failure, tighten bounded emergency buffering and byte-aware batching, recover/drain full spools through claim fallback/reclamation, harden shutdown handover/request timing, expand regression coverage for timeout and delayed-response behavior, and advance the SerilogRelay base version to `1.0.0`.
+
 - `e24a8c8` — Harden `JsonConfigurationFileEncoder` against transient Windows file-sharing/lock races without weakening the concurrent writer contract. Sharing retries are now separate from logical content-rewrite retries, post-write verification can wait for a brief lock without re-running the encode operation, and the returned changed-value count remains tied to the successful rewrite. Strengthen split and legacy tests with deterministic temporary-lock coverage plus repeated writer/delete race validation; update Configuration.Values public docs and package release notes.
 
 - `1da2b00` — Stabilize the SerilogRelay partial-claim race reliability test by stopping and awaiting the sink's autonomous sender before the test manually drives `ProcessPendingAsync`. Hosted diagnostics showed the prior failure was independent of net8/net10 and TFM parallelism: the test could introduce an unintended second claim agent and observe one row reclaimed after the explicit release. Product delivery behavior is unchanged.
