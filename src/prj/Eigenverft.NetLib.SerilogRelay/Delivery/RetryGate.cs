@@ -51,11 +51,11 @@ namespace Eigenverft.NetLib.SerilogRelay
             }
         }
 
-        internal bool TryAcquire(DateTimeOffset now)
+        internal bool TryAcquire(DateTimeOffset now, bool ignoreBackoff = false)
         {
             lock (_sync)
             {
-                if (_attemptInFlight || (_nextAttemptAt.HasValue && _nextAttemptAt.Value > now))
+                if (_attemptInFlight || (!ignoreBackoff && _nextAttemptAt.HasValue && _nextAttemptAt.Value > now))
                     return false;
 
                 _attemptInFlight = true;

@@ -429,6 +429,18 @@ LIMIT 1;";
         }
 
         [TestMethod]
+        public void ApplicationIdAccepts256CharactersAndRejectsLongerNormalizedIdentity()
+        {
+            string maximumLengthId = new string('a', 256);
+            Assert.AreEqual(maximumLengthId, LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(maximumLengthId));
+            Assert.AreEqual(maximumLengthId, LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId($" {maximumLengthId} "));
+
+            ArgumentException exception = Assert.ThrowsExactly<ArgumentException>(
+                () => LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(new string('a', 257)));
+            Assert.AreEqual("applicationId", exception.ParamName);
+        }
+
+        [TestMethod]
         public async Task MissingMachineIdPersistsAsNull()
         {
             string directory = CreateTemporaryDirectory();
@@ -865,6 +877,52 @@ LIMIT 1;";
         }
 
         [TestMethod]
+        [DataRow(HttpStatusCode.MultipleChoices, true)]
+        [DataRow(HttpStatusCode.BadRequest, true)]
+        [DataRow(HttpStatusCode.TooManyRequests, true)]
+        [DataRow(HttpStatusCode.InternalServerError, true)]
+        [DataRow(HttpStatusCode.ServiceUnavailable, true)]
+        [DataRow(HttpStatusCode.ServiceUnavailable, false)]
+        public async Task SendBatchHonorsRetryAfterOnUnsuccessfulResponses(HttpStatusCode statusCode, bool respectRetryAfter)
+        {
+            string directory = CreateTemporaryDirectory();
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+
+            try
+            {
+                listener.Start();
+                int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+                var options = new SerilogRelayOptions();
+                options.EndpointRetry.InitialDelay = TimeSpan.FromMilliseconds(200);
+                options.EndpointRetry.MaximumDelay = TimeSpan.FromMilliseconds(200);
+                options.EndpointRetry.JitterRatio = 0d;
+                options.EndpointRetry.RespectRetryAfter = respectRetryAfter;
+                await using var sink = new SerilogRelaySink(
+                    $"Data Source={Path.Combine(directory, "relay.db")}",
+                    $"http://127.0.0.1:{port}/logs",
+                    options);
+
+                DateTimeOffset started = DateTimeOffset.UtcNow;
+                Task<string> request = ReceiveSingleRequestAsync(listener, statusCode, "Retry-After: 60\r\n");
+                Assert.IsFalse(await InvokeSendBatchAsync(sink, new List<LogEntry> { CreateLogEntry(1, "retry-after") }, CancellationToken.None));
+                _ = await request.WaitAsync(TimeSpan.FromSeconds(5));
+
+                RetryGate gate = GetPrivateField<RetryGate>(sink, "_retryGate");
+                Assert.AreEqual(1, gate.ConsecutiveFailures);
+                Assert.IsNotNull(gate.NextAttemptAt);
+                if (respectRetryAfter)
+                    Assert.IsTrue(gate.NextAttemptAt.Value >= started.AddSeconds(60));
+                else
+                    Assert.IsTrue(gate.NextAttemptAt.Value <= DateTimeOffset.UtcNow.AddMilliseconds(200));
+            }
+            finally
+            {
+                listener.Stop();
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
+        [TestMethod]
         [DoNotParallelize]
         public async Task SendBatchUsesSharedRetryGateAndHandlesHttpFailures()
         {
@@ -910,7 +968,7 @@ LIMIT 1;";
                 Assert.IsFalse(listener.Pending());
 
                 await Task.Delay(250);
-                Task<string> successRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
+                Task<string> successRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, "Retry-After: 60\r\n");
                 Assert.IsTrue(await InvokeSendBatchAsync(sink, entries, CancellationToken.None));
                 _ = await successRequest.WaitAsync(TimeSpan.FromSeconds(5));
                 Assert.AreEqual(0, gate.ConsecutiveFailures);
@@ -1290,7 +1348,7 @@ END;";
                 entry.Exception = null;
                 entry.Properties = null;
 
-                GetPrivateMethod("PersistLogEntryCore", isStatic: false)
+                GetPrivateMethod("TryPersistLogEntryCore", isStatic: false)
                     .Invoke(sink, new object[] { entry });
 
                 GetPrivateMethod("EnqueueEmergency", isStatic: false)
@@ -1773,7 +1831,7 @@ END;";
             CancellationToken cancellationToken)
         {
             MethodInfo method = GetPrivateMethod("ProcessPendingAsync", isStatic: false);
-            var task = (Task<bool>)method.Invoke(sink, new object[] { ignoreMinBatch, cancellationToken })!;
+            var task = (Task<bool>)method.Invoke(sink, new object[] { ignoreMinBatch, cancellationToken, false })!;
             return await task;
         }
 
@@ -1995,11 +2053,19 @@ END;";
 
         private static void DeleteTemporaryDirectory(string directory)
         {
-            SqliteConnection.ClearAllPools();
-
-            if (Directory.Exists(directory))
+            // Bounded Dispose can return before an already-running SQLite call releases its file.
+            for (int attempt = 0; Directory.Exists(directory); attempt++)
             {
-                Directory.Delete(directory, recursive: true);
+                SqliteConnection.ClearAllPools();
+                try
+                {
+                    Directory.Delete(directory, recursive: true);
+                    return;
+                }
+                catch (IOException) when (attempt < 100)
+                {
+                    Thread.Sleep(50);
+                }
             }
         }
     }

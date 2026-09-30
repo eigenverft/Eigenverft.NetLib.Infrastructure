@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -16,7 +17,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         private async Task SenderLoopAsync()
         {
             CancellationToken token = _cts.Token;
-            while (!token.IsCancellationRequested)
+            while (!token.IsCancellationRequested && Volatile.Read(ref _disposeStarted) == 0)
             {
                 try
                 {
@@ -24,7 +25,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                     TimeSpan existingRetryDelay = _retryGate.GetDelay(now);
                     if (existingRetryDelay > TimeSpan.Zero)
                     {
-                        await Task.Delay(existingRetryDelay, token).ConfigureAwait(false);
+                        await WaitForSenderDelayAsync(existingRetryDelay, token).ConfigureAwait(false);
                         continue;
                     }
 
@@ -47,6 +48,8 @@ namespace Eigenverft.NetLib.SerilogRelay
                             Volatile.Write(ref _startupBacklogPending, 0);
                     }
 
+                    if (Volatile.Read(ref _disposeStarted) != 0)
+                        break;
                     if (deliveryOpportunityCompleted)
                         ApplyDeferredUnsentCleanup();
 
@@ -54,7 +57,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                     TimeSpan retryDelay = _retryGate.GetDelay(DateTimeOffset.UtcNow);
                     if (retryDelay > TimeSpan.Zero)
                     {
-                        await Task.Delay(retryDelay, token).ConfigureAwait(false);
+                        await WaitForSenderDelayAsync(retryDelay, token).ConfigureAwait(false);
                         continue;
                     }
 
@@ -68,7 +71,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                 catch (Exception ex)
                 {
                     SelfLog.WriteLine("Error in sender loop: {0}", ex.Message);
-                    await Task.Delay(_baseInterval, token).ConfigureAwait(false);
+                    await WaitForSenderDelayAsync(_baseInterval, token).ConfigureAwait(false);
                 }
             }
         }
@@ -133,7 +136,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         private async Task WaitForSenderDelayAsync(TimeSpan delay, CancellationToken token)
         {
             Task deadline = Task.Delay(delay, token);
-            while (!token.IsCancellationRequested)
+            while (!token.IsCancellationRequested && Volatile.Read(ref _disposeStarted) == 0)
             {
                 lock (_signalLock)
                 {
@@ -168,9 +171,10 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// Processes and sends claimable logs in batches, with optional bypass of the minimum threshold.
         /// </summary>
         /// <param name="token">Cancellation token.</param>
+        /// <param name="shutdownDrain">If true, drains after the normal sender has yielded to shutdown.</param>
         /// <param name="ignoreMinBatch">If true, skips the minimum batch-size check.</param>
-        /// <returns>True if any logs were successfully sent.</returns>
-        private async Task<bool> ProcessPendingAsync(bool ignoreMinBatch, CancellationToken token)
+        /// <returns>True if logs were sent and the round ended without a failed HTTP attempt.</returns>
+        private async Task<bool> ProcessPendingAsync(bool ignoreMinBatch, CancellationToken token, bool shutdownDrain = false)
         {
             long pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
             if (!ignoreMinBatch && pending < _minBatchSize)
@@ -181,6 +185,9 @@ namespace Eigenverft.NetLib.SerilogRelay
             int sentCount = 0, batches = 0;
             while (pending > 0 && batches++ < 20 && !token.IsCancellationRequested)
             {
+                if (!shutdownDrain && Volatile.Read(ref _disposeStarted) != 0)
+                    break;
+
                 ClaimedLogBatch claimed = await ClaimPendingAsync(
                     _maxBatchSize,
                     DateTimeOffset.UtcNow,
@@ -193,7 +200,8 @@ namespace Eigenverft.NetLib.SerilogRelay
                     break;
                 }
 
-                if (!ignoreMinBatch && entries.Count < _minBatchSize)
+                // Byte/capacity-limited batches are ready below the preferred event count.
+                if (!ignoreMinBatch && !claimed.PayloadTargetReached && !claimed.ClaimCapacityLimited && entries.Count < _minBatchSize)
                 {
                     await ReleaseClaimAsync(claimed, token).ConfigureAwait(false);
                     pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
@@ -203,27 +211,37 @@ namespace Eigenverft.NetLib.SerilogRelay
                 if (!await SendBatchAsync(entries, token).ConfigureAwait(false))
                 {
                     await ReleaseClaimAsync(claimed, token).ConfigureAwait(false);
-                    pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
-                    break;
+                    RefreshClaimablePendingState(DateTimeOffset.UtcNow);
+                    // Preserve failure pacing even if earlier batches in this round succeeded.
+                    return false;
                 }
 
-                await MarkClaimedAsSentAsync(claimed, token).ConfigureAwait(false);
+                await AcknowledgeClaimAsync(claimed, token).ConfigureAwait(false);
 
-                pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
                 sentCount += entries.Count;
-                await Task.Delay(100, token).ConfigureAwait(false);
+                // Finish the current request and acknowledgment, then hand over to RAM delivery.
+                if (!shutdownDrain && Volatile.Read(ref _disposeStarted) != 0)
+                    break;
+                pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
+                if (!shutdownDrain)
+                    await Task.Delay(100, token).ConfigureAwait(false);
             }
 
             return sentCount > 0;
         }
 
-        // Send one batch of logs over HTTP using AOT-compatible source-gen context.
-        private async Task<bool> SendBatchAsync(List<LogEntry> entries, CancellationToken token)
+        private async Task WaitForShutdownRetryAsync(long roundStarted, CancellationToken token)
         {
-            if (!_retryGate.TryAcquire(DateTimeOffset.UtcNow))
-                return false;
+            // Count time spent in the failed request toward the retry interval.
+            long attemptStarted = Math.Max(roundStarted, Interlocked.Read(ref _lastHttpAttemptStartedTimestamp));
+            TimeSpan delay = _shutdownRetryInterval - Stopwatch.GetElapsedTime(attemptStarted);
+            if (delay > TimeSpan.Zero)
+                await Task.Delay(delay, token).ConfigureAwait(false);
+        }
 
-            var payload = new LogBatchPayload
+        private static LogBatchPayload CreateBatchPayload(List<LogEntry> entries)
+        {
+            return new LogBatchPayload
             {
                 ProtocolVersion = 1,
                 BatchId = Guid.NewGuid().ToString(),
@@ -231,12 +249,25 @@ namespace Eigenverft.NetLib.SerilogRelay
                 Count = entries.Count,
                 Logs = entries
             };
+        }
+
+        // Send one batch of logs over HTTP using AOT-compatible source-gen context.
+        private async Task<bool> SendBatchAsync(List<LogEntry> entries, CancellationToken token)
+        {
+            if (!_retryGate.TryAcquire(DateTimeOffset.UtcNow, ignoreBackoff: Volatile.Read(ref _disposeStarted) != 0))
+                return false;
+
+            LogBatchPayload payload = CreateBatchPayload(entries);
             var json = JsonSerializer.Serialize(payload, LogBatchJsonContext.Default.LogBatchPayload);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             try
             {
-                using var resp = await _httpClient.PostAsync(_endpoint, content, token).ConfigureAwait(false);
+                using var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
+                // Also shorten an HTTP attempt that was already running when shutdown began.
+                using var shutdownRegistration = _shutdownSignal.Token.Register(() => requestCancellation.CancelAfter(_shutdownRequestTimeout));
+                Interlocked.Exchange(ref _lastHttpAttemptStartedTimestamp, Stopwatch.GetTimestamp());
+                using var resp = await _httpClient.PostAsync(_endpoint, content, requestCancellation.Token).ConfigureAwait(false);
                 if (resp.IsSuccessStatusCode)
                 {
                     _retryGate.RecordSuccess();
@@ -244,7 +275,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                 }
 
                 DateTimeOffset? retryAfter = null;
-                if ((int)resp.StatusCode == 429 && resp.Headers.RetryAfter is not null)
+                if (resp.Headers.RetryAfter is not null)
                 {
                     if (resp.Headers.RetryAfter.Delta.HasValue)
                         retryAfter = DateTimeOffset.UtcNow + resp.Headers.RetryAfter.Delta.Value;

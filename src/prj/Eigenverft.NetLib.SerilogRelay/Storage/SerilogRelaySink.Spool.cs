@@ -63,44 +63,32 @@ DELETE FROM {TableName}
                 ? "0 seconds"
                 : FormattableString.Invariant($"{-span.TotalSeconds:R} seconds");
 
-        private bool PersistLogEntryCore(LogEntry entry)
+        // A false result means the event is rejected by the spool capacity policy.
+        // Storage exceptions propagate so the caller can use the emergency buffer.
+        private bool TryPersistLogEntryCore(LogEntry entry)
         {
-            int reclaimAttempts = 0;
-            bool emptySpoolFitChecked = false;
-
-            while (true)
+            try
             {
-                try
-                {
-                    PersistLogEntryOnceCore(entry);
-                    return true;
-                }
-                catch (SqliteException ex) when (IsFullError(ex) && reclaimAttempts++ < 8)
-                {
-                    if (!emptySpoolFitChecked)
-                    {
-                        emptySpoolFitChecked = true;
-                        if (!CanPersistInEmptyApplicationSpoolCore(entry))
-                            return false;
-                    }
+                PersistLogEntryOnceCore(entry);
+                return true;
+            }
+            catch (SqliteException ex) when (IsFullError(ex))
+            {
+                if (!CanFitInEmptyApplicationSpoolCore(entry))
+                    return false;
 
-                    if (!TryReclaimApplicationSpoolSpaceCore())
-                        return false;
-                }
+                return TryReclaimAndPersistApplicationSpoolCore(entry);
             }
         }
 
-        private bool CanPersistInEmptyApplicationSpoolCore(LogEntry entry)
+        private bool CanFitInEmptyApplicationSpoolCore(LogEntry entry)
         {
+            // This disposable database only probes capacity; it stores no backlog.
             using var conn = new SqliteConnection("Data Source=:memory:");
             conn.Open();
             ConfigurePragmas(conn);
 
-            using (var createCommand = conn.CreateCommand())
-            {
-                createCommand.CommandText = TableSchema.Replace("{0}", TableName, StringComparison.Ordinal);
-                createCommand.ExecuteNonQuery();
-            }
+            EnsureTableSchemaCore(conn);
 
             try
             {
@@ -121,11 +109,18 @@ DELETE FROM {TableName}
             InsertLogEntryCore(conn, entry);
         }
 
-        private static void InsertLogEntryCore(SqliteConnection conn, LogEntry entry)
+        private void InsertLogEntryCore(SqliteConnection conn, LogEntry entry)
         {
-            using var tx = conn.BeginTransaction();
+            using var transaction = conn.BeginTransaction();
+            InsertLogEntryCore(conn, entry, transaction);
+            EnsureClaimHeadroomCore(conn, transaction);
+            transaction.Commit();
+        }
+
+        private static void InsertLogEntryCore(SqliteConnection conn, LogEntry entry, SqliteTransaction transaction)
+        {
             using var cmd = conn.CreateCommand();
-            cmd.Transaction = tx;
+            cmd.Transaction = transaction;
             cmd.CommandText = $@"
 INSERT INTO {TableName}
   (EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
@@ -146,36 +141,68 @@ VALUES
             cmd.Parameters.AddWithValue("$props", (object?)entry.Properties ?? DBNull.Value);
 
             cmd.ExecuteNonQuery();
-            tx.Commit();
         }
 
-        private bool TryReclaimApplicationSpoolSpaceCore()
+        private void EnsureClaimHeadroomCore(SqliteConnection conn, SqliteTransaction transaction)
+        {
+            using var command = conn.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = "SELECT page_size, page_count, freelist_count FROM pragma_page_size(), pragma_page_count(), pragma_freelist_count();";
+            using var reader = command.ExecuteReader();
+            reader.Read();
+            long pageSize = reader.GetInt64(0);
+            long maxPages = Math.Max(1L, _maxApplicationSpoolPhysicalBytes / pageSize);
+            long usedPages = reader.GetInt64(1) - reader.GetInt64(2);
+            // Keep room within the existing budget for growing claim rows and splitting indexes.
+            // Small spools reserve at most a quarter; the claim fallback can use smaller batches.
+            long reservePages = Math.Min(maxPages / 4L, 8L + ((_maxBatchSize * 512L + pageSize - 1L) / pageSize));
+            if (usedPages + reservePages > maxPages)
+                throw new SqliteException("Spool capacity is reserved for delivery claim metadata.", SQLitePCL.raw.SQLITE_FULL);
+        }
+
+        private bool TryReclaimAndPersistApplicationSpoolCore(LogEntry entry)
         {
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
             ConfigurePragmas(conn);
-            using var tx = conn.BeginTransaction();
 
-            int deletedSent = DeleteOldestApplicationSpoolRowsCore(conn, tx, sent: true, limit: 256);
-            int deletedUnsent = deletedSent == 0
-                ? DeleteOldestApplicationSpoolRowsCore(conn, tx, sent: false, limit: 64)
-                : 0;
-            tx.Commit();
-
-            if (deletedUnsent > 0)
+            for (int unsentLimit = 0; unsentLimit <= 512; unsentLimit += 64)
             {
-                Interlocked.Add(ref _applicationSpoolDroppedCount, deletedUnsent);
-                Volatile.Write(ref _pendingCountNeedsRefresh, 1);
-                if (Interlocked.Exchange(ref _applicationSpoolOverflowReported, 1) == 0)
+                using var transaction = conn.BeginTransaction();
+                DeleteOldestApplicationSpoolRowsCore(conn, transaction, sent: true, limit: int.MaxValue);
+                int deletedUnsent = DeleteOldestApplicationSpoolRowsCore(conn, transaction, sent: false, limit: unsentLimit);
+
+                try
                 {
-                    SelfLog.WriteLine(
-                        "SerilogRelay spool reached its {0}-byte budget; {1} oldest unsent events were evicted to keep disk usage bounded.",
-                        _maxApplicationSpoolPhysicalBytes,
-                        deletedUnsent);
+                    InsertLogEntryCore(conn, entry, transaction);
+                    EnsureClaimHeadroomCore(conn, transaction);
+                    transaction.Commit();
                 }
+                catch (SqliteException ex) when (IsFullError(ex))
+                {
+                    // The transaction restores reclaimed rows when the replacement still does not fit.
+                    if (deletedUnsent < unsentLimit)
+                        return false;
+                    continue;
+                }
+
+                if (deletedUnsent > 0)
+                {
+                    ReportApplicationSpoolEvictions(deletedUnsent);
+                }
+
+                return true;
             }
 
-            return deletedSent + deletedUnsent > 0;
+            return false;
+        }
+
+        private void ReportApplicationSpoolEvictions(int count)
+        {
+            Interlocked.Add(ref _applicationSpoolDroppedCount, count);
+            Volatile.Write(ref _pendingCountNeedsRefresh, 1);
+            if (Interlocked.Exchange(ref _applicationSpoolOverflowReported, 1) == 0)
+                SelfLog.WriteLine("SerilogRelay spool reached its {0}-byte budget; {1} oldest unsent events were evicted to keep disk usage bounded.", _maxApplicationSpoolPhysicalBytes, count);
         }
 
         private static int DeleteOldestApplicationSpoolRowsCore(
@@ -221,18 +248,6 @@ DELETE FROM {TableName}
         }
 
 
-        private void RecordApplicationSpoolCapacityRejected()
-        {
-            long dropped = Interlocked.Increment(ref _applicationSpoolDroppedCount);
-            if (Interlocked.Exchange(ref _applicationSpoolOverflowReported, 1) != 0)
-                return;
-
-            SelfLog.WriteLine(
-                "SerilogRelay spool reached its {0}-byte budget; incoming events are being dropped because no retained rows can be reclaimed. Total spool-capacity loss: {1}.",
-                _maxApplicationSpoolPhysicalBytes,
-                dropped);
-        }
-
         private void MarkSpoolUnavailable(Exception exception)
         {
             if (Interlocked.CompareExchange(ref _spoolUnavailable, 1, 0) != 0)
@@ -268,6 +283,7 @@ DELETE FROM {TableName}
                     await conn.OpenAsync(token).ConfigureAwait(false);
                     ConfigurePragmas(conn);
 
+                    bool claimCapacityLimited = false;
                     using (var claim = conn.CreateCommand())
                     {
                         claim.CommandText = $@"
@@ -300,7 +316,48 @@ UPDATE {TableName}
                         claim.Parameters.AddWithValue("$claimUntil", claimUntilUnixMs);
                         claim.Parameters.AddWithValue("$now", nowUnixMs);
                         claim.Parameters.AddWithValue("$limit", limit);
-                        await claim.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+                        int claimLimit = limit;
+                        int reclaimLimit = -1;
+                        while (true)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            using var transaction = conn.BeginTransaction();
+                            claim.Transaction = transaction;
+                            claim.Parameters["$limit"].Value = claimLimit;
+                            int deletedUnsent = 0;
+                            if (reclaimLimit >= 0)
+                            {
+                                DeleteOldestApplicationSpoolRowsCore(conn, transaction, sent: true, limit: int.MaxValue);
+                                deletedUnsent = DeleteOldestApplicationSpoolRowsCore(conn, transaction, sent: false, limit: reclaimLimit);
+                            }
+
+                            try
+                            {
+                                int claimedCount = await claim.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+                                if (claimedCount == 0 && deletedUnsent > 0)
+                                    throw new SqliteException("Capacity reclamation left no event to reserve.", SQLitePCL.raw.SQLITE_FULL);
+                                transaction.Commit();
+                            }
+                            catch (SqliteException ex) when (IsFullError(ex))
+                            {
+                                // Old/full spools may lack the reserve. First shrink the claim;
+                                // only reclaim capacity if even one event cannot be reserved.
+                                if (claimLimit > 1)
+                                {
+                                    claimLimit = Math.Max(1, claimLimit / 2);
+                                    continue;
+                                }
+                                if (reclaimLimit >= 512 || (reclaimLimit > 0 && deletedUnsent < reclaimLimit))
+                                    throw;
+                                reclaimLimit = reclaimLimit < 1 ? reclaimLimit + 1 : Math.Min(512, reclaimLimit * 2);
+                                continue;
+                            }
+
+                            claimCapacityLimited = claimLimit < limit || reclaimLimit >= 0;
+                            if (deletedUnsent > 0)
+                                ReportApplicationSpoolEvictions(deletedUnsent);
+                            break;
+                        }
                     }
 
                     var entries = new List<LogEntry>();
@@ -315,33 +372,75 @@ SELECT Id, EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, Rende
                     select.Parameters.AddWithValue("$owner", _claimOwnerId);
                     select.Parameters.AddWithValue("$claimBatchId", claimBatchId);
 
-                    using var reader = await select.ExecuteReaderAsync(token).ConfigureAwait(false);
-                    while (await reader.ReadAsync(token).ConfigureAwait(false))
+                    long payloadBytes = JsonSerializer.SerializeToUtf8Bytes(CreateBatchPayload(entries), LogBatchJsonContext.Default.LogBatchPayload).Length;
+                    bool payloadTargetReached = false;
+                    using (var reader = await select.ExecuteReaderAsync(token).ConfigureAwait(false))
                     {
-                        entries.Add(new LogEntry
+                        while (await reader.ReadAsync(token).ConfigureAwait(false))
                         {
-                            Id = reader.GetInt64(0),
-                            EventId = reader.GetString(1),
-                            ApplicationId = reader.GetString(2),
-                            MachineId = reader.IsDBNull(3) ? null : reader.GetString(3),
-                            ProcessId = reader.GetInt32(4),
-                            Timestamp = reader.GetString(5),
-                            Level = reader.GetString(6),
-                            RenderMessage = reader.GetString(7),
-                            MessageTemplate = reader.GetString(8),
-                            TraceId = reader.IsDBNull(9) ? null : reader.GetString(9),
-                            SpanId = reader.IsDBNull(10) ? null : reader.GetString(10),
-                            Exception = reader.IsDBNull(11) ? null : reader.GetString(11),
-                            Properties = reader.IsDBNull(12) ? null : reader.GetString(12),
-                        });
+                            var entry = new LogEntry
+                            {
+                                Id = reader.GetInt64(0),
+                                EventId = reader.GetString(1),
+                                ApplicationId = reader.GetString(2),
+                                MachineId = reader.IsDBNull(3) ? null : reader.GetString(3),
+                                ProcessId = reader.GetInt32(4),
+                                Timestamp = reader.GetString(5),
+                                Level = reader.GetString(6),
+                                RenderMessage = reader.GetString(7),
+                                MessageTemplate = reader.GetString(8),
+                                TraceId = reader.IsDBNull(9) ? null : reader.GetString(9),
+                                SpanId = reader.IsDBNull(10) ? null : reader.GetString(10),
+                                Exception = reader.IsDBNull(11) ? null : reader.GetString(11),
+                                Properties = reader.IsDBNull(12) ? null : reader.GetString(12),
+                            };
+                            int entryBytes = JsonSerializer.SerializeToUtf8Bytes(entry, LogBatchJsonContext.Default.LogEntry).Length;
+                            int countDigitsAdded = (entries.Count + 1).ToString(CultureInfo.InvariantCulture).Length
+                                - entries.Count.ToString(CultureInfo.InvariantCulture).Length;
+                            long nextPayloadBytes = payloadBytes + entryBytes + countDigitsAdded + (entries.Count == 0 ? 0 : 1);
+
+                            if (entries.Count > 0 && nextPayloadBytes > _targetBatchPayloadBytes)
+                            {
+                                payloadTargetReached = true;
+                                break;
+                            }
+
+                            // Always include the first event so an oversized event can leave the spool.
+                            entries.Add(entry);
+                            payloadBytes = nextPayloadBytes;
+                            if (payloadBytes >= _targetBatchPayloadBytes)
+                            {
+                                payloadTargetReached = true;
+                                break;
+                            }
+                        }
                     }
 
-                    return new ClaimedLogBatch(claimBatchId, entries);
+                    if (payloadTargetReached)
+                    {
+                        // Release the unread suffix before HTTP; acknowledgment covers only this payload.
+                        using var release = conn.CreateCommand();
+                        release.CommandText = $@"
+UPDATE {TableName}
+   SET ClaimOwnerId = NULL,
+       ClaimBatchId = NULL,
+       ClaimUntilUnixMs = NULL
+ WHERE Sent = 0
+   AND ClaimOwnerId = $owner
+   AND ClaimBatchId = $claimBatchId
+   AND Id > $lastIncludedId;";
+                        release.Parameters.AddWithValue("$owner", _claimOwnerId);
+                        release.Parameters.AddWithValue("$claimBatchId", claimBatchId);
+                        release.Parameters.AddWithValue("$lastIncludedId", entries[entries.Count - 1].Id);
+                        await release.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+                    }
+
+                    return new ClaimedLogBatch(claimBatchId, entries, payloadTargetReached, claimCapacityLimited);
                 },
                 token).ConfigureAwait(false);
         }
 
-        private async Task MarkClaimedAsSentAsync(ClaimedLogBatch batch, CancellationToken token)
+        private async Task AcknowledgeClaimAsync(ClaimedLogBatch batch, CancellationToken token)
         {
             if (batch.Entries.Count == 0)
                 return;
@@ -353,7 +452,13 @@ SELECT Id, EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, Rende
                     await conn.OpenAsync(token).ConfigureAwait(false);
                     ConfigurePragmas(conn);
                     using var cmd = conn.CreateCommand();
-                    cmd.CommandText = $@"
+                    cmd.CommandText = _applicationSpoolSentEventRetention == TimeSpan.Zero
+                        ? $@"
+DELETE FROM {TableName}
+ WHERE Sent = 0
+   AND ClaimOwnerId = $owner
+   AND ClaimBatchId = $claimBatchId;"
+                        : $@"
 UPDATE {TableName}
    SET Sent = 1,
        ClaimOwnerId = NULL,
@@ -451,6 +556,11 @@ SELECT COUNT(*)
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
             ConfigurePragmas(conn);
+            EnsureTableSchemaCore(conn);
+        }
+
+        private static void EnsureTableSchemaCore(SqliteConnection conn)
+        {
             using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = TableSchema.Replace("{0}", TableName, StringComparison.Ordinal);

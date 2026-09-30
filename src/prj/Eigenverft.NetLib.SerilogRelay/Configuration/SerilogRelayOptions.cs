@@ -35,10 +35,10 @@ namespace Eigenverft.NetLib.SerilogRelay
     public sealed class ApplicationSpoolOptions
     {
         /// <summary>
-        /// Gets or sets how long successfully delivered events remain in the shared application spool.
+        /// Gets or sets optional retention for successfully delivered events. Zero deletes acknowledged events immediately.
         /// This process applies the value during spool-wide maintenance; cleanup is not limited to rows created by this process.
         /// </summary>
-        public TimeSpan SentEventRetention { get; set; } = TimeSpan.FromDays(1);
+        public TimeSpan SentEventRetention { get; set; } = TimeSpan.Zero;
 
         /// <summary>
         /// Gets or sets the maximum physical size of the shared application spool in bytes.
@@ -69,6 +69,12 @@ namespace Eigenverft.NetLib.SerilogRelay
         public int MaximumBatchEvents { get; set; } = 100;
 
         /// <summary>
+        /// Gets or sets the target UTF-8 JSON payload size per send, including batch metadata.
+        /// An event larger than this target is sent alone, without truncation or size-based rejection.
+        /// </summary>
+        public int TargetBatchPayloadBytes { get; set; } = 4 * 1024 * 1024;
+
+        /// <summary>
         /// Gets or sets the normal sender polling interval.
         /// </summary>
         public TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(5);
@@ -77,6 +83,24 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// Gets or sets the maximum time a partial batch may wait before delivery is attempted.
         /// </summary>
         public TimeSpan MaximumBatchWait { get; set; } = TimeSpan.FromSeconds(5);
+
+        /// <summary>
+        /// Gets or sets the maximum total time allowed for shutdown delivery and claim release.
+        /// Shutdown finishes earlier when all pending work completes.
+        /// </summary>
+        public TimeSpan ShutdownTimeout { get; set; } = TimeSpan.FromSeconds(3);
+
+        /// <summary>
+        /// Gets or sets the additional HTTP request time limit during shutdown.
+        /// The normal HTTP timeout and remaining shutdown budget may end a request earlier.
+        /// </summary>
+        public TimeSpan ShutdownRequestTimeout { get; set; } = TimeSpan.FromSeconds(1);
+
+        /// <summary>
+        /// Gets or sets the minimum interval before retrying failed shutdown delivery.
+        /// Time spent in the failed request counts toward this interval; successful batches have no delay.
+        /// </summary>
+        public TimeSpan ShutdownRetryInterval { get; set; } = TimeSpan.FromSeconds(1);
     }
 
     /// <summary>
@@ -116,7 +140,7 @@ namespace Eigenverft.NetLib.SerilogRelay
     public sealed class EmergencyMemoryBufferOptions
     {
         /// <summary>
-        /// Gets or sets the maximum number of events buffered in memory.
+        /// Gets or sets the maximum number of queued and in-flight emergency events. The oldest queued events are evicted when necessary.
         /// </summary>
         public int MaxBufferedEvents { get; set; } = 16384;
 

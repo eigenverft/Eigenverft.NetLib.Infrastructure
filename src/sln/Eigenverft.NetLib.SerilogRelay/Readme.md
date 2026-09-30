@@ -3,6 +3,8 @@
 Durable Serilog relay for forwarding application logs over HTTP while keeping a bounded local
 persistent spool.
 
+For a runnable sender and receiver, see [Run the examples](#run-the-sender-and-receiver-together).
+
 ## Supported frameworks
 
 - .NET 8 (`net8.0`)
@@ -198,10 +200,46 @@ src/prj/Eigenverft.NetLib.SerilogRelay/
 
 src/prj/Eigenverft.NetLib.SerilogRelay.Tests/
   Eigenverft.NetLib.SerilogRelay.Tests.csproj
+
+src/prj/Eigenverft.NetLib.SerilogRelayReceiver.Example/
+  Eigenverft.NetLib.SerilogRelayReceiver.Example.csproj
+
+src/prj/Eigenverft.NetLib.SerilogRelaySender.Example/
+  Eigenverft.NetLib.SerilogRelaySender.Example.csproj
 ```
 
 - `Eigenverft.NetLib.SerilogRelay` is the packable product library.
 - `Eigenverft.NetLib.SerilogRelay.Tests` contains persistence, delivery, shared-spool, recovery, compatibility, and reliability tests.
+- `Eigenverft.NetLib.SerilogRelaySender.Example` sends events through the relay NuGet package.
+- `Eigenverft.NetLib.SerilogRelayReceiver.Example` receives events through the receiver NuGet package.
 - `RELIABILITY.md` contains the deeper implemented reliability contract and option-scope semantics.
 
 The Solution README intentionally contains the same product description and usage guidance as the NuGet README so the repository can be understood directly without following documentation links.
+
+## Run the sender and receiver together
+
+The sender is a console app using `Eigenverft.NetLib.SerilogRelay` from NuGet. The receiver is an ASP.NET Core app using `Eigenverft.WebLib.SerilogRelayReceiver` from NuGet and storing events in SQLite. Both projects are in this solution and have no product project references.
+
+If you are adding the relay to an application, start with [the sender code](../../prj/Eigenverft.NetLib.SerilogRelaySender.Example/Program.cs). The receiver project supplies a local endpoint for trying it.
+
+Start the receiver from this repository root in the first terminal:
+
+```powershell
+dotnet run --project src/prj/Eigenverft.NetLib.SerilogRelayReceiver.Example/Eigenverft.NetLib.SerilogRelayReceiver.Example.csproj
+```
+
+Send one message from the same repository root in a second terminal:
+
+```powershell
+dotnet run --project src/prj/Eigenverft.NetLib.SerilogRelaySender.Example/Eigenverft.NetLib.SerilogRelaySender.Example.csproj -- "Hello from the example"
+```
+
+In the second terminal, read the newest stored message:
+
+```powershell
+(Invoke-RestMethod 'http://127.0.0.1:5217/demo/events')[0].renderMessage
+```
+
+The result contains `Hello from the example`. The sender writes to a local durable spool and attempts delivery when its logger is disposed. Pending events remain in the spool for a later run if the receiver is unavailable.
+
+Both programs use loopback without authentication for this first example. In an application, configure the receiver's EF Core provider, migrations, endpoint, and authentication for that host; `EnsureCreated` is used here only for the demo. The projects retain Eigenverft metadata and icons but are not packed or published.
