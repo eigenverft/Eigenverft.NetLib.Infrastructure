@@ -2999,6 +2999,98 @@ VALUES
             }
         }
 
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task DelayedHttpResponseTimesOutReleasesClaimAndRetriesStableEvent(bool waitAfterResponseHeaders)
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var options = new SerilogRelayOptions();
+            options.Delivery.MinimumBatchEvents = 1;
+            options.Delivery.ShutdownTimeout = TimeSpan.Zero;
+            options.EndpointRetry.JitterRatio = 0d;
+            var sink = new SerilogRelaySink(connectionString, endpoint: null, options);
+            var responseGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var receivedBody = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Task<string>? heldRequest = null;
+
+            try
+            {
+                Assert.AreEqual(TimeSpan.FromSeconds(2), GetPrivateField<HttpClient>(sink, "_httpClient").Timeout);
+                sink.Emit(CreateLogEvent("receiver still working"));
+                SetPrivateField(sink, "_endpoint", $"http://127.0.0.1:{port}/logs");
+                heldRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, responseGate: responseGate.Task,
+                    onBodyReceived: body => receivedBody.TrySetResult(body), waitAfterResponseHeaders: waitAfterResponseHeaders);
+
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                Task<bool> firstAttempt = InvokePrivateTaskMethod<bool>(sink, "ProcessPendingAsync", true, CancellationToken.None, false);
+                string originalBody = await receivedBody.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.IsNotNull(GetClaimOwnerId(connectionString));
+                Assert.IsFalse(await firstAttempt.WaitAsync(TimeSpan.FromSeconds(6)));
+                stopwatch.Stop();
+                Assert.IsGreaterThanOrEqualTo(TimeSpan.FromSeconds(1.5), stopwatch.Elapsed);
+                Assert.IsLessThan(TimeSpan.FromSeconds(5), stopwatch.Elapsed);
+                Assert.IsFalse(heldRequest.IsCompleted);
+                Assert.AreEqual(1L, GetUnsentCount(connectionString));
+                Assert.IsNull(GetClaimOwnerId(connectionString));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+
+                RetryGate retry = GetPrivateField<RetryGate>(sink, "_retryGate");
+                Assert.AreEqual(1, retry.ConsecutiveFailures);
+                Assert.IsNotNull(retry.NextAttemptAt);
+                Assert.IsGreaterThan(DateTimeOffset.UtcNow, retry.NextAttemptAt.Value);
+                Assert.IsFalse(await InvokePrivateTaskMethod<bool>(sink, "ProcessPendingAsync", true, CancellationToken.None, false));
+                Assert.IsFalse(listener.Pending());
+
+                // Check that timeout released the HTTP gate, then advance the test past backoff.
+                Assert.IsTrue(retry.TryAcquire(retry.NextAttemptAt.Value));
+                retry.RecordSuccess();
+                Task<string> secondRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent);
+                Assert.IsTrue(await InvokePrivateTaskMethod<bool>(sink, "ProcessPendingAsync", true, CancellationToken.None, false));
+                string retryBody = await secondRequest.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.IsFalse(heldRequest.IsCompleted, "The receiver may still be processing the timed-out first attempt.");
+                Assert.AreEqual(0L, GetTotalRowCount(connectionString));
+                Assert.AreEqual(0, retry.ConsecutiveFailures);
+                using JsonDocument original = JsonDocument.Parse(originalBody);
+                using JsonDocument repeated = JsonDocument.Parse(retryBody);
+                Assert.AreEqual(original.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString(),
+                    repeated.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString());
+                Assert.AreNotEqual(original.RootElement.GetProperty("batchId").GetString(), repeated.RootElement.GetProperty("batchId").GetString());
+
+                responseGate.TrySetResult(true);
+                try
+                {
+                    await heldRequest.WaitAsync(TimeSpan.FromSeconds(5));
+                }
+                catch (IOException)
+                {
+                    // A late response can fail to write because HttpClient canceled the request.
+                }
+                Assert.AreEqual(0L, GetTotalRowCount(connectionString));
+            }
+            finally
+            {
+                responseGate.TrySetResult(true);
+                listener.Stop();
+                if (heldRequest is not null)
+                {
+                    try
+                    {
+                        await heldRequest.WaitAsync(TimeSpan.FromSeconds(5));
+                    }
+                    catch (Exception exception) when (exception is IOException or SocketException)
+                    {
+                    }
+                }
+                await DisposeAndWaitForCleanupAsync(sink);
+                DeleteTemporaryDirectory(directory);
+            }
+        }
+
         private static async Task DisposeAndWaitForCleanupAsync(SerilogRelaySink sink)
         {
             await sink.DisposeAsync();
@@ -3434,7 +3526,9 @@ SELECT ClaimOwnerId
             HttpStatusCode statusCode,
             string? extraHeaders = null,
             Task? responseGate = null,
-            Action? onReceived = null)
+            Action? onReceived = null,
+            Action<string>? onBodyReceived = null,
+            bool waitAfterResponseHeaders = false)
         {
             using TcpClient client = await listener.AcceptTcpClientAsync();
             using NetworkStream stream = client.GetStream();
@@ -3474,14 +3568,23 @@ SELECT ClaimOwnerId
             }
 
             string body = new string(bodyBuffer, 0, totalRead);
+            onBodyReceived?.Invoke(body);
             onReceived?.Invoke();
-            if (responseGate is not null)
+            if (!waitAfterResponseHeaders && responseGate is not null)
                 await responseGate;
             string reason = statusCode == HttpStatusCode.OK ? "OK" : "Error";
+            int responseLength = waitAfterResponseHeaders ? 1 : 0;
             byte[] response = Encoding.ASCII.GetBytes(
-                $"HTTP/1.1 {(int)statusCode} {reason}\r\n{extraHeaders ?? string.Empty}Content-Length: 0\r\nConnection: close\r\n\r\n");
+                $"HTTP/1.1 {(int)statusCode} {reason}\r\n{extraHeaders ?? string.Empty}Content-Length: {responseLength}\r\nConnection: close\r\n\r\n");
             await stream.WriteAsync(response);
             await stream.FlushAsync();
+            if (waitAfterResponseHeaders)
+            {
+                if (responseGate is not null)
+                    await responseGate;
+                await stream.WriteAsync(new byte[] { (byte)'x' });
+                await stream.FlushAsync();
+            }
             return body;
         }
 

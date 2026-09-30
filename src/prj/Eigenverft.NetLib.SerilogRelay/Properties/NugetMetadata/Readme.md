@@ -149,6 +149,16 @@ An event that cannot be stored enters the bounded emergency RAM buffer, whether 
 
 This is a batching target, not an event-size admission limit. An individual event larger than the target is sent alone and without truncation, so the target cannot strand it in the spool. The value belongs to the sender and does not negotiate or impose a receiver body limit. HTTP non-2xx responses retain the events for the existing retry policy.
 
+## Slow responses and HTTP timeouts
+
+The sender currently uses a fixed two-second `HttpClient.Timeout` and a 30-second claim lease. The request timeout starts with HTTP delivery; the claim lease also covers the preceding local claim/read/payload preparation. Claims are not renewed by receiver activity.
+
+A receiver taking 10, 30, or 60 seconds to finish its response does not extend the client timeout. An HTTP timeout records an endpoint failure, leaves durable events unacknowledged, and releases the still-owned claim for retry. If claim release fails or the process exits first, the lease provides the fallback. Only one client HTTP attempt per sink is active at a time; a timed-out server operation may still overlap later retries or attempts from other processes.
+
+`PostAsync` waits for the entire response, including its body. Even received 2xx headers cannot acknowledge a response whose body stalls past the timeout. A completed response on a connection kept open for HTTP keep-alive is already complete and can be acknowledged normally. During shutdown, the remaining shutdown budget may cancel a request earlier.
+
+A server can commit successfully after the client has timed out. Retries preserve `EventId` but create a new `BatchId`; the receiver owns handling repeat delivery, including any deduplication it requires. The relay cannot infer the outcome of a request without a completed 2xx response.
+
 ## Shutdown
 
 `Delivery.ShutdownTimeout` is an upper limit, not a fixed wait. Shutdown finishes as soon as the emergency buffer and durable spool have been handled. Set it to `TimeSpan.Zero` to skip shutdown delivery. The default is three seconds; `Delivery.ShutdownRetryInterval` defaults to one second and applies after failed attempts.
