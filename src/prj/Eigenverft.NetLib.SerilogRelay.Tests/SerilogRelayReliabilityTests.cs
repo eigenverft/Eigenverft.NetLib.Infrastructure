@@ -1383,6 +1383,20 @@ END;";
                     "http://127.0.0.1:1/logs",
                     options);
 
+                // This test drives ProcessPendingAsync directly. Stop the autonomous sender first
+                // so it cannot claim the same row while the retry gate is held by the test.
+                CancellationTokenSource senderCancellation =
+                    GetPrivateField<CancellationTokenSource>(sink, "_cts");
+                senderCancellation.Cancel();
+                try
+                {
+                    await GetPrivateField<Task>(sink, "_senderTask")
+                        .WaitAsync(TimeSpan.FromSeconds(5));
+                }
+                catch (OperationCanceledException) when (senderCancellation.IsCancellationRequested)
+                {
+                }
+
                 sink.Emit(CreateLogEvent("retry gate already in flight"));
 
                 RetryGate gate = GetPrivateField<RetryGate>(sink, "_retryGate");
