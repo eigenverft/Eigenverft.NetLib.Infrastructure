@@ -109,10 +109,11 @@ DELETE FROM {TableName}
             InsertLogEntryCore(conn, entry);
         }
 
-        private static void InsertLogEntryCore(SqliteConnection conn, LogEntry entry)
+        private void InsertLogEntryCore(SqliteConnection conn, LogEntry entry)
         {
             using var transaction = conn.BeginTransaction();
             InsertLogEntryCore(conn, entry, transaction);
+            EnsureClaimHeadroomCore(conn, transaction);
             transaction.Commit();
         }
 
@@ -142,6 +143,23 @@ VALUES
             cmd.ExecuteNonQuery();
         }
 
+        private void EnsureClaimHeadroomCore(SqliteConnection conn, SqliteTransaction transaction)
+        {
+            using var command = conn.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = "SELECT page_size, page_count, freelist_count FROM pragma_page_size(), pragma_page_count(), pragma_freelist_count();";
+            using var reader = command.ExecuteReader();
+            reader.Read();
+            long pageSize = reader.GetInt64(0);
+            long maxPages = Math.Max(1L, _maxApplicationSpoolPhysicalBytes / pageSize);
+            long usedPages = reader.GetInt64(1) - reader.GetInt64(2);
+            // Keep room within the existing budget for growing claim rows and splitting indexes.
+            // Small spools reserve at most a quarter; the claim fallback can use smaller batches.
+            long reservePages = Math.Min(maxPages / 4L, 8L + ((_maxBatchSize * 512L + pageSize - 1L) / pageSize));
+            if (usedPages + reservePages > maxPages)
+                throw new SqliteException("Spool capacity is reserved for delivery claim metadata.", SQLitePCL.raw.SQLITE_FULL);
+        }
+
         private bool TryReclaimAndPersistApplicationSpoolCore(LogEntry entry)
         {
             using var conn = new SqliteConnection(_connectionString);
@@ -157,6 +175,7 @@ VALUES
                 try
                 {
                     InsertLogEntryCore(conn, entry, transaction);
+                    EnsureClaimHeadroomCore(conn, transaction);
                     transaction.Commit();
                 }
                 catch (SqliteException ex) when (IsFullError(ex))
@@ -169,16 +188,21 @@ VALUES
 
                 if (deletedUnsent > 0)
                 {
-                    Interlocked.Add(ref _applicationSpoolDroppedCount, deletedUnsent);
-                    Volatile.Write(ref _pendingCountNeedsRefresh, 1);
-                    if (Interlocked.Exchange(ref _applicationSpoolOverflowReported, 1) == 0)
-                        SelfLog.WriteLine("SerilogRelay spool reached its {0}-byte budget; {1} oldest unsent events were evicted to keep disk usage bounded.", _maxApplicationSpoolPhysicalBytes, deletedUnsent);
+                    ReportApplicationSpoolEvictions(deletedUnsent);
                 }
 
                 return true;
             }
 
             return false;
+        }
+
+        private void ReportApplicationSpoolEvictions(int count)
+        {
+            Interlocked.Add(ref _applicationSpoolDroppedCount, count);
+            Volatile.Write(ref _pendingCountNeedsRefresh, 1);
+            if (Interlocked.Exchange(ref _applicationSpoolOverflowReported, 1) == 0)
+                SelfLog.WriteLine("SerilogRelay spool reached its {0}-byte budget; {1} oldest unsent events were evicted to keep disk usage bounded.", _maxApplicationSpoolPhysicalBytes, count);
         }
 
         private static int DeleteOldestApplicationSpoolRowsCore(
@@ -259,6 +283,7 @@ DELETE FROM {TableName}
                     await conn.OpenAsync(token).ConfigureAwait(false);
                     ConfigurePragmas(conn);
 
+                    bool claimCapacityLimited = false;
                     using (var claim = conn.CreateCommand())
                     {
                         claim.CommandText = $@"
@@ -291,7 +316,48 @@ UPDATE {TableName}
                         claim.Parameters.AddWithValue("$claimUntil", claimUntilUnixMs);
                         claim.Parameters.AddWithValue("$now", nowUnixMs);
                         claim.Parameters.AddWithValue("$limit", limit);
-                        await claim.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+                        int claimLimit = limit;
+                        int reclaimLimit = -1;
+                        while (true)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            using var transaction = conn.BeginTransaction();
+                            claim.Transaction = transaction;
+                            claim.Parameters["$limit"].Value = claimLimit;
+                            int deletedUnsent = 0;
+                            if (reclaimLimit >= 0)
+                            {
+                                DeleteOldestApplicationSpoolRowsCore(conn, transaction, sent: true, limit: int.MaxValue);
+                                deletedUnsent = DeleteOldestApplicationSpoolRowsCore(conn, transaction, sent: false, limit: reclaimLimit);
+                            }
+
+                            try
+                            {
+                                int claimedCount = await claim.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+                                if (claimedCount == 0 && deletedUnsent > 0)
+                                    throw new SqliteException("Capacity reclamation left no event to reserve.", SQLitePCL.raw.SQLITE_FULL);
+                                transaction.Commit();
+                            }
+                            catch (SqliteException ex) when (IsFullError(ex))
+                            {
+                                // Old/full spools may lack the reserve. First shrink the claim;
+                                // only reclaim capacity if even one event cannot be reserved.
+                                if (claimLimit > 1)
+                                {
+                                    claimLimit = Math.Max(1, claimLimit / 2);
+                                    continue;
+                                }
+                                if (reclaimLimit >= 512 || (reclaimLimit > 0 && deletedUnsent < reclaimLimit))
+                                    throw;
+                                reclaimLimit = reclaimLimit < 1 ? reclaimLimit + 1 : Math.Min(512, reclaimLimit * 2);
+                                continue;
+                            }
+
+                            claimCapacityLimited = claimLimit < limit || reclaimLimit >= 0;
+                            if (deletedUnsent > 0)
+                                ReportApplicationSpoolEvictions(deletedUnsent);
+                            break;
+                        }
                     }
 
                     var entries = new List<LogEntry>();
@@ -369,7 +435,7 @@ UPDATE {TableName}
                         await release.ExecuteNonQueryAsync(token).ConfigureAwait(false);
                     }
 
-                    return new ClaimedLogBatch(claimBatchId, entries, payloadTargetReached);
+                    return new ClaimedLogBatch(claimBatchId, entries, payloadTargetReached, claimCapacityLimited);
                 },
                 token).ConfigureAwait(false);
         }

@@ -1831,7 +1831,7 @@ END;";
             CancellationToken cancellationToken)
         {
             MethodInfo method = GetPrivateMethod("ProcessPendingAsync", isStatic: false);
-            var task = (Task<bool>)method.Invoke(sink, new object[] { ignoreMinBatch, cancellationToken })!;
+            var task = (Task<bool>)method.Invoke(sink, new object[] { ignoreMinBatch, cancellationToken, false })!;
             return await task;
         }
 

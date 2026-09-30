@@ -655,7 +655,7 @@ CREATE TABLE IF NOT EXISTS {0} (
                         if (ExecuteDatabaseWithRecovery(GetPendingCountCore) == 0)
                             break;
 
-                        bool didWork = await ProcessPendingAsync(ignoreMinBatch: true, token).ConfigureAwait(false);
+                        bool didWork = await ProcessPendingAsync(ignoreMinBatch: true, token, shutdownDrain: true).ConfigureAwait(false);
                         if (!didWork)
                             await Task.Delay(_shutdownRetryInterval, token).ConfigureAwait(false);
                     }

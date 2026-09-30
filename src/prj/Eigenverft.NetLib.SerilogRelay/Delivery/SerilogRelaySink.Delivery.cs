@@ -47,6 +47,8 @@ namespace Eigenverft.NetLib.SerilogRelay
                             Volatile.Write(ref _startupBacklogPending, 0);
                     }
 
+                    if (Volatile.Read(ref _disposeStarted) != 0)
+                        break;
                     if (deliveryOpportunityCompleted)
                         ApplyDeferredUnsentCleanup();
 
@@ -68,7 +70,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                 catch (Exception ex)
                 {
                     SelfLog.WriteLine("Error in sender loop: {0}", ex.Message);
-                    await Task.Delay(_baseInterval, token).ConfigureAwait(false);
+                    await WaitForSenderDelayAsync(_baseInterval, token).ConfigureAwait(false);
                 }
             }
         }
@@ -168,9 +170,10 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// Processes and sends claimable logs in batches, with optional bypass of the minimum threshold.
         /// </summary>
         /// <param name="token">Cancellation token.</param>
+        /// <param name="shutdownDrain">If true, drains after the normal sender has yielded to shutdown.</param>
         /// <param name="ignoreMinBatch">If true, skips the minimum batch-size check.</param>
         /// <returns>True if any logs were successfully sent.</returns>
-        private async Task<bool> ProcessPendingAsync(bool ignoreMinBatch, CancellationToken token)
+        private async Task<bool> ProcessPendingAsync(bool ignoreMinBatch, CancellationToken token, bool shutdownDrain = false)
         {
             long pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
             if (!ignoreMinBatch && pending < _minBatchSize)
@@ -181,6 +184,9 @@ namespace Eigenverft.NetLib.SerilogRelay
             int sentCount = 0, batches = 0;
             while (pending > 0 && batches++ < 20 && !token.IsCancellationRequested)
             {
+                if (!shutdownDrain && Volatile.Read(ref _disposeStarted) != 0)
+                    break;
+
                 ClaimedLogBatch claimed = await ClaimPendingAsync(
                     _maxBatchSize,
                     DateTimeOffset.UtcNow,
@@ -193,8 +199,8 @@ namespace Eigenverft.NetLib.SerilogRelay
                     break;
                 }
 
-                // A batch filled by bytes is ready even below the preferred event count.
-                if (!ignoreMinBatch && !claimed.PayloadTargetReached && entries.Count < _minBatchSize)
+                // Byte/capacity-limited batches are ready below the preferred event count.
+                if (!ignoreMinBatch && !claimed.PayloadTargetReached && !claimed.ClaimCapacityLimited && entries.Count < _minBatchSize)
                 {
                     await ReleaseClaimAsync(claimed, token).ConfigureAwait(false);
                     pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
@@ -210,9 +216,12 @@ namespace Eigenverft.NetLib.SerilogRelay
 
                 await AcknowledgeClaimAsync(claimed, token).ConfigureAwait(false);
 
-                pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
                 sentCount += entries.Count;
-                if (Volatile.Read(ref _disposeStarted) == 0)
+                // Finish the current request and acknowledgment, then hand over to RAM delivery.
+                if (!shutdownDrain && Volatile.Read(ref _disposeStarted) != 0)
+                    break;
+                pending = RefreshClaimablePendingState(DateTimeOffset.UtcNow);
+                if (!shutdownDrain)
                     await Task.Delay(100, token).ConfigureAwait(false);
             }
 

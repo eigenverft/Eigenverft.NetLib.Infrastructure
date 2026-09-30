@@ -147,6 +147,8 @@ namespace Eigenverft.NetLib.SerilogRelay
         private async Task<bool> TryProcessEmergencyEntryAsync(LogEntry entry, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
+            if (Volatile.Read(ref _disposeStarted) != 0)
+                await _senderTask.WaitAsync(token).ConfigureAwait(false);
 
             // On shutdown prioritize sending volatile events before the process exits.
             if (Volatile.Read(ref _disposeStarted) == 0 || string.IsNullOrEmpty(_endpoint))

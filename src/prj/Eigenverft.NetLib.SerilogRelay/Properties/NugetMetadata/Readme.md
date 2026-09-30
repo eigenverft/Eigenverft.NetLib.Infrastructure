@@ -135,7 +135,11 @@ The relay currently provides:
 
 Normal delivery stores events in SQLite first. A successful HTTP 2xx deletes the still-owned claimed rows immediately by default. `SentEventRetention` greater than zero explicitly opts into keeping delivered rows locally.
 
-When SQLite reaches its configured capacity, the relay first checks whether the new event fits an empty spool with the complete schema, including claim indexes. It reclaims sent rows before the oldest eligible unsent rows. Reclamation and replacement commit together; a failed replacement rolls the deletions back.
+The insert capacity policy leaves room inside `MaxPhysicalBytes` for delivery claim metadata and index growth. The reserve scales with `MaximumBatchEvents` and is capped at a quarter of the configured page budget for small spools. Both normal inserts and the empty-spool capacity probe apply it.
+
+Already-full spools can be drained without another incoming event: when a claim hits `SQLITE_FULL`, the sender reduces the claim down to one event if necessary. If that still cannot fit, it reclaims sent rows first and then the oldest eligible unsent rows, using the existing bounded capacity policy. Reclamation commits only with a successful claim; failed attempts restore the rows. Reduced claims can be sent below the preferred minimum event count.
+
+When SQLite reaches its configured capacity, the relay first checks whether the new event fits an empty spool with the complete schema, including claim indexes and the metadata reserve. It reclaims sent rows before the oldest eligible unsent rows. Reclamation and replacement commit together; a failed replacement rolls the deletions back.
 
 An event that cannot be stored enters the bounded emergency RAM buffer, whether storage failed with an exception or rejected it because of capacity. The worker retries durable storage and can send directly over HTTP. At either RAM limit, the oldest waiting events are discarded to make room for newer ones, including an old event waiting for another retry. Only a currently executing storage or HTTP attempt retains its reservation. An event too large for the remaining budget after that active reservation is rejected without clearing the queue.
 
@@ -149,7 +153,9 @@ This is a batching target, not an event-size admission limit. An individual even
 
 `Delivery.ShutdownTimeout` is an upper limit, not a fixed wait. Shutdown finishes as soon as the emergency buffer and durable spool have been handled. Set it to `TimeSpan.Zero` to skip shutdown delivery. The default is three seconds; `Delivery.ShutdownRetryInterval` defaults to one second and applies after failed attempts.
 
-Shutdown sends volatile emergency events first, then flushes the spool even below `MinimumBatchEvents`. Successful batches have no normal inter-batch pause. The final delivery attempts bypass the normal endpoint backoff, while only one HTTP attempt remains active at a time.
+If a normal sender batch is already in progress, shutdown lets that batch and its acknowledgment finish, then stops the normal round before another batch. Retry/error waits yield to shutdown as well. Emergency delivery waits for this handover before acquiring the HTTP gate.
+
+Shutdown then sends volatile emergency events first and flushes the spool even below `MinimumBatchEvents`. Successful batches have no normal inter-batch pause. The final delivery attempts bypass the normal endpoint backoff, while only one HTTP attempt remains active at a time.
 
 When the budget expires, `Dispose` returns and pending durable rows remain available for a later run. SQLite calls already executing may finish afterward; their resources are released when background cleanup completes. Claims that cannot be released become available after their 30-second lease expires. Remaining RAM events are best-effort delivery only.
 
