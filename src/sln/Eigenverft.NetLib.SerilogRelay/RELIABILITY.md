@@ -25,6 +25,7 @@ SerilogRelayOptions
     MinimumBatchEvents        = 20
     MaximumBatchEvents        = 100
     TargetBatchPayloadBytes   = 4 MiB
+    RequestTimeout            = 2 seconds
     EmergencyMaximumBatchEvents      = 256
     EmergencyTargetBatchPayloadBytes = 4 MiB
     PollInterval              = 5 seconds
@@ -40,6 +41,11 @@ SerilogRelayOptions
   EmergencyMemoryBuffer
     MaxBufferedEvents         = 16384
     MaxBufferedPayloadBytes   = 64 MiB
+
+  StatusEvents
+    Mode                      = Off
+    MinimumLevel              = Warning
+    SummaryInterval           = none
 ```
 
 The normal call remains:
@@ -47,6 +53,23 @@ The normal call remains:
 ```csharp
 .WriteTo.SerilogRelay("https://logging.example/api/v1/logs")
 ```
+
+`StatusEvents` is a process-local operational output. `RelayOnly` stores and sends marked
+status events through this sink; `AllSinks` publishes them through the application logger;
+`AllSinks` requires a `LoggerProvider` that returns null until that logger is ready;
+`Off` leaves only Serilog SelfLog diagnostics. Status events use the same spool, emergency RAM
+buffer, batching, and shutdown delivery as application events. On admission they may reclaim sent
+spool rows, but do not evict waiting spool or RAM events. They still occupy capacity, and later
+normal reclamation can evict eligible unsent rows with a loss report. If both buffers reject a
+`RelayOnly` status transition, it remains pending for retry. Warnings cover outages, recovery,
+and pressure; errors
+summarize event loss. An optional Debug summary has its own interval. Dropped status events in
+RAM remain in cumulative counters but do not trigger another status event.
+Known state transitions wake the status worker immediately and remain ordered in a bounded
+64-entry queue; further rapid changes are summarized with counts and first/last timestamps.
+The shared SQLite page budget is sampled every 30 seconds because other processes can change it.
+Pending transitions are volatile until publication; process shutdown can lose them.
+In `RelayOnly`, failed spool and RAM admission leaves the transition pending for retry.
 
 ## Application spool
 
@@ -59,8 +82,11 @@ The default file-backed spool path is application based:
 Therefore multiple processes of the same logical application resolve to the same durable spool
 unless the caller overrides the spool path.
 
-The spool schema already records both `ApplicationId` and `ProcessId` on every event.
-`ProcessId` therefore identifies which OS process originally created a row.
+The spool records `ApplicationId` and `ProcessId` on every event. New rows also record the
+originating application's `ApplicationVersion`, resolved once from the entry assembly when the
+sink is created or supplied through the options. Existing rows retain a null version after the
+schema upgrade. A later sender does not substitute its own version for an older row.
+`ProcessId` identifies which OS process originally created a row.
 
 Multiple active sinks can open and persist into the same file-backed spool. There is no
 lifetime-exclusive owner lock.
@@ -152,6 +178,7 @@ Pending rows carry:
 
 ```text
 Origin:
+  ApplicationVersion (nullable on older rows)
   ProcessId
 
 Delivery coordination:
@@ -160,8 +187,9 @@ Delivery coordination:
   ClaimUntilUnixMs
 ```
 
-Existing spool schemas are upgraded in place. Claim-column migration is serialized through an
-immediate SQLite transaction, and claim lookup/ownership indexes are created idempotently.
+Existing spool schemas are upgraded in place. Claim-column and application-version migration is
+serialized through an immediate SQLite transaction, and claim lookup/ownership indexes are
+created idempotently.
 
 ### Atomic claim behavior
 
@@ -173,6 +201,11 @@ A sender atomically claims up to `Delivery.MaximumBatchEvents` from rows that ar
 
 The default internal claim lease is 30 seconds. It is a crash/active-delivery safety window,
 not a retry-backoff timer.
+Its clock starts after the SQLite write lock is acquired. Immediately before HTTP delivery,
+after preparing the payload, the sender verifies ownership of the entire batch and renews the
+lease. A lost or incomplete claim is not sent. The request deadline is also bounded by the
+remaining renewed lease, with a one-second margin; a renewal that leaves no usable time skips
+the HTTP attempt. A renewal failure is reported as a spool failure rather than an endpoint failure.
 
 A process may claim rows created by another process of the same application spool. Only rows
 matching the current `ClaimOwnerId` and `ClaimBatchId` are marked sent after HTTP success.
@@ -200,6 +233,7 @@ same logical event may be delivered again. How a receiver stores or presents rep
 The process currently sending a claimed row uses its own runtime configuration:
 
 - its `Delivery` batch/cycle settings;
+- its HTTP client, authentication, and request timeout;
 - its `EndpointRetry` state;
 - its shutdown deadline.
 
@@ -218,16 +252,21 @@ without a separate cross-process notification subsystem.
 
 ### Recovery coordination
 
-Physical corruption quarantine/recreate is coordinated separately from row claims. A short-lived
-file-backed recovery lock serializes recovery for a shared spool. After acquiring the lock, the
-process runs a SQLite quick check first; if another process already recovered the spool, no
-second quarantine is performed.
+Startup generation selection and corruption recovery share one short-lived coordination lock
+at `<base-spool-filename>.recovery.lock`, independent of row claims. Its small versioned record
+contains the latest generation number and OS boot identifier, so cleanup needs no additional
+metadata file or SQL table. Marker replacement first flushes an empty record, then writes and
+flushes the replacement; interrupted or mismatched records cannot authorize cleanup.
 
-Normal persistence, claiming, and sending are not serialized behind that recovery lock.
+Normal persistence, claiming, and sending are not serialized behind that recovery lock. A local
+filesystem with working cross-process file locks is required for coordinated access.
 
 ## Endpoint outage and RetryGate
 
 Each sink/process owns its own in-memory `RetryGate`.
+
+Retry settings are captured when the sink is created. The multiplier must be finite and at
+least one; jitter must be finite and between zero and one.
 
 Default failed-attempt progression:
 
@@ -239,6 +278,11 @@ with +/-20% jitter.
 
 A valid HTTP `Retry-After` is honored on every non-2xx response. A successful delivery resets that process's retry state
 immediately.
+
+Response bodies are read and discarded as they arrive instead of being buffered in full.
+The client's `MaxResponseContentBufferSize` still limits the complete response size, even for
+an unknown-length body. Request, client, lease, and shutdown deadlines remain active through
+the body. A batch is acknowledged only after a complete 2xx response within these limits.
 
 Normal endpoint outages remain in durable storage and do not consume Emergency memory.
 
@@ -268,12 +312,45 @@ active attempt ends. RAM and spool events are never mixed in one HTTP batch.
 
 ## Corruption recovery
 
-The current SQLite implementation can quarantine a corrupted spool and create a replacement.
+For ordinary storage failures, the selected generation remains fixed and database operations
+continue to retry. If initial schema creation or migration failed, the next database operation
+retries initialization under the same process-local gate before accessing that schema. Delayed
+initialization still preserves the startup delivery opportunity before unsent-age cleanup.
+Storage failures from delivery, maintenance, and diagnostic access share the Emit/Emergency
+availability state. Successful writes (or successful schema initialization) mark recovery;
+reads alone do not establish that writes can resume. Confirmation of the exact EventId after an
+ambiguous write also establishes that the affected event became durable. A capacity rejection
+that leaves the event only in RAM does not establish recovery.
 
-Concurrent recovery of one shared application spool is coordinated by the short-lived recovery
-lock described above. The lock is used only for quarantine/recreate and is automatically
-released when its file handle closes; a dead process therefore does not leave a lifetime spool
-owner behind.
+Each instance selects the highest numeric generation once at startup: the configured base
+filename is generation zero, followed by `.g0001`, `.g0002`, etc. before its extension. The
+connection string is fixed for that instance; healthy older instances are not forced to switch.
+
+A first `SQLITE_CORRUPT` or `SQLITE_NOTADB` sets a permanent process-visible flag on the
+affected sink instance. All its SQLite access stops, including emergency repersistence,
+claiming/acknowledgment, maintenance, diagnostic queries, and shutdown spool draining. Its RAM
+buffer retains the existing admission, batching, retry, and shutdown rules. Already active HTTP
+requests may finish; the disabled instance does not acknowledge them through SQLite.
+
+Under the recovery lock, the instance reserves the next generation with create-new semantics,
+or accepts that another process already reserved a higher generation. The new filename is an
+empty database; a new instance initializes its normal schema. The detecting instance remains in
+RAM mode even after creating the successor. Failures to reserve it are diagnosed through
+`SelfLog`, while RAM delivery remains available. Other SQLite errors keep their normal retry
+behavior. No database or WAL/SHM file is moved, replaced, or salvaged in a running boot session.
+
+At startup, a valid marker matching the highest generation and a different current OS boot
+identifier permits deletion of lower generations and their WAL/SHM files under the same lock.
+The helper uses the Windows native boot-environment query, Linux
+`/proc/sys/kernel/random/boot_id`, or macOS `kern.bootsessionuuid`. Missing, incomplete, or
+mismatched records are conservatively initialized for the current boot and defer deletion until
+a later boot. Unavailable boot information skips deletion without preventing spool use.
+
+Cleanup does not infer reboot from wall-clock or filesystem timestamps. Participating versions
+must all follow generation selection; binaries predating this protocol are not coordinated by
+it. Corrupt older data may be lost, and retained obsolete generations are outside the active
+database's configured size budget. Startup coordination/selection failure leaves that instance
+in RAM mode until it is replaced, rather than risking access to a stale generation.
 
 ## Shutdown
 

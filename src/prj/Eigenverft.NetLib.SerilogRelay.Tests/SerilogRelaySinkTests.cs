@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
@@ -64,70 +66,132 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         }
 
         [TestMethod]
+        public async Task SuppliedHttpClientKeepsItsSettingsAndRemainsCallerOwned()
+        {
+            var authorizationHeaders = new List<string?>();
+            using var client = new HttpClient(new CallbackHttpHandler((request, _) =>
+            {
+                authorizationHeaders.Add(request.Headers.Authorization?.ToString());
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+            }));
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", "host-token");
+            client.Timeout = TimeSpan.FromSeconds(30);
+
+            var options = new SerilogRelayOptions { HttpClient = client };
+            await using (var sink = new SerilogRelaySink(
+                "Data Source=:memory:",
+                "http://receiver.test/logs",
+                options,
+                bearerToken: "relay-token"))
+            {
+                Assert.IsTrue(await InvokeSendBatchAsync(
+                    sink,
+                    new List<LogEntry> { CreateLogEntry(1, "custom client") },
+                    CancellationToken.None));
+            }
+
+            Assert.AreEqual("Bearer relay-token", authorizationHeaders[0]);
+            Assert.AreEqual("Basic host-token", client.DefaultRequestHeaders.Authorization?.ToString());
+            Assert.AreEqual(TimeSpan.FromSeconds(30), client.Timeout);
+
+            await using (var sink = new SerilogRelaySink(
+                "Data Source=:memory:",
+                "http://receiver.test/logs",
+                options))
+            {
+                Assert.IsTrue(await InvokeSendBatchAsync(
+                    sink,
+                    new List<LogEntry> { CreateLogEntry(2, "client authentication") },
+                    CancellationToken.None));
+            }
+
+            Assert.AreEqual("Basic host-token", authorizationHeaders[1]);
+        }
+
+        [TestMethod]
+        public async Task SuppliedHttpClientUsesRelayRequestTimeout()
+        {
+            using var client = new HttpClient(new CallbackHttpHandler(async (_, cancellationToken) =>
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            }));
+            client.Timeout = TimeSpan.FromSeconds(30);
+            var options = new SerilogRelayOptions { HttpClient = client };
+            options.Delivery.RequestTimeout = TimeSpan.FromMilliseconds(100);
+            options.Delivery.ShutdownTimeout = TimeSpan.Zero;
+
+            await using var sink = new SerilogRelaySink(
+                "Data Source=:memory:",
+                "http://receiver.test/logs",
+                options);
+            Stopwatch elapsed = Stopwatch.StartNew();
+            Assert.IsFalse(await InvokeSendBatchAsync(
+                sink,
+                new List<LogEntry> { CreateLogEntry(1, "request timeout") },
+                CancellationToken.None));
+            elapsed.Stop();
+
+            Assert.IsLessThan(TimeSpan.FromSeconds(2), elapsed.Elapsed);
+            Assert.AreEqual(TimeSpan.FromSeconds(30), client.Timeout);
+            Assert.AreEqual(1, GetPrivateField<RetryGate>(sink, "_retryGate").ConsecutiveFailures);
+        }
+
+        [TestMethod]
+        public void SuppliedHttpClientRejectsSinkCertificateBypass()
+        {
+            using var client = new HttpClient(new CallbackHttpHandler((_, _) =>
+                Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent))));
+            var options = new SerilogRelayOptions { HttpClient = client };
+
+            Assert.ThrowsExactly<ArgumentException>(() => new SerilogRelaySink(
+                "Data Source=:memory:",
+                "http://receiver.test/logs",
+                options,
+                dangerousAcceptAnyServerCertificate: true));
+            Assert.ThrowsExactly<ArgumentException>(() => new LoggerConfiguration()
+                .WriteTo.SerilogRelay(
+                    endpoint: "http://receiver.test/logs",
+                    options: options,
+                    dangerousAcceptAnyServerCertificate: true));
+        }
+
+        [TestMethod]
         [DoNotParallelize]
-        public void CorruptedSpoolIsQuarantinedRecreatedAndReported()
+        public void CorruptedSpoolCreatesSuccessorWithoutMovingOriginal()
         {
             string directory = CreateTemporaryDirectory();
             string databasePath = Path.Combine(directory, "SerilogRelay.db");
-            string walPath = databasePath + "-wal";
-            string shmPath = databasePath + "-shm";
-
+            string successorPath = Path.Combine(directory, "SerilogRelay.g0001.db");
+            const string damagedContent = "this is not a sqlite database";
+            var options = new SerilogRelayOptions();
+            options.Delivery.ShutdownTimeout = TimeSpan.Zero;
             try
             {
-                File.WriteAllBytes(databasePath, Encoding.UTF8.GetBytes("this is not a sqlite database"));
-                File.WriteAllText(walPath, "fake wal");
-                File.WriteAllText(shmPath, "fake shm");
+                File.WriteAllText(databasePath, damagedContent);
+                using var damaged = new SerilogRelaySink($"Data Source={databasePath}", null, options);
+                damaged.Emit(CreateLogEvent("Volatile after corruption"));
+                Assert.IsTrue(GetPrivateField<bool>(damaged, "_spoolDisabledForLifetime"));
+                Assert.AreEqual(1L, GetPrivateField<long>(damaged, "_emergencyBufferedCount"));
+                Assert.AreEqual(damagedContent, ReadSharedSpoolFile(databasePath));
+                Assert.IsTrue(File.Exists(successorPath));
+                Assert.IsFalse(Directory.Exists(Path.Combine(directory, "corrupted")));
+                Assert.IsFalse(File.Exists(successorPath + ".boot"));
 
-                using (Logger logger = new LoggerConfiguration()
-                    .WriteTo.SerilogRelay(
-                        endpoint: null,
-                        spoolDirectory: directory)
-                    .CreateLogger())
+                using (var successor = new SerilogRelaySink($"Data Source={databasePath}", null, options))
                 {
-                    logger.Information("After corruption recovery");
+                    Assert.AreEqual(successorPath, GetPrivateField<string>(successor, "_databasePath"));
+                    successor.Emit(CreateLogEvent("Durable in new generation"));
                 }
-
-                using var connection = new SqliteConnection($"Data Source={databasePath}");
+                // The older live instance never follows the successor or retries its old spool.
+                damaged.Emit(CreateLogEvent("Still volatile"));
+                Assert.AreEqual(2L, GetPrivateField<long>(damaged, "_emergencyBufferedCount"));
+                using var connection = new SqliteConnection($"Data Source={successorPath}");
                 connection.Open();
-
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = "SELECT COUNT(*) FROM SerilogRelayEvents;";
-                    Assert.AreEqual(2L, Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture));
-                }
-
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = @"
-SELECT Properties
-FROM SerilogRelayEvents
-WHERE RenderMessage = 'SerilogRelay quarantined a corrupted SQLite spool and created a new spool.'
-LIMIT 1;";
-
-                    string propertiesJson =
-                        Convert.ToString(command.ExecuteScalar(), CultureInfo.InvariantCulture)
-                        ?? string.Empty;
-
-                    using JsonDocument document = JsonDocument.Parse(propertiesJson);
-                    Assert.AreEqual(
-                        "spool_corrupted",
-                        document.RootElement.GetProperty("RelayEventType").GetString());
-                    Assert.AreEqual(
-                        "quarantined_and_recreated",
-                        document.RootElement.GetProperty("RecoveryAction").GetString());
-                    Assert.IsFalse(string.IsNullOrWhiteSpace(
-                        document.RootElement.GetProperty("QuarantineId").GetString()));
-                }
-
-                string corruptedRoot = Path.Combine(directory, "corrupted");
-                string[] quarantineDirectories = Directory.GetDirectories(corruptedRoot);
-                Assert.HasCount(1, quarantineDirectories);
-
-                string quarantineDirectory = quarantineDirectories[0];
-                Assert.IsTrue(File.Exists(Path.Combine(quarantineDirectory, "SerilogRelay.db")));
-                Assert.IsTrue(File.Exists(Path.Combine(quarantineDirectory, "corruption.json")));
-
-                Assert.IsTrue(File.Exists(databasePath));
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT COUNT(*) FROM SerilogRelayEvents;";
+                Assert.AreEqual(1L, Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture));
+                Assert.AreEqual(damagedContent, ReadSharedSpoolFile(databasePath));
             }
             finally
             {
@@ -137,39 +201,29 @@ LIMIT 1;";
         }
 
         [TestMethod]
-        public void CorruptionHelpersClassifyPathsAndSidecars()
+        public void CorruptionHelpersClassifyPathsAndGenerationNames()
         {
             Assert.IsTrue(InvokeIsCorruptionError(new SqliteException("corrupt", SQLitePCL.raw.SQLITE_CORRUPT)));
             Assert.IsTrue(InvokeIsCorruptionError(new SqliteException("notadb", SQLitePCL.raw.SQLITE_NOTADB)));
             Assert.IsFalse(InvokeIsCorruptionError(new SqliteException("ioerr", SQLitePCL.raw.SQLITE_IOERR)));
-
             Assert.IsNull(InvokeResolveDatabasePath("Data Source=:memory:"));
-
-            string namedMemoryConnection = new SqliteConnectionStringBuilder
+            Assert.IsNull(InvokeResolveDatabasePath(new SqliteConnectionStringBuilder
             {
                 DataSource = "relay-memory",
                 Mode = SqliteOpenMode.Memory,
-            }.ToString();
-            Assert.IsNull(InvokeResolveDatabasePath(namedMemoryConnection));
+            }.ToString()));
             Assert.IsNull(InvokeResolveDatabasePath(string.Empty));
-
             string directory = CreateTemporaryDirectory();
-            string quarantineDirectory = Path.Combine(directory, "quarantine");
-            string source = Path.Combine(directory, "SerilogRelay.db-wal");
-
             try
             {
-                Directory.CreateDirectory(quarantineDirectory);
-                File.WriteAllText(source, "sidecar");
-
-                InvokeMoveToQuarantineIfPresent(source, quarantineDirectory);
-
-                Assert.IsFalse(File.Exists(source));
-                Assert.IsTrue(File.Exists(Path.Combine(quarantineDirectory, "SerilogRelay.db-wal")));
-
-                InvokeMoveToQuarantineIfPresent(
-                    Path.Combine(directory, "missing.db-shm"),
-                    quarantineDirectory);
+                using var sink = new SerilogRelaySink($"Data Source={Path.Combine(directory, "relay.db")}", null, new SerilogRelayOptions());
+                MethodInfo number = GetPrivateMethod("GetSpoolGenerationNumber", isStatic: false);
+                Assert.AreEqual(0, (int)number.Invoke(sink, new object[] { "relay.db" })!);
+                Assert.AreEqual(1, (int)number.Invoke(sink, new object[] { "relay.g0001.db" })!);
+                Assert.AreEqual(10, (int)number.Invoke(sink, new object[] { "relay.g0010.db" })!);
+                Assert.AreEqual(-1, (int)number.Invoke(sink, new object[] { "relay.g1.db" })!);
+                Assert.AreEqual(-1, (int)number.Invoke(sink, new object[] { "relay.g0001.db-wal" })!);
+                Assert.AreEqual(-1, (int)number.Invoke(sink, new object[] { "other.g0001.db" })!);
             }
             finally
             {
@@ -179,42 +233,27 @@ LIMIT 1;";
 
         [TestMethod]
         [DoNotParallelize]
-        public async Task CorruptionDuringAsyncReadIsRecovered()
+        public async Task CorruptionDuringAsyncReadPermanentlyDisablesSpool()
         {
             string directory = CreateTemporaryDirectory();
             string databasePath = Path.Combine(directory, "relay.db");
             string connectionString = $"Data Source={databasePath}";
-
             try
             {
-                await using var sink = new SerilogRelaySink(
-                    connectionString,
-                    endpoint: null,
-                    minBatchItems: 1,
-                    maxBatchItems: 10,
-                    TimeSpan.FromMilliseconds(20),
-                    TimeSpan.FromDays(1),
-                    TimeSpan.FromDays(3));
-
-                SetPrivateField<string?>(sink, "_machineId", null);
+                var options = new SerilogRelayOptions();
+                options.Delivery.PollInterval = TimeSpan.FromHours(1);
+                await using var sink = new SerilogRelaySink(connectionString, null, options);
                 SqliteConnection.ClearAllPools();
                 File.Delete(databasePath + "-wal");
                 File.Delete(databasePath + "-shm");
-                File.WriteAllBytes(databasePath, Encoding.UTF8.GetBytes("not sqlite anymore"));
-
-                ClaimedLogBatch claimed = await InvokeClaimPendingAsync(
-                    sink,
-                    limit: 10,
-                    DateTimeOffset.UtcNow,
-                    CancellationToken.None);
-                List<LogEntry> entries = claimed.Entries;
-
-                Assert.HasCount(1, entries);
-                Assert.IsNull(entries[0].MachineId);
-                using JsonDocument properties = JsonDocument.Parse(entries[0].Properties!);
-                Assert.AreEqual(
-                    "spool_corrupted",
-                    properties.RootElement.GetProperty("RelayEventType").GetString());
+                File.WriteAllText(databasePath, "not sqlite anymore");
+                await Assert.ThrowsExactlyAsync<SqliteException>(() => InvokeClaimPendingAsync(
+                    sink, 10, DateTimeOffset.UtcNow, CancellationToken.None));
+                Assert.IsTrue(GetPrivateField<bool>(sink, "_spoolDisabledForLifetime"));
+                Assert.IsTrue(File.Exists(Path.Combine(directory, "relay.g0001.db")));
+                await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => InvokeClaimPendingAsync(
+                    sink, 10, DateTimeOffset.UtcNow, CancellationToken.None));
+                Assert.AreEqual("not sqlite anymore", ReadSharedSpoolFile(databasePath));
             }
             finally
             {
@@ -249,10 +288,10 @@ LIMIT 1;";
                     sink,
                     new SqliteException("notadb", SQLitePCL.raw.SQLITE_NOTADB)));
 
-                Assert.ThrowsExactly<SqliteException>(
+                Assert.ThrowsExactly<InvalidOperationException>(
                     () => InvokeSyncRecoveryOperationThatAlwaysCorrupts(sink));
 
-                await Assert.ThrowsExactlyAsync<SqliteException>(
+                await Assert.ThrowsExactlyAsync<InvalidOperationException>(
                     () => InvokeAsyncRecoveryOperationThatAlwaysCorrupts(sink));
 
                 StringAssert.Contains(
@@ -288,8 +327,7 @@ LIMIT 1;";
                     TimeSpan.FromDays(1),
                     TimeSpan.FromDays(3));
 
-                string corruptedPath = Path.Combine(directory, "corrupted");
-                File.WriteAllText(corruptedPath, "blocks directory creation");
+                Directory.CreateDirectory(Path.Combine(directory, "relay.g0001.db"));
 
                 SqliteConnection.ClearAllPools();
                 File.Delete(databasePath + "-wal");
@@ -302,17 +340,10 @@ LIMIT 1;";
 
                 StringAssert.Contains(
                     selfLog.ToString(),
-                    "failed to quarantine/recreate");
+                    "could not create the next spool generation");
 
-                InvokeWriteCorruptionMetadata(
-                    sink,
-                    Path.Combine(directory, "missing", "nested"),
-                    "test-quarantine",
-                    new SqliteException("corrupt", SQLitePCL.raw.SQLITE_CORRUPT));
+                Assert.IsTrue(GetPrivateField<bool>(sink, "_spoolDisabledForLifetime"));
 
-                StringAssert.Contains(
-                    selfLog.ToString(),
-                    "could not write corruption metadata");
             }
             finally
             {
@@ -333,7 +364,8 @@ LIMIT 1;";
 
             string expected = Path.GetFullPath(
                 Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
+                        Environment.SpecialFolderOption.DoNotVerify),
                     "Eigenverft",
                     "SerilogRelay",
                     "My_App_Worker",
@@ -369,7 +401,8 @@ LIMIT 1;";
 
                 string expectedRelative = Path.GetFullPath(
                     Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
+                            Environment.SpecialFolderOption.DoNotVerify),
                         "Eigenverft",
                         "SerilogRelay",
                         "My.App",
@@ -1303,6 +1336,7 @@ END;";
                         {
                             CreateLogEntry(index + 1, $"emergency {index}"),
                             exception,
+                            true,
                         });
                 }
 
@@ -1358,6 +1392,7 @@ END;";
                         {
                             entry,
                             new IOException("simulated ambiguous write result"),
+                            true,
                         });
 
                 await WaitUntilAsync(
@@ -1718,18 +1753,17 @@ END;";
             return (bool)method.Invoke(null, new object[] { exception })!;
         }
 
+        private static string ReadSharedSpoolFile(string path)
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var reader = new StreamReader(stream);
+            return reader.ReadToEnd();
+        }
+
         private static string? InvokeResolveDatabasePath(string connectionString)
         {
             MethodInfo method = GetPrivateMethod("ResolveDatabasePath", isStatic: true);
             return (string?)method.Invoke(null, new object[] { connectionString });
-        }
-
-        private static void InvokeMoveToQuarantineIfPresent(
-            string sourcePath,
-            string quarantineDirectory)
-        {
-            MethodInfo method = GetPrivateMethod("MoveToQuarantineIfPresent", isStatic: true);
-            method.Invoke(null, new object[] { sourcePath, quarantineDirectory });
         }
 
         private static bool InvokeTryRecoverCorruptedSpool(
@@ -1738,18 +1772,6 @@ END;";
         {
             MethodInfo method = GetPrivateMethod("TryRecoverCorruptedSpool", isStatic: false);
             return (bool)method.Invoke(sink, new object[] { exception })!;
-        }
-
-        private static void InvokeWriteCorruptionMetadata(
-            SerilogRelaySink sink,
-            string quarantineDirectory,
-            string quarantineId,
-            SqliteException exception)
-        {
-            MethodInfo method = GetPrivateMethod("WriteCorruptionMetadata", isStatic: false);
-            method.Invoke(
-                sink,
-                new object[] { quarantineDirectory, quarantineId, exception });
         }
 
         private static async Task<ClaimedLogBatch> InvokeClaimPendingAsync(
@@ -1761,7 +1783,7 @@ END;";
             MethodInfo method = GetPrivateMethod("ClaimPendingAsync", isStatic: false);
             var task = (Task<ClaimedLogBatch>)method.Invoke(
                 sink,
-                new object[] { limit, now, cancellationToken })!;
+                new object[] { limit, cancellationToken })!;
             return await task;
         }
 
@@ -1782,11 +1804,11 @@ END;";
 
             try
             {
-                method.Invoke(sink, new object[] { operation });
+                method.Invoke(sink, new object[] { operation, true });
             }
-            catch (TargetInvocationException ex) when (ex.InnerException is SqliteException sqliteException)
+            catch (TargetInvocationException ex) when (ex.InnerException is Exception innerException)
             {
-                throw sqliteException;
+                throw innerException;
             }
         }
 
@@ -1841,7 +1863,7 @@ END;";
             CancellationToken cancellationToken)
         {
             MethodInfo method = GetPrivateMethod("SendBatchAsync", isStatic: false);
-            var task = (Task<bool>)method.Invoke(sink, new object[] { entries, cancellationToken })!;
+            var task = (Task<bool>)method.Invoke(sink, new object?[] { entries, cancellationToken, null })!;
             return await task;
         }
 
@@ -1871,6 +1893,19 @@ END;";
         {
             public override string ToString()
                 => throw new InvalidOperationException("expected ToString failure");
+        }
+
+        private sealed class CallbackHttpHandler : HttpMessageHandler
+        {
+            private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _send;
+
+            internal CallbackHttpHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send)
+                => _send = send;
+
+            protected override Task<HttpResponseMessage> SendAsync(
+                HttpRequestMessage request,
+                CancellationToken cancellationToken)
+                => _send(request, cancellationToken);
         }
 
         private static LogEvent CreateLogEvent(string message)

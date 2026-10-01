@@ -6,6 +6,8 @@ using System.IO;
 using System.Reflection;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Channels;
@@ -33,7 +35,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// Configures Serilog to try local SQLite persistence first, attempt bounded volatile buffering when storage fails or rejects an event, and optionally relay events to an HTTP endpoint.
         /// </summary>
         /// <remarks>
-        /// Processes sharing one application spool may send each other's pending rows. The process that owns the current claim uses its own endpoint and bearer token. A 2xx response marks the still-owned claim delivered; non-2xx releases the claim before process-local retry backoff so another process/version may take over.
+        /// Processes sharing one application spool may send each other's pending rows. Each new event records the originating application's version once, independently of the process that later sends it. The process that owns the current claim uses its own endpoint and bearer token. A 2xx response marks the still-owned claim delivered; non-2xx releases the claim before process-local retry backoff so another process/version may take over.
         /// </remarks>
         /// <param name="loggerConfiguration">The Serilog sink configuration.</param>
         /// <param name="endpoint">The optional HTTP endpoint used by this sink/process for batched delivery of any shared-spool rows it claims. Pending rows do not retain the endpoint of their creating process.</param>
@@ -90,7 +92,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// </remarks>
         /// <param name="loggerConfiguration">The Serilog sink configuration.</param>
         /// <param name="endpoint">The optional HTTP endpoint that receives batched log events.</param>
-        /// <param name="options">Relay behavior options. All nested option groups have complete defaults.</param>
+        /// <param name="options">Relay behavior options, including an optional caller-owned HTTP client. All nested option groups have complete defaults.</param>
         /// <param name="spoolDirectory">Optional spool directory.</param>
         /// <param name="spoolFileName">Optional spool filename.</param>
         /// <param name="applicationId">Optional logical application identity. The normalized identity must not exceed 256 characters.</param>
@@ -110,6 +112,10 @@ namespace Eigenverft.NetLib.SerilogRelay
             string? bearerToken = null)
         {
             ArgumentNullException.ThrowIfNull(options);
+            if (options.HttpClient is not null && dangerousAcceptAnyServerCertificate)
+                throw new ArgumentException(
+                    "Configure certificate validation on the supplied HttpClient instead.",
+                    nameof(dangerousAcceptAnyServerCertificate));
 
             string spoolPath = ResolveSpoolPath(spoolDirectory, spoolFileName, applicationId);
             try
@@ -148,7 +154,10 @@ namespace Eigenverft.NetLib.SerilogRelay
                 spoolDirectory,
                 spoolFileName,
                 applicationId,
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+                Path.IsPathRooted(spoolDirectory)
+                    ? string.Empty
+                    : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
+                        Environment.SpecialFolderOption.DoNotVerify));
 
         internal static string ResolveSpoolPath(
             string? spoolDirectory,
@@ -164,6 +173,9 @@ namespace Eigenverft.NetLib.SerilogRelay
                 throw new ArgumentException("Spool filename must be a valid filename without a directory component.", nameof(spoolFileName));
             }
 
+            if (Path.IsPathRooted(spoolDirectory))
+                return Path.Combine(Path.GetFullPath(spoolDirectory), spoolFileName);
+
             if (string.IsNullOrWhiteSpace(localApplicationData))
                 throw new InvalidOperationException("The operating system did not provide a LocalApplicationData directory for the SerilogRelay spool.");
 
@@ -171,15 +183,28 @@ namespace Eigenverft.NetLib.SerilogRelay
                 localApplicationData,
                 "Eigenverft",
                 "SerilogRelay",
-                ResolveApplicationId(applicationId));
+                ResolveApplicationSpoolDirectoryName(ResolveApplicationId(applicationId), OperatingSystem.IsWindows()));
 
             string resolvedDirectory = string.IsNullOrWhiteSpace(spoolDirectory)
                 ? defaultDirectory
-                : Path.IsPathRooted(spoolDirectory)
-                    ? Path.GetFullPath(spoolDirectory)
-                    : Path.GetFullPath(Path.Combine(defaultDirectory, spoolDirectory));
+                : Path.GetFullPath(Path.Combine(defaultDirectory, spoolDirectory));
 
             return Path.Combine(resolvedDirectory, spoolFileName);
+        }
+
+        private static string ResolveApplicationSpoolDirectoryName(string applicationId, bool isWindows)
+        {
+            // The logical ID may contain 256 ASCII characters; a filesystem component may not.
+            bool reservedWindowsName = isWindows
+                && Regex.IsMatch(applicationId, @"^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)",
+                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            if (applicationId.Length <= 255 && !reservedWindowsName)
+                return applicationId;
+
+            // Normalized IDs cannot start with '_', so the hash namespace cannot collide
+            // with an ordinary ID's directory. The event's ApplicationId stays unchanged.
+            return "_" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(applicationId)))
+                .ToLowerInvariant();
         }
 
         internal static string ResolveApplicationId(string? applicationId)
@@ -208,28 +233,32 @@ namespace Eigenverft.NetLib.SerilogRelay
     public partial class SerilogRelaySink : ILogEventSink, IAsyncDisposable, IDisposable
     {
 
-        private static readonly HttpClientHandler _defaultHttpHandler = new HttpClientHandler();
+        private static readonly HttpClientHandler _defaultHttpHandler = new HttpClientHandler
+        {
+            UseCookies = false,
+        };
 
         private static readonly HttpClientHandler _dangerousHttpHandler = new HttpClientHandler
         {
+            UseCookies = false,
             ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
         };
 
         private const int MaxBusyRetries = 5;
+        private const int MaximumApplicationVersionLength = 256;
         private const int BusyRetryDelayMs = 100;
         private const int EmergencyRetryDelayMs = 250;
-        private static readonly TimeSpan HttpRequestTimeout = TimeSpan.FromSeconds(2);
+        private static readonly TimeSpan MaximumSenderDelay = TimeSpan.FromMilliseconds(uint.MaxValue - 1L);
         private static readonly TimeSpan ClaimLeaseDuration = TimeSpan.FromSeconds(30);
         private static readonly TimeSpan RecoveryLockTimeout = TimeSpan.FromSeconds(5);
         private const string TableName = "SerilogRelayEvents";
-        private const string CorruptionDirectoryName = "corrupted";
-        private const string CorruptionEventType = "spool_corrupted";
 
         private const string TableSchema = @"
 CREATE TABLE IF NOT EXISTS {0} (
     Id              INTEGER PRIMARY KEY AUTOINCREMENT,
     EventId         TEXT    NOT NULL UNIQUE,
     ApplicationId   TEXT    NOT NULL,
+    ApplicationVersion TEXT,
     MachineId       TEXT,
     ProcessId       INTEGER NOT NULL,
     Timestamp       TEXT    NOT NULL,
@@ -248,10 +277,15 @@ CREATE TABLE IF NOT EXISTS {0} (
 );";
 
         private readonly string _connectionString;
+        private readonly string? _baseDatabasePath;
         private readonly string? _databasePath;
+        private volatile bool _spoolDisabledForLifetime;
+        private bool _spoolInitialized; // Accessed only under _databaseGate.
         private readonly SemaphoreSlim _databaseGate = new SemaphoreSlim(1, 1);
+        private readonly TimeProvider _timeProvider = TimeProvider.System;
         private readonly string? _endpoint;
         private readonly string _applicationId;
+        private readonly string? _applicationVersion;
         private readonly string? _machineId;
         private readonly int _processId;
         private readonly string _claimOwnerId;
@@ -263,6 +297,7 @@ CREATE TABLE IF NOT EXISTS {0} (
         private readonly TimeSpan _baseInterval;
         private readonly TimeSpan _maximumBatchWait;
         private readonly TimeSpan _shutdownTimeout;
+        private readonly TimeSpan _requestTimeout;
         private readonly TimeSpan _shutdownRequestTimeout;
         private readonly TimeSpan _shutdownRetryInterval;
         private long _lastHttpAttemptStartedTimestamp;
@@ -275,9 +310,12 @@ CREATE TABLE IF NOT EXISTS {0} (
         private readonly CancellationTokenSource _cts;
         private readonly CancellationTokenSource _shutdownSignal;
         private readonly Task _senderTask;
+        private readonly Task _statusTask;
         private readonly Channel<EmergencyEntry> _emergencyChannel;
         private readonly Task _emergencyTask;
         private readonly HttpClient _httpClient;
+        private readonly bool _ownsHttpClient;
+        private readonly AuthenticationHeaderValue? _authorizationHeader;
         private readonly int _emergencyBufferCapacity;
         private readonly long _maxEmergencyBufferedPayloadBytes;
 
@@ -286,12 +324,15 @@ CREATE TABLE IF NOT EXISTS {0} (
         private long _emergencyBufferedPayloadBytes;
         private long _emergencyDroppedCount;
         private long _applicationSpoolDroppedCount;
+        private long _statusEmergencyDroppedCount;
         private int _emergencyOverflowReported;
         private int _spoolUnavailable;
         private int _pendingCountNeedsRefresh;
         private int _applicationSpoolOverflowReported;
         private int _startupBacklogPending;
         private int _startupUnsentCleanupPending;
+        private int _endpointFailureActive;
+        private long _lastHttpSuccessUnixMs;
         private readonly object _signalLock = new object();
         private bool _hasNewLogs;
         private DateTimeOffset? _pendingSinceUtc;
@@ -346,11 +387,17 @@ CREATE TABLE IF NOT EXISTS {0} (
         {
             ArgumentNullException.ThrowIfNull(options);
             ValidateOptions(options);
+            if (options.HttpClient is not null && dangerousAcceptAnyServerCertificate)
+                throw new ArgumentException(
+                    "Configure certificate validation on the supplied HttpClient instead.",
+                    nameof(dangerousAcceptAnyServerCertificate));
 
             _connectionString = connectionString;
-            _databasePath = ResolveDatabasePath(connectionString);
+            _baseDatabasePath = ResolveDatabasePath(connectionString);
+            _databasePath = _baseDatabasePath;
             _endpoint = endpoint;
             _applicationId = LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(applicationId);
+            _applicationVersion = ResolveApplicationVersion(options.ApplicationVersion, Assembly.GetEntryAssembly());
             _machineId = ResolveMachineId();
             _processId = Environment.ProcessId;
             _claimOwnerId = FormattableString.Invariant($"{_processId}:{Guid.NewGuid():N}");
@@ -362,6 +409,7 @@ CREATE TABLE IF NOT EXISTS {0} (
             _baseInterval = options.Delivery.PollInterval;
             _maximumBatchWait = options.Delivery.MaximumBatchWait;
             _shutdownTimeout = options.Delivery.ShutdownTimeout;
+            _requestTimeout = options.Delivery.RequestTimeout;
             _shutdownRequestTimeout = options.Delivery.ShutdownRequestTimeout;
             _shutdownRetryInterval = options.Delivery.ShutdownRetryInterval;
             _applicationSpoolSentEventRetention = options.ApplicationSpool.SentEventRetention;
@@ -370,16 +418,17 @@ CREATE TABLE IF NOT EXISTS {0} (
             _retryGate = new RetryGate(options.EndpointRetry);
             _emergencyBufferCapacity = options.EmergencyMemoryBuffer.MaxBufferedEvents;
             _maxEmergencyBufferedPayloadBytes = options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes;
+            _statusEventMode = options.StatusEvents.Mode;
+            _statusMinimumLevel = options.StatusEvents.MinimumLevel;
+            _statusSummaryInterval = options.StatusEvents.SummaryInterval;
+            _statusLoggerProvider = options.StatusEvents.LoggerProvider;
 
-            _httpClient = new HttpClient(
+            _ownsHttpClient = options.HttpClient is null;
+            _httpClient = options.HttpClient ?? new HttpClient(
                 GetHttpClientHandler(dangerousAcceptAnyServerCertificate),
-                disposeHandler: false)
-            {
-                Timeout = HttpRequestTimeout,
-            };
+                disposeHandler: false);
             if (!string.IsNullOrWhiteSpace(bearerToken))
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", bearerToken);
+                _authorizationHeader = new AuthenticationHeaderValue("Bearer", bearerToken);
             _cts = new CancellationTokenSource();
             _shutdownSignal = new CancellationTokenSource();
             _emergencyChannel = Channel.CreateBounded<EmergencyEntry>(
@@ -391,17 +440,40 @@ CREATE TABLE IF NOT EXISTS {0} (
                     AllowSynchronousContinuations = false,
                 });
 
+            _startupUnsentCleanupPending =
+                !string.IsNullOrEmpty(_endpoint) && _applicationSpoolUnsentEventMaxAge.HasValue ? 1 : 0;
+
             try
             {
+                if (_baseDatabasePath is not null)
+                {
+                    // Select once, before any SQLite access. Each instance keeps its generation.
+                    try
+                    {
+                        _databasePath = SelectStartupSpoolGeneration();
+                        var builder = new SqliteConnectionStringBuilder(connectionString)
+                        {
+                            DataSource = _databasePath,
+                        };
+                        _connectionString = builder.ToString();
+                    }
+                    catch (Exception)
+                    {
+                        // Without safe selection a retry could accidentally open generation zero.
+                        _spoolDisabledForLifetime = true;
+                        throw;
+                    }
+                }
+
                 ExecuteDatabaseWithRecovery(() =>
                 {
-                    EnsureTableCreatedCore();
                     CleanupApplicationSpoolRetentionCore(
                         _applicationSpoolSentEventRetention,
                         string.IsNullOrEmpty(_endpoint) ? _applicationSpoolUnsentEventMaxAge : null);
                 });
 
-                _pendingCount = ExecuteDatabaseWithRecovery(() => GetClaimablePendingCountCore(DateTimeOffset.UtcNow));
+                _pendingCount = ExecuteDatabaseWithRecovery(
+                    () => GetClaimablePendingCountCore(DateTimeOffset.UtcNow), updatesSpool: false);
                 if (_pendingCount > 0)
                 {
                     _startupBacklogPending = string.IsNullOrEmpty(_endpoint) ? 0 : 1;
@@ -410,13 +482,13 @@ CREATE TABLE IF NOT EXISTS {0} (
                         _pendingSinceUtc = DateTimeOffset.UtcNow - _maximumBatchWait;
                     }
                 }
-
-                _startupUnsentCleanupPending =
-                    !string.IsNullOrEmpty(_endpoint) && _applicationSpoolUnsentEventMaxAge.HasValue ? 1 : 0;
             }
             catch (Exception ex)
             {
                 _pendingCount = 0;
+                // A delayed schema initialization must still give existing backlog its
+                // first delivery opportunity before the deferred unsent-age cleanup.
+                _startupBacklogPending = string.IsNullOrEmpty(_endpoint) ? 0 : 1;
                 MarkSpoolUnavailable(ex);
             }
 
@@ -428,6 +500,9 @@ CREATE TABLE IF NOT EXISTS {0} (
             _senderTask = !string.IsNullOrEmpty(_endpoint)
                 ? Task.Run(SenderLoopAsync, _cts.Token)
                 : Task.CompletedTask;
+            _statusTask = _statusEventMode == SerilogRelayStatusEventMode.Off
+                ? Task.CompletedTask
+                : Task.Run(StatusLoopAsync, _cts.Token);
         }
 
         private static SerilogRelayOptions CreateCompatibilityOptions(
@@ -478,10 +553,26 @@ CREATE TABLE IF NOT EXISTS {0} (
                 throw new ArgumentOutOfRangeException(nameof(options), "Emergency maximum batch size must be at least 1.");
             if (options.Delivery.EmergencyTargetBatchPayloadBytes < 1)
                 throw new ArgumentOutOfRangeException(nameof(options), "Emergency batch payload target must be at least 1 byte.");
-            if (options.Delivery.PollInterval <= TimeSpan.Zero)
-                throw new ArgumentOutOfRangeException(nameof(options), "Delivery poll interval must be greater than zero.");
+            if (options.Delivery.PollInterval < TimeSpan.FromMilliseconds(1)
+                || options.Delivery.PollInterval > MaximumSenderDelay)
+                throw new ArgumentOutOfRangeException(nameof(options), "Delivery poll interval must be at least one millisecond and fit a sender timer.");
             if (options.Delivery.MaximumBatchWait <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(options), "Maximum batch wait must be greater than zero.");
+            if (options.EndpointRetry.MaximumDelay > MaximumSenderDelay)
+                throw new ArgumentOutOfRangeException(nameof(options), "Retry maximum delay must fit a sender timer.");
+            if (options.Delivery.RequestTimeout <= TimeSpan.Zero
+                || options.Delivery.RequestTimeout >= ClaimLeaseDuration)
+                throw new ArgumentOutOfRangeException(nameof(options), "HTTP request timeout must be positive and shorter than the 30-second claim lease.");
+            if (!Enum.IsDefined(options.StatusEvents.Mode))
+                throw new ArgumentOutOfRangeException(nameof(options), "Unknown relay status event mode.");
+            if (options.StatusEvents.Mode == SerilogRelayStatusEventMode.AllSinks
+                && options.StatusEvents.LoggerProvider is null)
+                throw new ArgumentException("AllSinks status events require a LoggerProvider that returns null until the application logger is ready.", nameof(options));
+            if (!Enum.IsDefined(options.StatusEvents.MinimumLevel))
+                throw new ArgumentOutOfRangeException(nameof(options), "Unknown relay status minimum level.");
+            if (options.StatusEvents.SummaryInterval is TimeSpan summaryInterval
+                && (summaryInterval < TimeSpan.FromMinutes(1) || summaryInterval.TotalMilliseconds > uint.MaxValue - 1L))
+                throw new ArgumentOutOfRangeException(nameof(options), "Status summary interval must be at least one minute and fit a timer duration.");
             if (options.Delivery.ShutdownTimeout < TimeSpan.Zero
                 || options.Delivery.ShutdownTimeout.TotalMilliseconds > uint.MaxValue - 1L)
                 throw new ArgumentOutOfRangeException(nameof(options), "Shutdown timeout must be a finite, non-negative timer duration.");
@@ -510,6 +601,30 @@ CREATE TABLE IF NOT EXISTS {0} (
         private static string? ResolveMachineId()
             => PhysicalMachineBinding.TryGetFingerprint(out string machineId) ? machineId : null;
 
+        internal static string? ResolveApplicationVersion(string? configuredVersion, Assembly? entryAssembly)
+        {
+            if (configuredVersion is not null)
+            {
+                string version = configuredVersion.Trim();
+                if (version.Length == 0 || version.Length > MaximumApplicationVersionLength)
+                    throw new ArgumentException("ApplicationVersion must contain 1 to 256 characters.", nameof(configuredVersion));
+                return version;
+            }
+
+            if (entryAssembly is null)
+                return null;
+
+            string? informationalVersion = entryAssembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion;
+            string? versionFromAssembly = !string.IsNullOrWhiteSpace(informationalVersion)
+                ? informationalVersion
+                : entryAssembly.GetName().Version?.ToString();
+            if (versionFromAssembly?.Length > MaximumApplicationVersionLength)
+                throw new InvalidOperationException("Entry-assembly ApplicationVersion exceeds 256 characters; configure a shorter ApplicationVersion.");
+            return versionFromAssembly;
+        }
+
 
         /// <summary>
         /// Tries to persist a log event to the local SQLite spool first.
@@ -518,52 +633,74 @@ CREATE TABLE IF NOT EXISTS {0} (
         /// <param name="logEvent">The Serilog event to relay.</param>
         public void Emit(LogEvent logEvent)
         {
+            _ = TryEmit(logEvent, reportRejectedEvent: true);
+        }
+
+        // An internal status publication keeps its transition queued if neither the spool nor
+        // emergency memory accepted it. Public Emit retains its existing best-effort contract.
+        private bool TryEmit(LogEvent logEvent, bool reportRejectedEvent)
+        {
             ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeStarted) != 0, this);
+            bool statusEvent = IsRelayStatusEvent(logEvent);
 
             LogEntry entry;
             try
             {
-                entry = CreateLogEntry(logEvent, Guid.NewGuid().ToString("D"));
+                entry = CreateLogEntry(logEvent, Guid.NewGuid().ToString("D"), statusEvent);
             }
             catch (Exception ex)
             {
                 SelfLog.WriteLine("SerilogRelay could not materialize a log event: {0}", ex.Message);
-                return;
+                return false;
             }
+
+            if (_spoolDisabledForLifetime)
+                return EnqueueEmergency(entry, exception: null, reportRejectedEvent);
 
             int attempts = 0;
             while (true)
             {
+                bool persisted = false;
                 try
                 {
-                    bool persisted = ExecuteDatabaseWithRecovery(() => TryPersistLogEntryWithReclamationCore(entry));
+                    persisted = TryPersistLogEntryWithRecovery(entry);
                     if (!persisted)
-                    {
-                        EnqueueEmergency(entry, exception: null);
-                        return;
-                    }
+                        return EnqueueEmergency(entry, exception: null, reportRejectedEvent: reportRejectedEvent);
 
                     OnPersistedToSpool();
-                    return;
+                    return true;
                 }
-                catch (SqliteException ex) when (IsBusyError(ex) && attempts++ < MaxBusyRetries)
+                catch (SqliteException ex) when (!persisted && IsBusyError(ex) && attempts++ < MaxBusyRetries)
                 {
                     Thread.Sleep(BusyRetryDelayMs * attempts);
                 }
                 catch (Exception ex)
                 {
-                    EnqueueEmergency(entry, ex);
-                    return;
+                    if (persisted)
+                    {
+                        // The row is already durable. A failure while refreshing sender state
+                        // must not cause the same event to be buffered or published again.
+                        Volatile.Write(ref _pendingCountNeedsRefresh, 1);
+                        SelfLog.WriteLine("SerilogRelay stored an event but could not refresh sender state: {0}", ex.Message);
+                        return true;
+                    }
+                    // Known storage faults were already recorded under _databaseGate.
+                    // Re-reporting here could overwrite a newer successful write's recovery.
+                    Exception? unobservedFailure = ex is SqliteException or IOException or UnauthorizedAccessException
+                        ? null : ex;
+                    return EnqueueEmergency(entry, unobservedFailure, reportRejectedEvent);
                 }
             }
         }
 
-        private LogEntry CreateLogEntry(LogEvent logEvent, string eventId)
+        private LogEntry CreateLogEntry(LogEvent logEvent, string eventId, bool statusEvent)
         {
             return new LogEntry
             {
+                IsRelayStatusEvent = statusEvent,
                 EventId = eventId,
                 ApplicationId = _applicationId,
+                ApplicationVersion = _applicationVersion,
                 MachineId = _machineId,
                 ProcessId = _processId,
                 Timestamp = logEvent.Timestamp.UtcDateTime.ToString("o", CultureInfo.InvariantCulture),
@@ -579,19 +716,24 @@ CREATE TABLE IF NOT EXISTS {0} (
 
         private void OnPersistedToSpool()
         {
+            if (_spoolDisabledForLifetime)
+                return;
             long pending = Interlocked.Exchange(ref _pendingCountNeedsRefresh, 0) != 0
-                ? ExecuteDatabaseWithRecovery(() => GetClaimablePendingCountCore(DateTimeOffset.UtcNow))
+                ? RefreshClaimablePendingState(DateTimeOffset.UtcNow)
                 : Interlocked.Increment(ref _pendingCount);
 
             lock (_signalLock)
             {
+                if (_spoolDisabledForLifetime)
+                {
+                    Interlocked.Exchange(ref _pendingCount, 0);
+                    return;
+                }
                 if (pending == 1)
                     _pendingSinceUtc = DateTimeOffset.UtcNow;
 
                 _hasNewLogs = true;
             }
-
-            MarkSpoolRecovered();
         }
 
         /// <summary>
@@ -661,11 +803,12 @@ CREATE TABLE IF NOT EXISTS {0} (
                 await _senderTask.WaitAsync(token).ConfigureAwait(false);
                 await _emergencyTask.WaitAsync(token).ConfigureAwait(false);
 
-                if (!string.IsNullOrEmpty(_endpoint))
+                if (!string.IsNullOrEmpty(_endpoint) && !_spoolDisabledForLifetime)
                 {
                     while (!token.IsCancellationRequested)
                     {
-                        if (ExecuteDatabaseWithRecovery(GetPendingCountCore) == 0)
+                        if (_spoolDisabledForLifetime
+                            || ExecuteDatabaseWithRecovery(GetPendingCountCore, updatesSpool: false) == 0)
                             break;
 
                         long roundStarted = Stopwatch.GetTimestamp();
@@ -689,7 +832,7 @@ CREATE TABLE IF NOT EXISTS {0} (
                     _cts.Cancel();
                     try
                     {
-                        await Task.WhenAll(_senderTask, _emergencyTask, _applicationSpoolMaintenanceTask).ConfigureAwait(false);
+                        await Task.WhenAll(_senderTask, _emergencyTask, _applicationSpoolMaintenanceTask, _statusTask).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException) when (_cts.IsCancellationRequested)
                     {
@@ -697,7 +840,8 @@ CREATE TABLE IF NOT EXISTS {0} (
 
                     try
                     {
-                        await ReleaseAllOwnedClaimsAsync(token).ConfigureAwait(false);
+                        if (!_spoolDisabledForLifetime)
+                            await ReleaseAllOwnedClaimsAsync(token).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException) when (token.IsCancellationRequested)
                     {
@@ -715,10 +859,12 @@ CREATE TABLE IF NOT EXISTS {0} (
                 }
                 finally
                 {
-                    _httpClient.Dispose();
+                    if (_ownsHttpClient)
+                        _httpClient.Dispose();
                     _cts.Dispose();
                     _shutdownSignal.Dispose();
                     _databaseGate.Dispose();
+                    _statusSignal.Dispose();
                 }
             }
         }

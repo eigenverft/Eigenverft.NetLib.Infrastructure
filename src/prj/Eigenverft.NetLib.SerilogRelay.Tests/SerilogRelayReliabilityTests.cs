@@ -25,7 +25,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 {
     [TestClass]
     [DoNotParallelize]
-    public sealed class SerilogRelayReliabilityTests
+    public sealed partial class SerilogRelayReliabilityTests
     {
         [TestMethod]
         public void OptionsOverloadKeepsSimpleDurableUsage()
@@ -268,7 +268,6 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                     claimant,
                     "ClaimPendingAsync",
                     1,
-                    DateTimeOffset.UtcNow,
                     CancellationToken.None);
                 Assert.AreEqual(1, claimed.Entries.Count);
 
@@ -324,7 +323,6 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                     sink,
                     "ClaimPendingAsync",
                     1,
-                    DateTimeOffset.UtcNow,
                     CancellationToken.None);
                 Assert.AreEqual(1, claimed.Entries.Count);
                 string protectedEventId = claimed.Entries[0].EventId;
@@ -576,6 +574,7 @@ WHERE Sent = 0;";
                 options.Delivery.MaximumBatchEvents = 100;
                 options.Delivery.PollInterval = TimeSpan.FromSeconds(5);
                 options.Delivery.MaximumBatchWait = TimeSpan.FromSeconds(10);
+                options.Delivery.RequestTimeout = TimeSpan.FromSeconds(10);
                 options.Delivery.ShutdownRequestTimeout = TimeSpan.FromSeconds(10);
                 options.EndpointRetry.JitterRatio = 0d;
 
@@ -583,8 +582,6 @@ WHERE Sent = 0;";
                     connectionString,
                     $"http://127.0.0.1:{port}/logs",
                     options);
-                GetPrivateField<HttpClient>(sink, "_httpClient").Timeout = TimeSpan.FromSeconds(10);
-
                 sink.Emit(CreateLogEvent("shutdown deadline"));
 
                 Stopwatch stopwatch = Stopwatch.StartNew();
@@ -784,7 +781,7 @@ UPDATE SerilogRelayEvents
                     Assert.AreEqual(1, command.ExecuteNonQuery());
                 }
 
-                LogEntry replacement = InvokePrivateMethod<LogEntry>(sink, "CreateLogEntry", CreateLogEvent("replacement"), Guid.NewGuid().ToString("D"));
+                LogEntry replacement = InvokePrivateMethod<LogEntry>(sink, "CreateLogEntry", CreateLogEvent("replacement"), Guid.NewGuid().ToString("D"), false);
                 bool reclaimed = InvokePrivateMethod<bool>(sink, "TryReclaimAndPersistApplicationSpoolCore", replacement);
 
                 Assert.IsTrue(reclaimed);
@@ -844,7 +841,7 @@ UPDATE SerilogRelayEvents
         }
 
         [TestMethod]
-        public async Task EmergencyRecoveryRetainsCapacityRejectedEventWithoutLeavingSpoolUnavailable()
+        public async Task EmergencyCapacityRejectionDoesNotReportRecoveryUntilAnEventIsStored()
         {
             string directory = CreateTemporaryDirectory();
             string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
@@ -854,12 +851,13 @@ UPDATE SerilogRelayEvents
                 var options = new SerilogRelayOptions();
                 options.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
                 options.EmergencyMemoryBuffer.MaxBufferedEvents = 10;
-                options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = 1024L * 1024L;
+                options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = 2L * 1024L * 1024L;
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
                     endpoint: null,
                     options);
+                await StopRelayWorkers(sink);
 
                 using (var connection = new SqliteConnection(connectionString))
                 {
@@ -876,9 +874,8 @@ END;";
 
                 sink.Emit(CreateLogEvent(new string('x', 256 * 1024)));
 
-                await WaitUntilAsync(
-                    () => GetPrivateField<long>(sink, "_emergencyBufferedCount") == 1,
-                    TimeSpan.FromSeconds(5));
+                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.AreEqual(1, GetPrivateField<int>(sink, "_spoolUnavailable"));
 
                 using (var connection = new SqliteConnection(connectionString))
                 {
@@ -888,15 +885,27 @@ END;";
                     command.ExecuteNonQuery();
                 }
 
-                await WaitUntilAsync(
-                    () => GetPrivateField<int>(sink, "_spoolUnavailable") == 0,
-                    TimeSpan.FromSeconds(5));
+                sink.Emit(CreateLogEvent(new string('y', 256 * 1024)));
+                Assert.AreEqual(1, GetPrivateField<int>(sink, "_spoolUnavailable"),
+                    "An Emit rejected by capacity must not establish write recovery.");
+                object batch = InvokePrivateMethod<object>(sink, "TakeEmergencyBatch");
+                Assert.IsFalse(await InvokePrivateTaskMethod<bool>(sink, "TryProcessEmergencyBatchAsync", batch, CancellationToken.None));
 
                 Assert.AreEqual(0L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
-                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyDroppedCount"));
+                Assert.AreEqual(2L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
                 Assert.IsGreaterThan(0L, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
-                Assert.AreEqual(0, GetPrivateField<int>(sink, "_spoolUnavailable"));
+                Assert.AreEqual(1, GetPrivateField<int>(sink, "_spoolUnavailable"),
+                    "Rejected emergency persistence must not establish write recovery either.");
                 Assert.AreEqual(0L, GetUnsentCount(connectionString));
+                InvokePrivateMethod<object?>(sink, "ReturnEmergencyEntriesToRetry", batch);
+                InvokePrivateMethod<object?>(sink, "ReturnEmergencyEntriesToRetry", batch);
+                Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyInFlightPayloadBytes"));
+
+                sink.Emit(CreateLogEvent("successful write after capacity rejection"));
+                Assert.AreEqual(0, GetPrivateField<int>(sink, "_spoolUnavailable"));
+                Assert.AreEqual(1L, GetUnsentCount(connectionString));
+                Assert.AreEqual(2L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
                 await DisposeAndWaitForCleanupAsync(sink);
             }
             finally
@@ -1114,13 +1123,11 @@ END;";
                     first,
                     "ClaimPendingAsync",
                     5,
-                    now,
                     CancellationToken.None);
                 Task<ClaimedLogBatch> secondClaimTask = InvokePrivateTaskMethod<ClaimedLogBatch>(
                     second,
                     "ClaimPendingAsync",
                     5,
-                    now,
                     CancellationToken.None);
 
                 await Task.WhenAll(firstClaimTask, secondClaimTask);
@@ -1162,13 +1169,13 @@ END;";
                     new SerilogRelayOptions());
 
                 first.Emit(CreateLogEvent("claim takeover"));
-                DateTimeOffset now = DateTimeOffset.UtcNow;
+                var clock = new ManualRelayTimeProvider();
+                SetPrivateField(second, "_timeProvider", clock);
 
                 ClaimedLogBatch original = await InvokePrivateTaskMethod<ClaimedLogBatch>(
                     first,
                     "ClaimPendingAsync",
                     1,
-                    now,
                     CancellationToken.None);
                 Assert.AreEqual(1, original.Entries.Count);
 
@@ -1176,15 +1183,14 @@ END;";
                     second,
                     "ClaimPendingAsync",
                     1,
-                    now.AddSeconds(1),
                     CancellationToken.None);
                 Assert.AreEqual(0, blocked.Entries.Count);
 
+                clock.Advance(TimeSpan.FromSeconds(31));
                 ClaimedLogBatch takeover = await InvokePrivateTaskMethod<ClaimedLogBatch>(
                     second,
                     "ClaimPendingAsync",
                     1,
-                    now.AddSeconds(31),
                     CancellationToken.None);
                 Assert.AreEqual(1, takeover.Entries.Count);
                 Assert.AreEqual(original.Entries[0].EventId, takeover.Entries[0].EventId);
@@ -1229,13 +1235,11 @@ END;";
                     sink,
                     "ClaimPendingAsync",
                     1,
-                    now,
                     CancellationToken.None);
                 ClaimedLogBatch refreshed = await InvokePrivateTaskMethod<ClaimedLogBatch>(
                     sink,
                     "ClaimPendingAsync",
                     1,
-                    now.AddSeconds(1),
                     CancellationToken.None);
 
                 Assert.AreEqual(1, first.Entries.Count);
@@ -1296,7 +1300,6 @@ END;";
                     second,
                     "ClaimPendingAsync",
                     1,
-                    DateTimeOffset.UtcNow,
                     CancellationToken.None);
                 Assert.AreEqual(1, takeover.Entries.Count);
             }
@@ -1356,7 +1359,6 @@ END;";
                     second,
                     "ClaimPendingAsync",
                     1,
-                    DateTimeOffset.UtcNow,
                     CancellationToken.None);
                 Assert.AreEqual(1, takeover.Entries.Count);
             }
@@ -1492,7 +1494,6 @@ END;";
                     first,
                     "ClaimPendingAsync",
                     1,
-                    now,
                     CancellationToken.None);
                 Assert.AreEqual(1, claimed.Entries.Count);
 
@@ -1503,7 +1504,6 @@ END;";
                     second,
                     "ClaimPendingAsync",
                     1,
-                    now.AddSeconds(1),
                     CancellationToken.None);
                 Assert.AreEqual(1, takeover.Entries.Count);
                 Assert.AreEqual(claimed.Entries[0].EventId, takeover.Entries[0].EventId);
@@ -1829,26 +1829,25 @@ SELECT COUNT(*)
         }
 
         [TestMethod]
-        public async Task HealthySpoolShortCircuitsRedundantCorruptionRecovery()
+        public async Task CorruptionCreatesOnlyOneSuccessorAcrossInstances()
         {
             string directory = CreateTemporaryDirectory();
-            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
-
+            string databasePath = Path.Combine(directory, "relay.db");
+            string connectionString = $"Data Source={databasePath}";
             try
             {
-                await using var sink = new SerilogRelaySink(
-                    connectionString,
-                    endpoint: null,
-                    new SerilogRelayOptions());
-
-                Assert.IsTrue(InvokePrivateMethod<bool>(
-                    sink,
-                    "IsCurrentSpoolHealthyCore"));
-                Assert.IsTrue(InvokePrivateMethod<bool>(
-                    sink,
-                    "TryRecoverCorruptedSpool",
-                    new SqliteException("stale corruption observation", SQLitePCL.raw.SQLITE_CORRUPT)));
-                Assert.AreEqual(0L, GetUnsentCount(connectionString));
+                await using var first = new SerilogRelaySink(connectionString, null, new SerilogRelayOptions());
+                await using var second = new SerilogRelaySink(connectionString, null, new SerilogRelayOptions());
+                var corruption = new SqliteException("corruption observation", SQLitePCL.raw.SQLITE_CORRUPT);
+                Assert.IsTrue(InvokePrivateMethod<bool>(first, "TryRecoverCorruptedSpool", corruption));
+                Assert.IsTrue(InvokePrivateMethod<bool>(second, "TryRecoverCorruptedSpool", corruption));
+                Assert.IsTrue(GetPrivateField<bool>(first, "_spoolDisabledForLifetime"));
+                Assert.IsTrue(GetPrivateField<bool>(second, "_spoolDisabledForLifetime"));
+                Assert.IsTrue(File.Exists(Path.Combine(directory, "relay.g0001.db")));
+                Assert.IsFalse(File.Exists(Path.Combine(directory, "relay.g0002.db")));
+                await using var successor = new SerilogRelaySink(connectionString, null, new SerilogRelayOptions());
+                Assert.AreEqual(Path.Combine(directory, "relay.g0001.db"), GetPrivateField<string>(successor, "_databasePath"));
+                Assert.AreEqual(0L, GetUnsentCount($"Data Source={Path.Combine(directory, "relay.g0001.db")}"));
             }
             finally
             {
@@ -2133,6 +2132,7 @@ CREATE TABLE SerilogRelayEvents (
         [DataRow(2, 4 * 1024 * 1024, 1)]
         [DataRow(1, 4 * 1024 * 1024, 2)]
         [DataRow(2, 1, 2)]
+        [DataRow(2, 650, 2)]
         public async Task ShutdownSendsVolatileEventsThenPartialSpoolWithoutNormalWaits(
             int emergencyMaximumBatchEvents,
             int emergencyTargetBatchPayloadBytes,
@@ -2270,13 +2270,13 @@ END;
             options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = byteLimit;
             options.Delivery.EmergencyMaximumBatchEvents = 1;
             options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
+            options.Delivery.RequestTimeout = TimeSpan.FromSeconds(10);
             var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
 
             try
             {
                 var responseGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var requestStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                GetPrivateField<HttpClient>(sink, "_httpClient").Timeout = TimeSpan.FromSeconds(10);
                 Task<string> activeRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, responseGate: responseGate.Task, onReceived: () => requestStarted.SetResult(true));
                 string suffix = new string('x', 256 * 1024);
                 sink.Emit(CreateLogEvent($"ram0 {suffix}"));
@@ -2571,11 +2571,12 @@ VALUES
                 int diagnostics = 0;
                 SelfLog.Enable(_ =>
                 {
-                    if (Interlocked.Increment(ref diagnostics) == 1)
-                        throw new IOException("diagnostic output unavailable");
+                    Interlocked.Increment(ref diagnostics);
+                    throw new IOException("diagnostic output unavailable");
                 });
 
                 await Assert.ThrowsExactlyAsync<IOException>(async () => await sink.DisposeAsync());
+                Assert.IsGreaterThan(0, diagnostics);
                 Assert.ThrowsExactly<ObjectDisposedException>(() => _ = cancellation.Token);
             }
             finally
@@ -2890,7 +2891,7 @@ END;
                 }
 
                 SqliteException exception = await Assert.ThrowsExactlyAsync<SqliteException>(
-                    () => InvokePrivateTaskMethod<ClaimedLogBatch>(sink, "ClaimPendingAsync", 100, DateTimeOffset.UtcNow, CancellationToken.None));
+                    () => InvokePrivateTaskMethod<ClaimedLogBatch>(sink, "ClaimPendingAsync", 100, CancellationToken.None));
                 Assert.AreEqual(SQLitePCL.raw.SQLITE_FULL, exception.SqliteErrorCode);
                 Assert.AreEqual((long)eventCount, GetUnsentCount(connectionString));
                 Assert.AreEqual(0L, GetPrivateField<long>(sink, "_applicationSpoolDroppedCount"));
@@ -3064,7 +3065,7 @@ VALUES
 
             try
             {
-                Assert.AreEqual(TimeSpan.FromSeconds(2), GetPrivateField<HttpClient>(sink, "_httpClient").Timeout);
+                Assert.AreEqual(TimeSpan.FromSeconds(2), options.Delivery.RequestTimeout);
                 sink.Emit(CreateLogEvent("receiver still working"));
                 SetPrivateField(sink, "_endpoint", $"http://127.0.0.1:{port}/logs");
                 heldRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, responseGate: responseGate.Task,

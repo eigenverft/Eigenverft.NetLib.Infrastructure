@@ -26,6 +26,8 @@ namespace Eigenverft.NetLib.SerilogRelay
                 while (!token.IsCancellationRequested)
                 {
                     await Task.Delay(interval, token).ConfigureAwait(false);
+                    if (_spoolDisabledForLifetime)
+                        return;
 
                     try
                     {
