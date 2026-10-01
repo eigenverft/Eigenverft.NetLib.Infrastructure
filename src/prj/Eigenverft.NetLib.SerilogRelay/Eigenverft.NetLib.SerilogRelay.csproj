@@ -73,7 +73,7 @@
 
   <!-- Functional dependencies carried forward from the archived AxonInsight SQLite/HTTP Serilog sink. -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.31" />
     <PackageReference Include="Serilog" Version="4.4.0" />
   </ItemGroup>
 
