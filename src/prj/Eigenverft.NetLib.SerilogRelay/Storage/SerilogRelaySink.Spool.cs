@@ -63,9 +63,9 @@ DELETE FROM {TableName}
                 ? "0 seconds"
                 : FormattableString.Invariant($"{-span.TotalSeconds:R} seconds");
 
-        // A false result means the event is rejected by the spool capacity policy.
-        // Storage exceptions propagate so the caller can use the emergency buffer.
-        private bool TryPersistLogEntryCore(LogEntry entry)
+        // On SQLITE_FULL, sent and then oldest eligible unsent rows may be reclaimed.
+        // False means the new event was rejected by capacity; other storage errors propagate.
+        private bool TryPersistLogEntryWithReclamationCore(LogEntry entry)
         {
             try
             {
@@ -372,7 +372,7 @@ SELECT Id, EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, Rende
                     select.Parameters.AddWithValue("$owner", _claimOwnerId);
                     select.Parameters.AddWithValue("$claimBatchId", claimBatchId);
 
-                    long payloadBytes = JsonSerializer.SerializeToUtf8Bytes(CreateBatchPayload(entries), LogBatchJsonContext.Default.LogBatchPayload).Length;
+                    long payloadBytes = GetEmptyBatchPayloadBytes();
                     bool payloadTargetReached = false;
                     using (var reader = await select.ExecuteReaderAsync(token).ConfigureAwait(false))
                     {
@@ -394,10 +394,7 @@ SELECT Id, EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, Rende
                                 Exception = reader.IsDBNull(11) ? null : reader.GetString(11),
                                 Properties = reader.IsDBNull(12) ? null : reader.GetString(12),
                             };
-                            int entryBytes = JsonSerializer.SerializeToUtf8Bytes(entry, LogBatchJsonContext.Default.LogEntry).Length;
-                            int countDigitsAdded = (entries.Count + 1).ToString(CultureInfo.InvariantCulture).Length
-                                - entries.Count.ToString(CultureInfo.InvariantCulture).Length;
-                            long nextPayloadBytes = payloadBytes + entryBytes + countDigitsAdded + (entries.Count == 0 ? 0 : 1);
+                            long nextPayloadBytes = GetBatchPayloadBytesWithNextEntry(payloadBytes, entries.Count, entry);
 
                             if (entries.Count > 0 && nextPayloadBytes > _targetBatchPayloadBytes)
                             {

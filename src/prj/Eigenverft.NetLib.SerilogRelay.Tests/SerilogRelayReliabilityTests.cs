@@ -2130,7 +2130,13 @@ CREATE TABLE SerilogRelayEvents (
         }
 
         [TestMethod]
-        public async Task ShutdownSendsVolatileEventsThenPartialSpoolWithoutNormalWaits()
+        [DataRow(2, 4 * 1024 * 1024, 1)]
+        [DataRow(1, 4 * 1024 * 1024, 2)]
+        [DataRow(2, 1, 2)]
+        public async Task ShutdownSendsVolatileEventsThenPartialSpoolWithoutNormalWaits(
+            int emergencyMaximumBatchEvents,
+            int emergencyTargetBatchPayloadBytes,
+            int expectedEmergencyRequests)
         {
             string directory = CreateTemporaryDirectory();
             string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
@@ -2138,6 +2144,8 @@ CREATE TABLE SerilogRelayEvents (
             listener.Start();
             int port = ((IPEndPoint)listener.LocalEndpoint).Port;
             var options = new SerilogRelayOptions();
+            options.Delivery.EmergencyMaximumBatchEvents = emergencyMaximumBatchEvents;
+            options.Delivery.EmergencyTargetBatchPayloadBytes = emergencyTargetBatchPayloadBytes;
             options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
             options.Delivery.MaximumBatchWait = TimeSpan.FromMinutes(1);
             var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
@@ -2164,9 +2172,12 @@ END;
                 }
 
                 sink.Emit(CreateLogEvent("volatile one"));
+                await WaitUntilAsync(() => GetPrivateField<System.Collections.ICollection>(sink, "_emergencyRetryEntries").Count > 0, TimeSpan.FromSeconds(5));
                 sink.Emit(CreateLogEvent("volatile two"));
                 Assert.AreEqual(2L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
-                Task<List<string>> received = ReceiveRequestsAsync(listener, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK);
+                Task<List<string>> received = expectedEmergencyRequests == 1
+                    ? ReceiveRequestsAsync(listener, HttpStatusCode.OK, HttpStatusCode.OK)
+                    : ReceiveRequestsAsync(listener, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK);
 
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 await sink.DisposeAsync();
@@ -2176,12 +2187,22 @@ END;
                 Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
                 Assert.AreEqual(0L, GetTotalRowCount(connectionString));
 
-                using JsonDocument first = JsonDocument.Parse(bodies[0]);
-                using JsonDocument second = JsonDocument.Parse(bodies[1]);
-                using JsonDocument third = JsonDocument.Parse(bodies[2]);
-                Assert.AreEqual("volatile one", first.RootElement.GetProperty("logs")[0].GetProperty("renderMessage").GetString());
-                Assert.AreEqual("volatile two", second.RootElement.GetProperty("logs")[0].GetProperty("renderMessage").GetString());
-                Assert.AreEqual(2, third.RootElement.GetProperty("count").GetInt32());
+                var volatileMessages = new List<string>();
+                for (int index = 0; index < expectedEmergencyRequests; index++)
+                {
+                    using JsonDocument emergencyBatch = JsonDocument.Parse(bodies[index]);
+                    JsonElement logs = emergencyBatch.RootElement.GetProperty("logs");
+                    Assert.AreEqual(expectedEmergencyRequests == 1 ? 2 : 1, logs.GetArrayLength());
+                    foreach (JsonElement log in logs.EnumerateArray())
+                        volatileMessages.Add(log.GetProperty("renderMessage").GetString()!);
+                }
+                CollectionAssert.AreEqual(new[] { "volatile one", "volatile two" }, volatileMessages);
+
+                using JsonDocument spoolBatch = JsonDocument.Parse(bodies[expectedEmergencyRequests]);
+                JsonElement spoolLogs = spoolBatch.RootElement.GetProperty("logs");
+                Assert.AreEqual(2, spoolLogs.GetArrayLength());
+                Assert.AreEqual("durable one", spoolLogs[0].GetProperty("renderMessage").GetString());
+                Assert.AreEqual("durable two", spoolLogs[1].GetProperty("renderMessage").GetString());
             }
             finally
             {
@@ -2247,6 +2268,7 @@ END;
             options.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
             options.EmergencyMemoryBuffer.MaxBufferedEvents = eventLimit;
             options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = byteLimit;
+            options.Delivery.EmergencyMaximumBatchEvents = 1;
             options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
             var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
 
@@ -2310,6 +2332,7 @@ END;
             options.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
             options.EmergencyMemoryBuffer.MaxBufferedEvents = eventLimit;
             options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes = byteLimit;
+            options.Delivery.EmergencyMaximumBatchEvents = 1;
             options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
             var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
 
@@ -2318,7 +2341,7 @@ END;
                 GetPrivateField<RetryGate>(sink, "_retryGate").RecordFailure(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(5));
                 string suffix = new string('x', 256 * 1024);
                 sink.Emit(CreateLogEvent($"ram0 {suffix}"));
-                await WaitUntilAsync(() => GetPrivateField<object?>(sink, "_emergencyRetryEntry") is not null, TimeSpan.FromSeconds(5));
+                await WaitUntilAsync(() => GetPrivateField<System.Collections.ICollection>(sink, "_emergencyRetryEntries").Count > 0, TimeSpan.FromSeconds(5));
 
                 lock (GetPrivateField<object>(sink, "_emergencyBufferLock"))
                 {
@@ -2667,7 +2690,10 @@ VALUES
             int port = ((IPEndPoint)listener.LocalEndpoint).Port;
             var options = new SerilogRelayOptions();
             if (emergency)
+            {
                 options.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
+                options.Delivery.EmergencyTargetBatchPayloadBytes = 1024 * 1024;
+            }
             options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
             options.Delivery.MaximumBatchWait = TimeSpan.FromMinutes(1);
             Task<List<string>> requests = ReceiveRequestsAsync(listener, HttpStatusCode.OK, HttpStatusCode.OK);
@@ -2681,7 +2707,10 @@ VALUES
                 await sink.DisposeAsync();
                 List<string> bodies = await requests.WaitAsync(TimeSpan.FromSeconds(10));
                 using JsonDocument first = JsonDocument.Parse(bodies[0]);
-                Assert.IsGreaterThan(options.Delivery.TargetBatchPayloadBytes, Encoding.UTF8.GetByteCount(bodies[0]));
+                int targetBytes = emergency
+                    ? options.Delivery.EmergencyTargetBatchPayloadBytes
+                    : options.Delivery.TargetBatchPayloadBytes;
+                Assert.IsGreaterThan(targetBytes, Encoding.UTF8.GetByteCount(bodies[0]));
                 Assert.AreEqual(1, first.RootElement.GetProperty("count").GetInt32());
                 Assert.AreEqual(oversized, first.RootElement.GetProperty("logs")[0].GetProperty("renderMessage").GetString());
                 using JsonDocument second = JsonDocument.Parse(bodies[1]);

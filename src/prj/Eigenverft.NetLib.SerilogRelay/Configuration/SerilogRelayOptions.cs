@@ -14,7 +14,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         public ApplicationSpoolOptions ApplicationSpool { get; } = new ApplicationSpoolOptions();
 
         /// <summary>
-        /// Gets normal background-delivery options for this sink/process.
+        /// Gets background, direct emergency, and shutdown delivery options for this sink/process.
         /// </summary>
         public DeliveryOptions Delivery { get; } = new DeliveryOptions();
 
@@ -41,8 +41,8 @@ namespace Eigenverft.NetLib.SerilogRelay
         public TimeSpan SentEventRetention { get; set; } = TimeSpan.Zero;
 
         /// <summary>
-        /// Gets or sets the maximum physical size of the shared application spool in bytes.
-        /// This process applies the value to the shared spool/database. It is a spool-wide physical ceiling, not a per-process row quota, and is not negotiated with other processes.
+        /// Gets or sets the SQLite page budget, in bytes, for the shared application spool.
+        /// This process applies the value to the shared database, not to individual processes' rows. An existing larger database is not shrunk, and SQLite auxiliary files are outside this page budget. Other processes do not negotiate this value.
         /// </summary>
         public long MaxPhysicalBytes { get; set; } = 64L * 1024L * 1024L;
 
@@ -54,39 +54,55 @@ namespace Eigenverft.NetLib.SerilogRelay
     }
 
     /// <summary>
-    /// Configures normal background delivery for this sink/process.
+    /// Configures background, direct emergency, and shutdown delivery for this sink/process.
     /// </summary>
     public sealed class DeliveryOptions
     {
         /// <summary>
-        /// Gets or sets the preferred minimum event count for normal batches.
+        /// Gets or sets the preferred minimum count of claimable spool events before normal background delivery.
+        /// Startup backlog, elapsed MaximumBatchWait, byte- or capacity-limited batches, and shutdown may send fewer events. Direct emergency delivery has no minimum.
         /// </summary>
         public int MinimumBatchEvents { get; set; } = 20;
 
         /// <summary>
-        /// Gets or sets the maximum event count in one HTTP batch.
+        /// Gets or sets the maximum number of claimed spool events in one HTTP batch, including during shutdown.
+        /// Direct emergency batches use EmergencyMaximumBatchEvents instead.
         /// </summary>
         public int MaximumBatchEvents { get; set; } = 100;
 
         /// <summary>
-        /// Gets or sets the target UTF-8 JSON payload size per send, including batch metadata.
-        /// An event larger than this target is sent alone, without truncation or size-based rejection.
+        /// Gets or sets the target UTF-8 JSON size of a spool HTTP batch, including batch metadata.
+        /// This also applies during shutdown; direct emergency batches use EmergencyTargetBatchPayloadBytes. An event larger than the target is sent alone, without truncation or size-based rejection.
         /// </summary>
         public int TargetBatchPayloadBytes { get; set; } = 4 * 1024 * 1024;
 
         /// <summary>
-        /// Gets or sets the normal sender polling interval.
+        /// Gets or sets the maximum number of volatile emergency events in one direct HTTP batch, including during shutdown.
+        /// Emergency delivery has no minimum batch count and does not wait to fill a batch.
+        /// </summary>
+        public int EmergencyMaximumBatchEvents { get; set; } = 256;
+
+        /// <summary>
+        /// Gets or sets the target UTF-8 JSON size of a direct emergency HTTP batch.
+        /// An individual event larger than this target is sent alone without truncation.
+        /// </summary>
+        public int EmergencyTargetBatchPayloadBytes { get; set; } = 4 * 1024 * 1024;
+
+        /// <summary>
+        /// Gets or sets the normal sender polling interval; new events may wake it earlier.
+        /// Spool maintenance runs at the shorter of this interval and one minute.
         /// </summary>
         public TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>
-        /// Gets or sets the maximum time a partial batch may wait before delivery is attempted.
+        /// Gets or sets how long the normal sender waits before attempting a spool batch below MinimumBatchEvents.
+        /// Startup backlog and shutdown bypass this wait; direct emergency delivery does not use it.
         /// </summary>
         public TimeSpan MaximumBatchWait { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>
-        /// Gets or sets the maximum total time allowed for shutdown delivery and claim release.
-        /// Shutdown finishes earlier when all pending work completes.
+        /// Gets or sets how long Dispose and DisposeAsync wait for shutdown delivery and cleanup.
+        /// They return earlier when work completes. On timeout, delivery is canceled; cleanup that cannot stop immediately may finish after the call returns. Zero skips shutdown delivery.
         /// </summary>
         public TimeSpan ShutdownTimeout { get; set; } = TimeSpan.FromSeconds(3);
 
@@ -145,7 +161,8 @@ namespace Eigenverft.NetLib.SerilogRelay
         public int MaxBufferedEvents { get; set; } = 16384;
 
         /// <summary>
-        /// Gets or sets the maximum serialized event payload bytes buffered in memory.
+        /// Gets or sets the maximum estimated UTF-8 event-field bytes counted for queued and in-flight emergency events.
+        /// The estimate includes fixed field overhead; it is neither the serialized JSON size nor the process's memory usage.
         /// </summary>
         public long MaxBufferedPayloadBytes { get; set; } = 64L * 1024L * 1024L;
     }
