@@ -18,6 +18,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             Assert.AreEqual(20, options.Delivery.MinimumBatchEvents);
             Assert.AreEqual(100, options.Delivery.MaximumBatchEvents);
             Assert.AreEqual(4 * 1024 * 1024, options.Delivery.TargetBatchPayloadBytes);
+            Assert.AreEqual(256, options.Delivery.EmergencyMaximumBatchEvents);
+            Assert.AreEqual(4 * 1024 * 1024, options.Delivery.EmergencyTargetBatchPayloadBytes);
             Assert.AreEqual(TimeSpan.FromSeconds(5), options.Delivery.PollInterval);
             Assert.AreEqual(TimeSpan.FromSeconds(5), options.Delivery.MaximumBatchWait);
             Assert.AreEqual(TimeSpan.FromSeconds(3), options.Delivery.ShutdownTimeout);
@@ -37,6 +39,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             options.Delivery.MinimumBatchEvents = 3;
             options.Delivery.MaximumBatchEvents = 9;
             options.Delivery.TargetBatchPayloadBytes = 1024;
+            options.Delivery.EmergencyMaximumBatchEvents = 17;
+            options.Delivery.EmergencyTargetBatchPayloadBytes = 2048;
             options.Delivery.PollInterval = TimeSpan.FromSeconds(2);
             options.Delivery.MaximumBatchWait = TimeSpan.FromSeconds(7);
             options.Delivery.ShutdownTimeout = TimeSpan.FromMilliseconds(500);
@@ -56,6 +60,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             Assert.AreEqual(3, options.Delivery.MinimumBatchEvents);
             Assert.AreEqual(9, options.Delivery.MaximumBatchEvents);
             Assert.AreEqual(1024, options.Delivery.TargetBatchPayloadBytes);
+            Assert.AreEqual(17, options.Delivery.EmergencyMaximumBatchEvents);
+            Assert.AreEqual(2048, options.Delivery.EmergencyTargetBatchPayloadBytes);
             Assert.AreEqual(TimeSpan.FromSeconds(2), options.Delivery.PollInterval);
             Assert.AreEqual(TimeSpan.FromSeconds(7), options.Delivery.MaximumBatchWait);
             Assert.AreEqual(TimeSpan.FromMilliseconds(500), options.Delivery.ShutdownTimeout);
@@ -182,6 +188,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 },
                 typeof(ArgumentException));
             AssertInvalid(options => options.Delivery.TargetBatchPayloadBytes = 0, typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.Delivery.EmergencyMaximumBatchEvents = 0, typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.Delivery.EmergencyTargetBatchPayloadBytes = 0, typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.PollInterval = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.MaximumBatchWait = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.ShutdownTimeout = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));

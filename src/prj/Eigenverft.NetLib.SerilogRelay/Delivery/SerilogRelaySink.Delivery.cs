@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -249,6 +250,19 @@ namespace Eigenverft.NetLib.SerilogRelay
                 Count = entries.Count,
                 Logs = entries
             };
+        }
+
+        private static long GetEmptyBatchPayloadBytes()
+            => JsonSerializer.SerializeToUtf8Bytes(
+                CreateBatchPayload(new List<LogEntry>()),
+                LogBatchJsonContext.Default.LogBatchPayload).Length;
+
+        private static long GetBatchPayloadBytesWithNextEntry(long currentBytes, int currentCount, LogEntry entry)
+        {
+            int entryBytes = JsonSerializer.SerializeToUtf8Bytes(entry, LogBatchJsonContext.Default.LogEntry).Length;
+            int countDigitsAdded = (currentCount + 1).ToString(CultureInfo.InvariantCulture).Length
+                - currentCount.ToString(CultureInfo.InvariantCulture).Length;
+            return currentBytes + entryBytes + countDigitsAdded + (currentCount == 0 ? 0 : 1);
         }
 
         // Send one batch of logs over HTTP using AOT-compatible source-gen context.

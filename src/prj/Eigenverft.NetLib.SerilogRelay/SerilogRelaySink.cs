@@ -30,7 +30,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         private const string DefaultSpoolFileName = "SerilogRelay.db";
 
         /// <summary>
-        /// Configures Serilog to persist events to a durable local spool and optionally relay pending events to an HTTP endpoint.
+        /// Configures Serilog to try local SQLite persistence first, attempt bounded volatile buffering when storage fails or rejects an event, and optionally relay events to an HTTP endpoint.
         /// </summary>
         /// <remarks>
         /// Processes sharing one application spool may send each other's pending rows. The process that owns the current claim uses its own endpoint and bearer token. A 2xx response marks the still-owned claim delivered; non-2xx releases the claim before process-local retry backoff so another process/version may take over.
@@ -41,12 +41,12 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <param name="spoolFileName">Optional spool filename. Defaults to <c>SerilogRelay.db</c>.</param>
         /// <param name="applicationId">Optional application identity used by the default spool directory. Defaults to the entry-assembly name. The normalized identity must not exceed 256 characters.</param>
         /// <param name="dangerousAcceptAnyServerCertificate">When <see langword="true"/>, disables server-certificate validation for relay HTTP requests. Defaults to <see langword="false"/> and should only be enabled deliberately for trusted private/development infrastructure.</param>
-        /// <param name="minimumBatchSize">The minimum pending-event count required before normal background delivery starts.</param>
-        /// <param name="maximumBatchSize">The maximum number of events included in one HTTP batch.</param>
-        /// <param name="baseInterval">The normal delay between background delivery attempts.</param>
+        /// <param name="minimumBatchSize">The preferred minimum count of claimable spool events for normal background delivery; startup backlog, batch wait, and shutdown can bypass it.</param>
+        /// <param name="maximumBatchSize">The maximum count in a claimed-spool HTTP batch. Direct emergency batches have a separate limit in the options overload.</param>
+        /// <param name="baseInterval">The normal sender polling interval; new events may wake it earlier. Spool maintenance runs at the shorter of this interval and one minute.</param>
         /// <param name="sentRetention">Optional retention for successfully sent events. The default is zero, which deletes acknowledged events immediately.</param>
         /// <param name="unsentRetention">Optional maximum age for unsent events in the shared application spool. This applies spool-wide across processes using the same spool path.</param>
-        /// <param name="bearerToken">Optional raw bearer token used by this sink/process for claimed-row HTTP delivery and sent as <c>Authorization: Bearer &lt;token&gt;</c>. The token is not persisted with spool rows. Null, empty, or whitespace disables the header.</param>
+        /// <param name="bearerToken">Optional raw bearer token sent as <c>Authorization: Bearer &lt;token&gt;</c> on this sink/process's HTTP requests for claimed spool rows and direct emergency batches. The token is not persisted with spool rows. Null, empty, or whitespace disables the header.</param>
         /// <param name="restrictedToMinimumLevel">The minimum Serilog event level accepted by the sink.</param>
         public static LoggerConfiguration SerilogRelay(
             this LoggerSinkConfiguration loggerConfiguration,
@@ -202,8 +202,8 @@ namespace Eigenverft.NetLib.SerilogRelay
     }
 
     /// <summary>
-    /// A durable Serilog relay sink that persists each event immediately to SQLite
-    /// and ships stored events reliably to an HTTP endpoint.
+    /// A Serilog relay sink that tries immediate SQLite persistence and sends pending events to an optional HTTP endpoint.
+    /// Events that cannot be stored enter a bounded volatile emergency buffer when capacity allows.
     /// </summary>
     public partial class SerilogRelaySink : ILogEventSink, IAsyncDisposable, IDisposable
     {
@@ -258,6 +258,8 @@ CREATE TABLE IF NOT EXISTS {0} (
         private readonly int _minBatchSize;
         private readonly int _maxBatchSize;
         private readonly int _targetBatchPayloadBytes;
+        private readonly int _emergencyMaxBatchSize;
+        private readonly int _emergencyTargetBatchPayloadBytes;
         private readonly TimeSpan _baseInterval;
         private readonly TimeSpan _maximumBatchWait;
         private readonly TimeSpan _shutdownTimeout;
@@ -355,6 +357,8 @@ CREATE TABLE IF NOT EXISTS {0} (
             _minBatchSize = options.Delivery.MinimumBatchEvents;
             _maxBatchSize = options.Delivery.MaximumBatchEvents;
             _targetBatchPayloadBytes = options.Delivery.TargetBatchPayloadBytes;
+            _emergencyMaxBatchSize = options.Delivery.EmergencyMaximumBatchEvents;
+            _emergencyTargetBatchPayloadBytes = options.Delivery.EmergencyTargetBatchPayloadBytes;
             _baseInterval = options.Delivery.PollInterval;
             _maximumBatchWait = options.Delivery.MaximumBatchWait;
             _shutdownTimeout = options.Delivery.ShutdownTimeout;
@@ -470,6 +474,10 @@ CREATE TABLE IF NOT EXISTS {0} (
                 throw new ArgumentException("Minimum batch size must be less than or equal to maximum batch size.", nameof(options));
             if (options.Delivery.TargetBatchPayloadBytes < 1)
                 throw new ArgumentOutOfRangeException(nameof(options), "Batch payload target must be at least 1 byte.");
+            if (options.Delivery.EmergencyMaximumBatchEvents < 1)
+                throw new ArgumentOutOfRangeException(nameof(options), "Emergency maximum batch size must be at least 1.");
+            if (options.Delivery.EmergencyTargetBatchPayloadBytes < 1)
+                throw new ArgumentOutOfRangeException(nameof(options), "Emergency batch payload target must be at least 1 byte.");
             if (options.Delivery.PollInterval <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(options), "Delivery poll interval must be greater than zero.");
             if (options.Delivery.MaximumBatchWait <= TimeSpan.Zero)
@@ -504,9 +512,10 @@ CREATE TABLE IF NOT EXISTS {0} (
 
 
         /// <summary>
-        /// Persists a log event to the local SQLite spool before any network delivery attempt.
+        /// Tries to persist a log event to the local SQLite spool first.
+        /// If storage fails or rejects the event, queues it in the bounded volatile emergency buffer when capacity allows.
         /// </summary>
-        /// <param name="logEvent">The Serilog event to persist.</param>
+        /// <param name="logEvent">The Serilog event to relay.</param>
         public void Emit(LogEvent logEvent)
         {
             ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeStarted) != 0, this);
@@ -527,7 +536,7 @@ CREATE TABLE IF NOT EXISTS {0} (
             {
                 try
                 {
-                    bool persisted = ExecuteDatabaseWithRecovery(() => TryPersistLogEntryCore(entry));
+                    bool persisted = ExecuteDatabaseWithRecovery(() => TryPersistLogEntryWithReclamationCore(entry));
                     if (!persisted)
                     {
                         EnqueueEmergency(entry, exception: null);
@@ -584,12 +593,6 @@ CREATE TABLE IF NOT EXISTS {0} (
 
             MarkSpoolRecovered();
         }
-
-
-
-
-
-        // Load unsent log entries from SQLite
 
         /// <summary>
         /// Synchronously attempts shutdown delivery within the configured time budget.

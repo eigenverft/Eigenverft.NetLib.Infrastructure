@@ -12,8 +12,9 @@ namespace Eigenverft.NetLib.SerilogRelay
     public partial class SerilogRelaySink
     {
         private readonly object _emergencyBufferLock = new object();
-        private EmergencyEntry? _emergencyInFlight;
-        private EmergencyEntry? _emergencyRetryEntry;
+        private readonly List<EmergencyEntry> _emergencyInFlight = new List<EmergencyEntry>();
+        private readonly LinkedList<EmergencyEntry> _emergencyRetryEntries = new LinkedList<EmergencyEntry>();
+        private long _emergencyInFlightPayloadBytes;
 
         private void EnqueueEmergency(LogEntry entry, Exception? exception)
         {
@@ -23,8 +24,7 @@ namespace Eigenverft.NetLib.SerilogRelay
             long payloadBytes = GetEmergencyPayloadBytes(entry);
             lock (_emergencyBufferLock)
             {
-                long inFlightBytes = _emergencyInFlight?.PayloadBytes ?? 0L;
-                if (payloadBytes > _maxEmergencyBufferedPayloadBytes - inFlightBytes)
+                if (payloadBytes > _maxEmergencyBufferedPayloadBytes - _emergencyInFlightPayloadBytes)
                 {
                     RecordEmergencyDrop();
                     return;
@@ -33,8 +33,13 @@ namespace Eigenverft.NetLib.SerilogRelay
                 while (_emergencyBufferedCount >= _emergencyBufferCapacity
                     || payloadBytes > _maxEmergencyBufferedPayloadBytes - _emergencyBufferedPayloadBytes)
                 {
-                    EmergencyEntry? oldest = _emergencyRetryEntry;
-                    if (oldest is null && !_emergencyChannel.Reader.TryRead(out oldest))
+                    EmergencyEntry? oldest;
+                    if (_emergencyRetryEntries.First is LinkedListNode<EmergencyEntry> retryNode)
+                    {
+                        oldest = retryNode.Value;
+                        _emergencyRetryEntries.RemoveFirst();
+                    }
+                    else if (!_emergencyChannel.Reader.TryRead(out oldest))
                     {
                         RecordEmergencyDrop();
                         return;
@@ -96,17 +101,8 @@ namespace Eigenverft.NetLib.SerilogRelay
             {
                 while (true)
                 {
-                    EmergencyEntry? bufferedEntry;
-                    lock (_emergencyBufferLock)
-                    {
-                        bufferedEntry = _emergencyRetryEntry;
-                        _emergencyRetryEntry = null;
-                        if (bufferedEntry is null)
-                            _emergencyChannel.Reader.TryRead(out bufferedEntry);
-                        _emergencyInFlight = bufferedEntry;
-                    }
-
-                    if (bufferedEntry is null)
+                    List<EmergencyEntry> batch = TakeEmergencyBatch();
+                    if (batch.Count == 0)
                     {
                         if (!await _emergencyChannel.Reader.WaitToReadAsync(token).ConfigureAwait(false))
                             break;
@@ -117,24 +113,17 @@ namespace Eigenverft.NetLib.SerilogRelay
                     long roundStarted = Stopwatch.GetTimestamp();
                     try
                     {
-                        completed = await TryProcessEmergencyEntryAsync(bufferedEntry.Entry, token).ConfigureAwait(false);
+                        completed = await TryProcessEmergencyBatchAsync(batch, token).ConfigureAwait(false);
                     }
                     finally
                     {
-                        lock (_emergencyBufferLock)
+                        if (completed)
                         {
-                            if (completed)
-                            {
-                                CompleteEmergencyEntry(bufferedEntry);
-                            }
-                            else
-                            {
-                                // Only a running attempt is protected. During retry waits this is
-                                // the oldest buffered event and newer events may evict it first.
-                                _emergencyInFlight = null;
-                                _emergencyRetryEntry = bufferedEntry;
-                            }
+                            foreach (EmergencyEntry entry in batch)
+                                CompleteEmergencyEntry(entry);
                         }
+                        else
+                            ReturnEmergencyEntriesToRetry(batch);
                     }
 
                     if (!completed)
@@ -151,56 +140,145 @@ namespace Eigenverft.NetLib.SerilogRelay
             }
         }
 
-        private async Task<bool> TryProcessEmergencyEntryAsync(LogEntry entry, CancellationToken token)
+        private List<EmergencyEntry> TakeEmergencyBatch()
+        {
+            var batch = new List<EmergencyEntry>();
+            long payloadBytes = GetEmptyBatchPayloadBytes();
+            int maximumEvents = string.IsNullOrEmpty(_endpoint) ? 1 : _emergencyMaxBatchSize;
+
+            while (batch.Count < maximumEvents)
+            {
+                EmergencyEntry? next = TakeEmergencyEntry();
+                if (next is null)
+                    break;
+
+                long nextPayloadBytes = GetBatchPayloadBytesWithNextEntry(payloadBytes, batch.Count, next.Entry);
+                if (batch.Count > 0 && nextPayloadBytes > _emergencyTargetBatchPayloadBytes)
+                {
+                    ReturnEmergencyEntriesToRetry(new List<EmergencyEntry> { next });
+                    break;
+                }
+
+                batch.Add(next);
+                payloadBytes = nextPayloadBytes;
+                if (payloadBytes >= _emergencyTargetBatchPayloadBytes)
+                    break;
+            }
+
+            return batch;
+        }
+
+        private EmergencyEntry? TakeEmergencyEntry()
+        {
+            lock (_emergencyBufferLock)
+            {
+                EmergencyEntry? entry;
+                if (_emergencyRetryEntries.First is LinkedListNode<EmergencyEntry> retryNode)
+                {
+                    entry = retryNode.Value;
+                    _emergencyRetryEntries.RemoveFirst();
+                }
+                else if (!_emergencyChannel.Reader.TryRead(out entry))
+                {
+                    return null;
+                }
+
+                _emergencyInFlight.Add(entry);
+                _emergencyInFlightPayloadBytes += entry.PayloadBytes;
+                return entry;
+            }
+        }
+
+        private void ReturnEmergencyEntriesToRetry(List<EmergencyEntry> batch)
+        {
+            lock (_emergencyBufferLock)
+            {
+                for (int index = batch.Count - 1; index >= 0; index--)
+                {
+                    EmergencyEntry entry = batch[index];
+                    if (!_emergencyInFlight.Remove(entry))
+                        continue;
+
+                    _emergencyInFlightPayloadBytes -= entry.PayloadBytes;
+                    _emergencyRetryEntries.AddFirst(entry);
+                }
+            }
+        }
+
+        private async Task<bool> TryProcessEmergencyBatchAsync(List<EmergencyEntry> batch, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
-            if (Volatile.Read(ref _disposeStarted) != 0)
-                await _senderTask.WaitAsync(token).ConfigureAwait(false);
 
             // On shutdown prioritize sending volatile events before the process exits.
             if (Volatile.Read(ref _disposeStarted) == 0 || string.IsNullOrEmpty(_endpoint))
             {
-                try
+                for (int index = 0; index < batch.Count;)
                 {
-                    bool persisted = ExecuteDatabaseWithRecovery(() => TryPersistLogEntryCore(entry));
-                    if (persisted)
-                    {
-                        OnPersistedToSpool();
-                        return true;
-                    }
+                    token.ThrowIfCancellationRequested();
+                    if (Volatile.Read(ref _disposeStarted) != 0 && !string.IsNullOrEmpty(_endpoint))
+                        break;
 
-                    MarkSpoolRecovered();
-                }
-                catch (Exception ex)
-                {
-                    MarkSpoolUnavailable(ex);
+                    LogEntry entry = batch[index].Entry;
+                    bool persisted = false;
+                    bool storageFailed = false;
                     try
                     {
-                        if (ExecuteDatabaseWithRecovery(() => EventExistsCore(entry.EventId)))
-                        {
+                        persisted = ExecuteDatabaseWithRecovery(() => TryPersistLogEntryWithReclamationCore(entry));
+                        if (persisted)
                             OnPersistedToSpool();
-                            return true;
-                        }
+                        else
+                            MarkSpoolRecovered();
                     }
-                    catch (Exception verificationException)
+                    catch (Exception ex)
                     {
-                        MarkSpoolUnavailable(verificationException);
+                        MarkSpoolUnavailable(ex);
+                        try
+                        {
+                            persisted = ExecuteDatabaseWithRecovery(() => EventExistsCore(entry.EventId));
+                            if (persisted)
+                                OnPersistedToSpool();
+                        }
+                        catch (Exception verificationException)
+                        {
+                            MarkSpoolUnavailable(verificationException);
+                        }
+                        storageFailed = !persisted;
                     }
+
+                    if (persisted)
+                    {
+                        CompleteEmergencyEntry(batch[index]);
+                        batch.RemoveAt(index);
+                    }
+                    else
+                        index++;
+
+                    // Do not repeat a failing storage operation for every volatile event in
+                    // this batch when direct HTTP rescue is available.
+                    if (storageFailed && !string.IsNullOrEmpty(_endpoint))
+                        break;
                 }
             }
 
-            return !string.IsNullOrEmpty(_endpoint)
-                && await SendBatchAsync(new List<LogEntry> { entry }, token).ConfigureAwait(false);
+            if (batch.Count == 0)
+                return true;
+            if (string.IsNullOrEmpty(_endpoint))
+                return false;
+            if (Volatile.Read(ref _disposeStarted) != 0)
+                await _senderTask.WaitAsync(token).ConfigureAwait(false);
+
+            var entries = new List<LogEntry>(batch.Count);
+            foreach (EmergencyEntry bufferedEntry in batch)
+                entries.Add(bufferedEntry.Entry);
+            return await SendBatchAsync(entries, token).ConfigureAwait(false);
         }
 
         private void CompleteEmergencyEntry(EmergencyEntry entry)
         {
             lock (_emergencyBufferLock)
             {
-                if (ReferenceEquals(_emergencyInFlight, entry))
-                    _emergencyInFlight = null;
-                if (ReferenceEquals(_emergencyRetryEntry, entry))
-                    _emergencyRetryEntry = null;
+                if (_emergencyInFlight.Remove(entry))
+                    _emergencyInFlightPayloadBytes -= entry.PayloadBytes;
 
                 Interlocked.Decrement(ref _emergencyBufferedCount);
                 Interlocked.Add(ref _emergencyBufferedPayloadBytes, -entry.PayloadBytes);

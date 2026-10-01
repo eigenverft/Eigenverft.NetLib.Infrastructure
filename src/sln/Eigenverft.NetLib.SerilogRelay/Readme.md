@@ -55,6 +55,9 @@ var options = new SerilogRelayOptions
     {
         MinimumBatchEvents = 20,
         MaximumBatchEvents = 100,
+        TargetBatchPayloadBytes = 4 * 1024 * 1024,
+        EmergencyMaximumBatchEvents = 256,
+        EmergencyTargetBatchPayloadBytes = 4 * 1024 * 1024,
         PollInterval = TimeSpan.FromSeconds(5),
         MaximumBatchWait = TimeSpan.FromSeconds(5)
     },
@@ -88,8 +91,8 @@ configured values when it performs maintenance or reclamation:
 - `SentEventRetention` may remove eligible sent rows created by any process;
 - `UnsentEventMaxAge` may remove eligible unsent rows created by any process;
 - capacity reclamation may remove eligible rows created by any process;
-- `MaxPhysicalBytes` is the physical ceiling applied to the whole shared spool/database, not a
-  per-process row quota.
+- `MaxPhysicalBytes` sets the SQLite page budget for the shared database, not a per-process row
+  quota or a hard limit on all files. An existing larger database is not shrunk.
 
 Actively claimed unsent rows are protected from age cleanup and unsent capacity reclamation.
 After claim release or lease expiry, they become eligible again. Age cleanup runs periodically
@@ -98,6 +101,8 @@ exact deletion timestamp.
 
 `Delivery`, `EndpointRetry`, endpoint/bearer configuration, and `EmergencyMemoryBuffer` are
 runtime settings/state of one sink/process.
+`EmergencyMemoryBuffer.MaxBufferedPayloadBytes` counts estimated UTF-8 event-field bytes with
+fixed overhead, not exact JSON bytes or total process memory.
 
 ## Current reliability behavior
 
@@ -113,8 +118,22 @@ The relay currently provides:
 - immediate startup backlog delivery opportunity;
 - process-local exponential endpoint retry with jitter and HTTP `Retry-After`;
 - process-local Emergency memory bounds of 16384 events and 64 MiB payload bytes by default;
+- direct emergency HTTP batches without a minimum count or batch wait, with separate event-count
+  and JSON-size targets;
 - a real bounded shutdown deadline;
 - at-least-once HTTP delivery without imposing receiver-side storage/deduplication semantics.
+
+During normal operation, the emergency worker retries durable storage for buffered events. If
+storage fails, it sends the remaining events in that selected batch directly rather than repeat
+the same failing storage operation for every event. Only events still in RAM are sent directly.
+It takes currently available RAM events up to
+`Delivery.EmergencyMaximumBatchEvents` (256 by default) and
+`Delivery.EmergencyTargetBatchPayloadBytes` (4 MiB by default) per HTTP request, then immediately
+continues with another bounded batch. There is no minimum count or wait to fill an emergency
+batch. An individual event larger than the JSON target is sent alone without truncation.
+At shutdown, any already active normal request finishes first. Direct RAM batches run next;
+afterward, separate claimed spool batches are sent.
+RAM and spool events are not combined in one HTTP batch.
 
 
 ## Multi-process coordination

@@ -18,12 +18,15 @@ The important distinction for multi-process work is:
 SerilogRelayOptions
   ApplicationSpool
     MaxPhysicalBytes          = 64 MiB
-    SentEventRetention        = 1 day
+    SentEventRetention        = 0 (delete acknowledged rows immediately)
     UnsentEventMaxAge         = none
 
   Delivery
     MinimumBatchEvents        = 20
     MaximumBatchEvents        = 100
+    TargetBatchPayloadBytes   = 4 MiB
+    EmergencyMaximumBatchEvents      = 256
+    EmergencyTargetBatchPayloadBytes = 4 MiB
     PollInterval              = 5 seconds
     MaximumBatchWait          = 5 seconds
 
@@ -94,8 +97,8 @@ maintenance cadence and an active claim can defer removal. The current maintenan
 scheduled at the shorter of this process's `Delivery.PollInterval` and one minute; transient
 database/recovery failures can defer a pass further.
 
-`ApplicationSpool.MaxPhysicalBytes` is the physical ceiling applied to the shared
-spool/database. It is not a quota for rows belonging to one process.
+`ApplicationSpool.MaxPhysicalBytes` sets a SQLite page budget for the shared database.
+It is not a quota for rows belonging to one process or a hard limit on all files.
 
 Default:
 
@@ -103,14 +106,14 @@ Default:
 MaxPhysicalBytes = 64 MiB
 ```
 
-The SQLite implementation applies the configured physical page budget when a process opens the
+The SQLite implementation applies the configured page budget when a process opens the
 shared spool. Different processes may configure different values; this is intentionally not
 resolved through cross-process policy negotiation.
 
 An incoming event that cannot fit even in an otherwise empty spool under the configured
-physical ceiling is rejected before existing backlog is reclaimed.
+page budget is rejected before existing backlog is reclaimed.
 
-An existing spool above a newly configured physical ceiling is not destructively purged during
+An existing spool above a newly configured page budget is not destructively purged during
 startup.
 
 ## Delivery and process-local runtime limits
@@ -119,6 +122,9 @@ The following settings belong to the running sink/process:
 
 - `Delivery.MinimumBatchEvents`;
 - `Delivery.MaximumBatchEvents`;
+- `Delivery.TargetBatchPayloadBytes`;
+- `Delivery.EmergencyMaximumBatchEvents`;
+- `Delivery.EmergencyTargetBatchPayloadBytes`;
 - `Delivery.PollInterval`;
 - `Delivery.MaximumBatchWait`;
 - all `EndpointRetry` state/settings;
@@ -250,6 +256,16 @@ The first reached bound wins.
 Emergency direct-HTTP rescue uses the same `EndpointRetry` state as normal delivery in that
 process.
 
+During normal operation, the worker retries durable storage for buffered events before direct
+HTTP. If storage fails for one event, the rest of that selected batch proceeds to direct HTTP
+without repeating the same failing storage operation. It sends only events still in RAM in batches of up to
+`Delivery.EmergencyMaximumBatchEvents` and the separate
+`Delivery.EmergencyTargetBatchPayloadBytes` JSON target. The defaults are 256 events and 4 MiB.
+There is no minimum count or wait to fill a direct emergency batch. The worker sends another
+bounded batch immediately after success. One event larger than the target can be sent alone.
+Failed batches remain in RAM for retry and become eligible for oldest-waiting eviction after the
+active attempt ends. RAM and spool events are never mixed in one HTTP batch.
+
 ## Corruption recovery
 
 The current SQLite implementation can quarantine a corrupted spool and create a replacement.
@@ -265,6 +281,12 @@ Shutdown is process-local and bounded by a real cancellation deadline.
 
 Durable rows not sent before shutdown remain in the shared application spool. A later process
 may send them.
+
+With an endpoint, shutdown first lets an already active normal request finish, then sends direct
+RAM batches without another SQLite persistence attempt, and finally sends separate claimed spool
+batches. RAM uses the emergency count and JSON
+targets; spool uses the normal count and JSON targets. Neither source waits for a minimum batch
+count during shutdown.
 
 ## Shared-spool cross-version operating contract
 

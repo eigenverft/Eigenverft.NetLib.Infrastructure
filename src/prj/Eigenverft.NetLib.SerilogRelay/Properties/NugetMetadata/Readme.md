@@ -66,6 +66,8 @@ var options = new SerilogRelayOptions
         MinimumBatchEvents = 20,
         MaximumBatchEvents = 100,
         TargetBatchPayloadBytes = 4 * 1024 * 1024,
+        EmergencyMaximumBatchEvents = 256,
+        EmergencyTargetBatchPayloadBytes = 4 * 1024 * 1024,
         PollInterval = TimeSpan.FromSeconds(5),
         MaximumBatchWait = TimeSpan.FromSeconds(5),
         ShutdownTimeout = TimeSpan.FromSeconds(3),
@@ -102,8 +104,8 @@ configured values when it performs maintenance or reclamation:
 - `SentEventRetention` may remove eligible sent rows created by any process;
 - `UnsentEventMaxAge` may remove eligible unsent rows created by any process;
 - capacity reclamation may remove eligible rows created by any process;
-- `MaxPhysicalBytes` is the physical ceiling applied to the whole shared spool/database, not a
-  per-process row quota.
+- `MaxPhysicalBytes` sets the SQLite page budget for the shared database, not a per-process row
+  quota or a hard limit on all files. An existing larger database is not shrunk.
 
 Actively claimed unsent rows are protected from age cleanup and unsent capacity reclamation.
 After claim release or lease expiry, they become eligible again. Age cleanup runs periodically
@@ -112,6 +114,8 @@ exact deletion timestamp.
 
 `Delivery`, `EndpointRetry`, endpoint/bearer configuration, and `EmergencyMemoryBuffer` are
 runtime settings/state of one sink/process.
+`EmergencyMemoryBuffer.MaxBufferedPayloadBytes` counts estimated UTF-8 event-field bytes with
+fixed overhead, not exact JSON bytes or total process memory.
 
 ## Current reliability behavior
 
@@ -128,6 +132,8 @@ The relay currently provides:
 - immediate startup backlog delivery opportunity;
 - process-local exponential endpoint retry with jitter and HTTP `Retry-After` on every non-2xx response;
 - process-local Emergency memory bounds of 16384 events and 64 MiB payload bytes by default;
+- direct emergency HTTP batches without a minimum count or batch wait, with separate event-count
+  and JSON-size targets;
 - configurable shutdown delivery with a three-second total budget, one-second request cap, and one-second failure retry interval by default;
 - at-least-once HTTP delivery without imposing receiver-side storage/deduplication semantics.
 
@@ -142,13 +148,17 @@ Already-full spools can be drained without another incoming event: when a claim 
 
 When SQLite reaches its configured capacity, the relay first checks whether the new event fits an empty spool with the complete schema, including claim indexes and the metadata reserve. It reclaims sent rows before the oldest eligible unsent rows. Reclamation and replacement commit together; a failed replacement rolls the deletions back.
 
-An event that cannot be stored enters the bounded emergency RAM buffer, whether storage failed with an exception or rejected it because of capacity. The worker retries durable storage and can send directly over HTTP. At either RAM limit, the oldest waiting events are discarded to make room for newer ones, including an old event waiting for another retry. Only a currently executing storage or HTTP attempt retains its reservation. An event too large for the remaining budget after that active reservation is rejected without clearing the queue.
+An event that cannot be stored enters the bounded emergency RAM buffer, whether storage failed with an exception or rejected it because of capacity. The worker retries durable storage and can send directly over HTTP. At either RAM limit, the oldest waiting events are discarded to make room for newer ones, including an old event waiting for another retry. Events selected into an active batch retain their reservation until the attempt ends; a failed batch becomes eligible for oldest-waiting eviction again. An event too large for the remaining budget after that active reservation is rejected without clearing the queue.
+
+The emergency worker retries durable storage during normal operation. If storage fails for an event, it sends the remaining events in that selected batch directly rather than repeat the same failing storage operation for every event. It sends only events still in RAM directly, taking currently available entries up to `Delivery.EmergencyMaximumBatchEvents` (256 by default) and `Delivery.EmergencyTargetBatchPayloadBytes` (4 MiB by default) per request. There is no minimum count or wait to fill a direct emergency batch. Further RAM batches follow immediately after success. A failed batch remains in RAM for retry under the existing buffer bounds and endpoint backoff.
 
 ## Batch payload target
 
 `Delivery.TargetBatchPayloadBytes` defaults to 4 MiB. The sender measures the serialized UTF-8 JSON, including escaping, commas, count digits, and batch metadata. It stops filling a batch before another event would exceed the target and releases unused claims before sending. A batch filled by bytes can be sent below `MinimumBatchEvents`; low-volume batches still use `MaximumBatchWait`.
 
 This is a batching target, not an event-size admission limit. An individual event larger than the target is sent alone and without truncation, so the target cannot strand it in the spool. The value belongs to the sender and does not negotiate or impose a receiver body limit. HTTP non-2xx responses retain the events for the existing retry policy.
+
+The direct emergency HTTP path has independent count and JSON-size targets. Its JSON target likewise allows one individually oversized event to be attempted alone. RAM and spool events are never combined in one HTTP request.
 
 ## Slow responses and HTTP timeouts
 
@@ -168,7 +178,7 @@ A server can commit successfully after the client has timed out. Retries preserv
 
 If a normal sender batch is already in progress, shutdown lets the current attempt finish within the applicable limits and acknowledges it on success, then stops the normal round before another batch. Retry/error waits yield to shutdown as well. Emergency delivery waits for this handover before acquiring the HTTP gate.
 
-Shutdown then sends volatile emergency events first and flushes the spool even below `MinimumBatchEvents`. Successful batches have no normal inter-batch pause. The final delivery attempts bypass the normal endpoint backoff, while only one HTTP attempt remains active at a time.
+Shutdown then sends volatile emergency events in bounded RAM batches first and flushes the spool in separate claimed batches even below `MinimumBatchEvents`. The RAM batches use the emergency count and JSON targets; the spool batches use the normal count and JSON targets. Successful batches have no normal inter-batch pause. The final delivery attempts bypass the normal endpoint backoff, while only one HTTP attempt remains active at a time.
 
 When the budget expires, `Dispose` returns and pending durable rows remain available for a later run. SQLite calls already executing may finish afterward; their resources are released when background cleanup completes. Claims that cannot be released become available after their 30-second lease expires. Remaining RAM events are best-effort delivery only.
 
