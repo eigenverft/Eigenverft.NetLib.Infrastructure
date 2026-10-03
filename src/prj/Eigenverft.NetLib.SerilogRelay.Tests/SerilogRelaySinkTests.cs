@@ -330,11 +330,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
                 Directory.CreateDirectory(Path.Combine(directory, "relay.g0001.db"));
 
-                SqliteConnection.ClearAllPools();
-                File.Delete(databasePath + "-wal");
-                File.Delete(databasePath + "-shm");
-                File.WriteAllBytes(databasePath, Encoding.UTF8.GetBytes("not sqlite anymore"));
-
+                // Inject the corruption error directly; the maintenance worker may still use the database.
                 Assert.IsFalse(InvokeTryRecoverCorruptedSpool(
                     sink,
                     new SqliteException("corrupt", SQLitePCL.raw.SQLITE_CORRUPT)));
