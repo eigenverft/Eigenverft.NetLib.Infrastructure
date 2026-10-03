@@ -23,8 +23,9 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// the client. Prefer an application-lifetime client because bounded sink disposal can
         /// return while canceled background cleanup finishes. The sink does not change the
         /// client's default headers or timeout and does not dispose it. Leave null to use the
-        /// built-in client. Configure proxy, client certificates, or custom authentication on
-        /// the supplied client and its handlers.
+        /// built-in client, which limits response bodies to 4 KiB. A supplied client's
+        /// MaxResponseContentBufferSize remains its response-body limit. Configure proxy, client
+        /// certificates, or custom authentication on the supplied client and its handlers.
         /// </summary>
         public HttpClient? HttpClient { get; set; }
 
@@ -218,8 +219,8 @@ namespace Eigenverft.NetLib.SerilogRelay
         public double Multiplier { get; set; } = 2d;
 
         /// <summary>
-        /// Gets or sets the maximum retry delay. It must fit the sender timer (about 49.7 days).
-        /// A later HTTP Retry-After time is rechecked in bounded waits.
+        /// Gets or sets the upper limit for local backoff and HTTP Retry-After delays. Defaults to five minutes.
+        /// It must fit the sender timer (about 49.7 days).
         /// </summary>
         public TimeSpan MaximumDelay { get; set; } = TimeSpan.FromMinutes(5);
 
@@ -229,7 +230,8 @@ namespace Eigenverft.NetLib.SerilogRelay
         public double JitterRatio { get; set; } = 0.2d;
 
         /// <summary>
-        /// Gets or sets whether valid HTTP Retry-After values are honored.
+        /// Gets or sets whether valid HTTP Retry-After values may extend local backoff, up to MaximumDelay.
+        /// A server hint never shortens the local backoff delay.
         /// </summary>
         public bool RespectRetryAfter { get; set; } = true;
     }

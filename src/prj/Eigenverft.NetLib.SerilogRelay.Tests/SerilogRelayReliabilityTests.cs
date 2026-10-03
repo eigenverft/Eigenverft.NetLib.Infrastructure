@@ -123,7 +123,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             {
                 listener.Start();
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-                Task<string> requestTask = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
+                Task<string> requestTask = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent);
 
                 var options = new SerilogRelayOptions();
                 options.Delivery.MinimumBatchEvents = 20;
@@ -192,7 +192,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
                 listener.Start();
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-                Task<string> requestTask = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
+                Task<string> requestTask = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent);
 
                 await using var reader = new SerilogRelaySink(
                     connectionString,
@@ -995,7 +995,7 @@ END;";
                 Assert.IsFalse(oldProcess.HasExited);
 
                 Task<(string? Authorization, string Body)> newRequest =
-                    ReceiveRequestAsync(newListener, HttpStatusCode.OK);
+                    ReceiveRequestAsync(newListener, HttpStatusCode.NoContent);
 
                 newProcess = StartSeparateProcessSender(
                     role: "new",
@@ -1311,7 +1311,7 @@ END;";
         }
 
         [TestMethod]
-        public async Task RetryAfterLongerThanMaximumBackoffDoesNotReserveSharedClaim()
+        public async Task CappedRetryAfterDoesNotReserveSharedClaim()
         {
             string directory = CreateTemporaryDirectory();
             string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
@@ -1351,9 +1351,9 @@ END;";
 
                 RetryGate gate = GetPrivateField<RetryGate>(first, "_retryGate");
                 Assert.IsTrue(gate.NextAttemptAt.HasValue);
-                Assert.IsGreaterThan(
-                    TimeSpan.FromMinutes(9),
-                    gate.NextAttemptAt.Value - DateTimeOffset.UtcNow);
+                TimeSpan remainingDelay = gate.NextAttemptAt.Value - DateTimeOffset.UtcNow;
+                Assert.IsTrue(remainingDelay > TimeSpan.FromMinutes(4)
+                    && remainingDelay <= TimeSpan.FromMinutes(5));
 
                 ClaimedLogBatch takeover = await InvokePrivateTaskMethod<ClaimedLogBatch>(
                     second,
@@ -1455,7 +1455,7 @@ END;";
                     TimeSpan.FromSeconds(2));
 
                 Task<string> successRequest =
-                    ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
+                    ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent);
                 string successBody = await successRequest.WaitAsync(TimeSpan.FromSeconds(5));
                 StringAssert.Contains(successBody, "short retry completes");
 
@@ -1542,7 +1542,7 @@ END;";
                     endpoint: null,
                     new SerilogRelayOptions());
 
-                Task<string> received = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
+                Task<string> received = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent);
                 producer.Emit(CreateLogEvent("cross process discovery"));
 
                 string body = await received.WaitAsync(TimeSpan.FromSeconds(5));
@@ -2020,7 +2020,7 @@ CREATE TABLE SerilogRelayEvents (
             try
             {
                 Task<string?> authorizationTask =
-                    ReceiveAuthorizationHeaderAsync(listener, HttpStatusCode.OK);
+                    ReceiveAuthorizationHeaderAsync(listener, HttpStatusCode.NoContent);
 
                 using Logger logger = new LoggerConfiguration()
                     .WriteTo.SerilogRelay(
@@ -2182,8 +2182,8 @@ END;
                 sink.Emit(CreateLogEvent("volatile two"));
                 Assert.AreEqual(2L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
                 Task<List<string>> received = expectedEmergencyRequests == 1
-                    ? ReceiveRequestsAsync(listener, HttpStatusCode.OK, HttpStatusCode.OK)
-                    : ReceiveRequestsAsync(listener, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK);
+                    ? ReceiveRequestsAsync(listener, HttpStatusCode.NoContent, HttpStatusCode.NoContent)
+                    : ReceiveRequestsAsync(listener, HttpStatusCode.NoContent, HttpStatusCode.NoContent, HttpStatusCode.NoContent);
 
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 await sink.DisposeAsync();
@@ -2235,7 +2235,7 @@ END;
 
             try
             {
-                Task<List<string>> received = ReceiveRequestsAsync(listener, HttpStatusCode.ServiceUnavailable, HttpStatusCode.OK);
+                Task<List<string>> received = ReceiveRequestsAsync(listener, HttpStatusCode.ServiceUnavailable, HttpStatusCode.NoContent);
                 sink.Emit(CreateLogEvent("shutdown retry"));
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 await sink.DisposeAsync();
@@ -2283,7 +2283,7 @@ END;
             {
                 var responseGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var requestStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                Task<string> activeRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, responseGate: responseGate.Task, onReceived: () => requestStarted.SetResult(true));
+                Task<string> activeRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent, responseGate: responseGate.Task, onReceived: () => requestStarted.SetResult(true));
                 string suffix = new string('x', 256 * 1024);
                 sink.Emit(CreateLogEvent($"ram0 {suffix}"));
                 await requestStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -2295,7 +2295,7 @@ END;
                 Assert.AreEqual(5L - expectedDropped, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
                 Assert.IsLessThanOrEqualTo((long)byteLimit, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
                 HttpStatusCode[] responses = new HttpStatusCode[4 - expectedDropped];
-                Array.Fill(responses, HttpStatusCode.OK);
+                Array.Fill(responses, HttpStatusCode.NoContent);
                 Task<List<string>> received = ReceiveRequestsAsync(listener, responses);
                 responseGate.SetResult(true);
                 await sink.DisposeAsync();
@@ -2359,7 +2359,7 @@ END;
                 Assert.AreEqual(5L - expectedDropped, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
                 Assert.IsLessThanOrEqualTo((long)byteLimit, GetPrivateField<long>(sink, "_emergencyBufferedPayloadBytes"));
                 HttpStatusCode[] responses = new HttpStatusCode[5 - expectedDropped];
-                Array.Fill(responses, HttpStatusCode.OK);
+                Array.Fill(responses, HttpStatusCode.NoContent);
                 Task<List<string>> received = ReceiveRequestsAsync(listener, responses);
                 await sink.DisposeAsync();
                 List<string> bodies = await received.WaitAsync(TimeSpan.FromSeconds(5));
@@ -2651,8 +2651,8 @@ VALUES
                 }
 
                 Task<List<string>> requests = ReceiveRequestsAsync(listener,
-                    HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK,
-                    HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK);
+                    HttpStatusCode.NoContent, HttpStatusCode.NoContent, HttpStatusCode.NoContent,
+                    HttpStatusCode.NoContent, HttpStatusCode.NoContent, HttpStatusCode.NoContent);
                 var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
                 try
                 {
@@ -2703,7 +2703,7 @@ VALUES
             }
             options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
             options.Delivery.MaximumBatchWait = TimeSpan.FromMinutes(1);
-            Task<List<string>> requests = ReceiveRequestsAsync(listener, HttpStatusCode.OK, HttpStatusCode.OK);
+            Task<List<string>> requests = ReceiveRequestsAsync(listener, HttpStatusCode.NoContent, HttpStatusCode.NoContent);
             var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
             string oversized = new string('x', 2 * 1024 * 1024);
 
@@ -2734,7 +2734,7 @@ VALUES
         }
 
         [TestMethod]
-        [DataRow(HttpStatusCode.OK)]
+        [DataRow(HttpStatusCode.NoContent)]
         [DataRow(HttpStatusCode.ServiceUnavailable)]
         public async Task ByteFilledBatchSendsBelowMinimumAndReleasesTheUnsentSuffix(HttpStatusCode status)
         {
@@ -2765,12 +2765,12 @@ VALUES
                 sink.Emit(CreateLogEvent("second " + new string('x', 100)));
                 Task<string> request = ReceiveSingleRequestAsync(listener, status);
                 bool delivered = await InvokePrivateTaskMethod<bool>(sink, "ProcessPendingAsync", false, CancellationToken.None, false);
-                Assert.AreEqual(status == HttpStatusCode.OK, delivered);
+                Assert.AreEqual(status == HttpStatusCode.NoContent, delivered);
                 string body = await request.WaitAsync(TimeSpan.FromSeconds(5));
                 Assert.IsLessThanOrEqualTo(options.Delivery.TargetBatchPayloadBytes, Encoding.UTF8.GetByteCount(body));
                 using JsonDocument document = JsonDocument.Parse(body);
                 Assert.AreEqual(1, document.RootElement.GetProperty("count").GetInt32());
-                Assert.AreEqual(status == HttpStatusCode.OK ? 1L : 2L, GetUnsentCount(connectionString));
+                Assert.AreEqual(status == HttpStatusCode.NoContent ? 1L : 2L, GetUnsentCount(connectionString));
                 Assert.IsNull(GetClaimOwnerId(connectionString));
             }
             finally
@@ -2933,7 +2933,7 @@ END;
 
             try
             {
-                Task<string> activeRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, responseGate: responseGate.Task, onReceived: () => requestStarted.TrySetResult(true));
+                Task<string> activeRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent, responseGate: responseGate.Task, onReceived: () => requestStarted.TrySetResult(true));
                 sink.Emit(CreateLogEvent("already sending"));
                 await requestStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
                 sink.Emit(CreateLogEvent("durable next"));
@@ -2941,7 +2941,7 @@ END;
                 sink.Emit(CreateLogEvent(volatileMessage));
                 await WaitUntilAsync(() => GetPrivateField<long>(sink, "_emergencyBufferedCount") == 1, TimeSpan.FromSeconds(5));
 
-                Task<List<string>> followingRequests = ReceiveRequestsAsync(listener, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK);
+                Task<List<string>> followingRequests = ReceiveRequestsAsync(listener, HttpStatusCode.NoContent, HttpStatusCode.NoContent, HttpStatusCode.NoContent);
                 Task shutdown = sink.DisposeAsync().AsTask();
                 responseGate.TrySetResult(true);
                 await shutdown.WaitAsync(TimeSpan.FromSeconds(5));
@@ -3074,7 +3074,9 @@ VALUES
                 Assert.AreEqual(TimeSpan.FromSeconds(2), options.Delivery.RequestTimeout);
                 sink.Emit(CreateLogEvent("receiver still working"));
                 SetPrivateField(sink, "_endpoint", $"http://127.0.0.1:{port}/logs");
-                heldRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, responseGate: responseGate.Task,
+                // HTTP 204 has no body; use an unacknowledged 200 response for the stalled-body case.
+                heldRequest = ReceiveSingleRequestAsync(listener,
+                    waitAfterResponseHeaders ? HttpStatusCode.OK : HttpStatusCode.NoContent, responseGate: responseGate.Task,
                     onBodyReceived: body => receivedBody.TrySetResult(body), waitAfterResponseHeaders: waitAfterResponseHeaders);
 
                 Stopwatch stopwatch = Stopwatch.StartNew();
@@ -3169,14 +3171,14 @@ VALUES
                 sink.Emit(CreateLogEvent(emergency ? new string('v', 128 * 1024) : "durable shutdown timeout"));
                 Assert.AreEqual(emergency ? 1L : 0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
                 SetPrivateField(sink, "_endpoint", $"http://127.0.0.1:{port}/logs");
-                firstRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, responseGate: responseGate.Task,
+                firstRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent, responseGate: responseGate.Task,
                     onBodyReceived: body => firstBody.TrySetResult(body));
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 Task shutdown = sink.DisposeAsync().AsTask();
                 string first = await firstBody.Task.WaitAsync(TimeSpan.FromSeconds(2));
                 TimeSpan firstStarted = stopwatch.Elapsed;
 
-                secondRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, responseGate: responseGate.Task,
+                secondRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent, responseGate: responseGate.Task,
                     onBodyReceived: body => secondBody.TrySetResult(body));
                 string second = await secondBody.Task.WaitAsync(TimeSpan.FromSeconds(2));
                 TimeSpan secondStarted = stopwatch.Elapsed;
@@ -3240,7 +3242,7 @@ VALUES
 
             try
             {
-                activeRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, responseGate: responseGate.Task,
+                activeRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent, responseGate: responseGate.Task,
                     onBodyReceived: body => receivedBody.TrySetResult(body));
                 sink.Emit(CreateLogEvent("already running before shutdown"));
                 string originalBody = await receivedBody.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -3305,7 +3307,7 @@ VALUES
                 async Task<List<string>> ReceiveAsync()
                 {
                     var bodies = new List<string>();
-                    foreach (HttpStatusCode status in new[] { HttpStatusCode.OK, HttpStatusCode.ServiceUnavailable, HttpStatusCode.NoContent })
+                    foreach (HttpStatusCode status in new[] { HttpStatusCode.NoContent, HttpStatusCode.ServiceUnavailable, HttpStatusCode.NoContent })
                         bodies.Add(await ReceiveSingleRequestAsync(listener, status, onReceived: () => requestTimes.Add(stopwatch.Elapsed)));
                     return bodies;
                 }
@@ -3674,7 +3676,7 @@ SELECT ClaimOwnerId
 
             string body = new string(bodyBuffer, 0, totalRead);
             string reason =
-                statusCode == HttpStatusCode.OK ? "OK" : "Error";
+                statusCode == HttpStatusCode.NoContent ? "No Content" : "Error";
             byte[] response = Encoding.ASCII.GetBytes(
                 $"HTTP/1.1 {(int)statusCode} {reason}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
             await stream.WriteAsync(response);
@@ -3749,7 +3751,7 @@ SELECT ClaimOwnerId
                 totalRead += read;
             }
 
-            string reason = statusCode == HttpStatusCode.OK ? "OK" : "Error";
+            string reason = statusCode == HttpStatusCode.NoContent ? "No Content" : "Error";
             byte[] response = Encoding.ASCII.GetBytes(
                 $"HTTP/1.1 {(int)statusCode} {reason}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
             await stream.WriteAsync(response);
@@ -3808,7 +3810,7 @@ SELECT ClaimOwnerId
             onReceived?.Invoke();
             if (!waitAfterResponseHeaders && responseGate is not null)
                 await responseGate;
-            string reason = statusCode == HttpStatusCode.OK ? "OK" : "Error";
+            string reason = statusCode == HttpStatusCode.NoContent ? "No Content" : "Error";
             int responseLength = waitAfterResponseHeaders ? 1 : 0;
             byte[] response = Encoding.ASCII.GetBytes(
                 $"HTTP/1.1 {(int)statusCode} {reason}\r\n{extraHeaders ?? string.Empty}Content-Length: {responseLength}\r\nConnection: close\r\n\r\n");

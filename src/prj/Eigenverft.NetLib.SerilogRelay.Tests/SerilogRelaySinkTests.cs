@@ -631,7 +631,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             {
                 listener.Start();
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-                Task<string> requestTask = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
+                Task<string> requestTask = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent);
 
                 var sink = new SerilogRelaySink(
                     connectionString,
@@ -682,7 +682,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             {
                 listener.Start();
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-                Task<string> requestTask = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
+                Task<string> requestTask = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent);
 
                 var sink = new SerilogRelaySink(
                     connectionString,
@@ -948,7 +948,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
                 var options = new SerilogRelayOptions();
                 options.EndpointRetry.InitialDelay = TimeSpan.FromMilliseconds(200);
-                options.EndpointRetry.MaximumDelay = TimeSpan.FromMilliseconds(200);
+                options.EndpointRetry.MaximumDelay = TimeSpan.FromSeconds(30);
                 options.EndpointRetry.JitterRatio = 0d;
                 options.EndpointRetry.RespectRetryAfter = respectRetryAfter;
                 await using var sink = new SerilogRelaySink(
@@ -965,7 +965,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 Assert.AreEqual(1, gate.ConsecutiveFailures);
                 Assert.IsNotNull(gate.NextAttemptAt);
                 if (respectRetryAfter)
-                    Assert.IsTrue(gate.NextAttemptAt.Value >= started.AddSeconds(60));
+                    Assert.IsTrue(gate.NextAttemptAt.Value >= started.AddSeconds(29)
+                        && gate.NextAttemptAt.Value <= DateTimeOffset.UtcNow.AddSeconds(30));
                 else
                     Assert.IsTrue(gate.NextAttemptAt.Value <= DateTimeOffset.UtcNow.AddMilliseconds(200));
             }
@@ -996,7 +997,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 {
                     InitialDelay = TimeSpan.FromMilliseconds(200),
                     Multiplier = 1d,
-                    MaximumDelay = TimeSpan.FromMilliseconds(200),
+                    MaximumDelay = TimeSpan.FromSeconds(5),
                     JitterRatio = 0d,
                 };
 
@@ -1022,7 +1023,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 Assert.IsFalse(listener.Pending());
 
                 await Task.Delay(250);
-                Task<string> successRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK, "Retry-After: 60\r\n");
+                Task<string> successRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent, "Retry-After: 60\r\n");
                 Assert.IsTrue(await InvokeSendBatchAsync(sink, entries, CancellationToken.None));
                 _ = await successRequest.WaitAsync(TimeSpan.FromSeconds(5));
                 Assert.AreEqual(0, gate.ConsecutiveFailures);
@@ -1211,7 +1212,7 @@ END;";
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
                 Task<string> requestTask = ReceiveSingleRequestAsync(
                     listener,
-                    HttpStatusCode.OK);
+                    HttpStatusCode.NoContent);
 
                 await using var sink = new SerilogRelaySink(
                     connectionString,
@@ -1277,7 +1278,7 @@ END;";
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
                 Task<string> requestTask = ReceiveSingleRequestAsync(
                     listener,
-                    HttpStatusCode.OK);
+                    HttpStatusCode.NoContent);
 
                 using Logger logger = new LoggerConfiguration()
                     .WriteTo.SerilogRelay(
@@ -1611,7 +1612,7 @@ END;";
 
                 listener.Start();
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-                Task<List<string>> serverTask = ReceiveRequestsAsync(listener, 7, HttpStatusCode.OK);
+                Task<List<string>> serverTask = ReceiveRequestsAsync(listener, 7, HttpStatusCode.NoContent);
 
                 await using var relay = new SerilogRelaySink(
                     connectionString,
@@ -1743,7 +1744,7 @@ END;";
             {
                 listener.Start();
                 int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-                Task<string> requestTask = ReceiveSingleRequestAsync(listener, HttpStatusCode.OK);
+                Task<string> requestTask = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent);
 
                 var sink = new SerilogRelaySink(
                     connectionString,
@@ -2076,7 +2077,7 @@ END;";
             }
 
             string body = new string(bodyBuffer, 0, totalRead);
-            string reason = statusCode == HttpStatusCode.OK ? "OK" : "Error";
+            string reason = statusCode == HttpStatusCode.NoContent ? "No Content" : "Error";
             byte[] response = Encoding.ASCII.GetBytes(
                 $"HTTP/1.1 {(int)statusCode} {reason}\r\n{extraHeaders ?? string.Empty}Content-Length: 0\r\nConnection: close\r\n\r\n");
             await stream.WriteAsync(response);

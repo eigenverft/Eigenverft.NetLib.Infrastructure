@@ -291,13 +291,19 @@ Default failed-attempt progression:
 
 with +/-20% jitter.
 
-A valid HTTP `Retry-After` is honored on every non-2xx response. A successful delivery resets that process's retry state
-immediately.
+A valid HTTP `Retry-After` is captured on every non-204 response before reading its body. The
+hint still controls failure pacing if the body is rejected or cannot be read completely; the
+failed response never confirms delivery. `EndpointRetry.MaximumDelay` caps both local backoff
+and server hints, defaulting to five minutes. A hint can extend, but never shorten, local backoff.
+Both delta-seconds and absolute dates are capped; an excessive delta is bounded before date
+arithmetic. Set `RespectRetryAfter` to false to ignore server hints. A successful delivery resets
+that process's retry state immediately.
 
 Response bodies are read and discarded as they arrive instead of being buffered in full.
-The client's `MaxResponseContentBufferSize` still limits the complete response size, even for
-an unknown-length body. Request, client, lease, and shutdown deadlines remain active through
-the body. A batch is acknowledged only after a complete 2xx response within these limits.
+The built-in HTTP client limits complete response bodies to 4 KiB. A supplied client's
+`MaxResponseContentBufferSize` remains its response-body limit, even for an unknown-length body;
+the sink does not change it. Request, client, lease, and shutdown deadlines remain active through
+the body. A batch is acknowledged only after a complete HTTP 204 response within these limits.
 
 Normal endpoint outages remain in durable storage and do not consume Emergency memory.
 
@@ -388,21 +394,21 @@ Pending rows are not bound to the endpoint or bearer token of the process that c
 process that currently owns a claim sends those rows using its own configured endpoint and
 bearer token.
 
-A non-2xx response releases the claim before that process enters its own retry delay. A different
+A non-204 response releases the claim before that process enters its own retry delay. A different
 process/version can therefore claim the same row and attempt delivery through different current
-credentials or a different endpoint. A 2xx response received by the current claim owner marks
+credentials or a different endpoint. A complete HTTP 204 response received by the current claim owner marks
 the claimed row delivered regardless of which process originally wrote it.
 
 This exact shape is covered by a separate-OS-process regression: the old sender remains alive
-after receiving non-2xx, its claim is released, and a second process sends the same `EventId`
-with its own endpoint/token and marks it sent after 2xx.
+after receiving non-204, its claim is released, and a second process sends the same `EventId`
+with its own endpoint/token and marks it sent after HTTP 204.
 
 `ProcessId` remains useful row-origin metadata. It is not an ownership, endpoint, retention, or
 capacity boundary.
 
 ## Dead-letter direction
 
-The sink intentionally has no dead-letter path. A non-2xx response does not permanently classify
+The sink intentionally has no dead-letter path. A non-204 response does not permanently classify
 or move the row; it remains unsent for later delivery attempts or takeover by an updated
 application version.
 
@@ -413,9 +419,16 @@ Those rows are still subject to the configured shared-spool bounds:
 
 The sink targets a generic HTTP receiver rather than one mandatory server implementation.
 
-For normal delivery, any HTTP 2xx received by the current claim owner is treated as successful
-delivery. Non-2xx or transport failure leaves the row unsent and releases its claim before the
-process-local retry delay.
+The receiver must return **204 No Content** after processing the entire batch under its own
+acceptance policy. No response body or extra acknowledgment header is required. Only a completed
+204 confirms delivery, for durable, emergency RAM, and shutdown batches alike. HTTP 200, 201,
+202, and every other status leave events unacknowledged. A durable row remains unsent and its
+claim is released before the process-local retry delay; an emergency event remains available
+for retry within the configured memory and shutdown limits.
+
+Redirects remain subject to the HTTP handler's policy, with 204 required from the final response.
+A login page returning HTTP 200 cannot acknowledge the batch. Receivers using another successful
+status must change their acknowledgment to 204.
 
 Receiver persistence, duplicate presentation, and server-side storage policies remain receiver
 concerns. Optional bearer authentication only controls the Authorization header emitted by the

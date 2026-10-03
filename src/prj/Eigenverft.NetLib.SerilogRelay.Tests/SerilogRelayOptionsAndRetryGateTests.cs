@@ -172,16 +172,16 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         }
 
         [TestMethod]
-        public void RetryGateHonorsRetryAfterOnlyWhenConfigured()
+        public void RetryGateCapsRetryAfterAndIgnoresItWhenDisabled()
         {
             DateTimeOffset now = new DateTimeOffset(2026, 9, 26, 12, 0, 0, TimeSpan.Zero);
-            DateTimeOffset serverNotBefore = now.AddMinutes(1);
+            DateTimeOffset serverNotBefore = now.AddYears(1);
 
             var respectingGate = new RetryGate(
                 new EndpointRetryOptions
                 {
                     InitialDelay = TimeSpan.FromSeconds(5),
-                    MaximumDelay = TimeSpan.FromSeconds(5),
+                    MaximumDelay = TimeSpan.FromSeconds(15),
                     Multiplier = 1d,
                     JitterRatio = 0d,
                     RespectRetryAfter = true,
@@ -189,7 +189,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 nextDouble: () => 0.5d);
             Assert.IsTrue(respectingGate.TryAcquire(now));
             respectingGate.RecordFailure(now, serverNotBefore);
-            Assert.AreEqual(serverNotBefore, respectingGate.NextAttemptAt);
+            Assert.AreEqual(now.AddSeconds(15), respectingGate.NextAttemptAt);
 
             var ignoringGate = new RetryGate(
                 new EndpointRetryOptions

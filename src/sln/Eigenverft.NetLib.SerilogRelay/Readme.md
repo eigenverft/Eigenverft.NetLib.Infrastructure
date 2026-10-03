@@ -199,12 +199,6 @@ configured values when it performs maintenance or reclamation:
 - `MaxPhysicalBytes` sets the SQLite page budget for the shared database, not a per-process row
   quota or a hard limit on all files. An existing larger database is not shrunk.
 
-Actively claimed unsent rows are protected from age cleanup and unsent capacity reclamation.
-After claim release or lease expiry, they become eligible again. Age cleanup runs periodically
-while the sink remains active; the configured age is an eligibility threshold rather than an
-exact deletion timestamp.
-
-`Delivery`, `EndpointRetry`, endpoint/bearer configuration, and `EmergencyMemoryBuffer` are
 `SentEventRetention` measures age since insertion into the spool (`CreatedAt`), not time since
 successful delivery. Acknowledgment does not restart this age. For example, with one-day
 retention, a row delivered after two days of backlog is eligible for removal on the next
@@ -212,6 +206,12 @@ maintenance pass. Zero deletes acknowledged rows immediately. This option does n
 unsent rows; `UnsentEventMaxAge` controls their age cleanup. Capacity reclamation may remove
 sent rows before the retention age is reached.
 
+Actively claimed unsent rows are protected from age cleanup and unsent capacity reclamation.
+After claim release or lease expiry, they become eligible again. Age cleanup runs periodically
+while the sink remains active; the configured age is an eligibility threshold rather than an
+exact deletion timestamp.
+
+`Delivery`, `EndpointRetry`, endpoint/bearer configuration, and `EmergencyMemoryBuffer` are
 runtime settings/state of one sink/process.
 `EmergencyMemoryBuffer.MaxBufferedPayloadBytes` counts estimated UTF-8 event-field bytes with
 fixed overhead, not exact JSON bytes or total process memory.
@@ -236,8 +236,17 @@ The relay currently provides:
 - at-least-once HTTP delivery without imposing receiver-side storage/deduplication semantics.
 
 `Delivery.PollInterval` must be at least one millisecond and no longer than the supported sender
-timer delay (about 49.7 days); `EndpointRetry.MaximumDelay` has the same upper bound. A later
-HTTP `Retry-After` time remains effective across repeated bounded waits.
+timer delay (about 49.7 days); `EndpointRetry.MaximumDelay` has the same upper bound.
+`MaximumDelay` caps both local backoff and HTTP `Retry-After`, with a default of five minutes.
+A server hint can extend local backoff up to this cap, but cannot shorten it. The cap applies
+to both delta-seconds and absolute dates, including a hint a year in the future.
+
+The built-in HTTP client limits complete response bodies to 4 KiB. A supplied client's
+`MaxResponseContentBufferSize` remains its response-body limit; the sink does not change it.
+Bodies are streamed and discarded under the size and request-time limits. A body that exceeds a
+limit or ends unsuccessfully never confirms delivery. A valid `Retry-After` received with non-204
+headers still controls failure pacing, capped by `MaximumDelay`, if reading that body fails;
+it does not confirm delivery.
 
 During normal operation, the emergency worker retries durable storage for buffered events. If
 storage fails, it sends the remaining events in that selected batch directly rather than repeat
@@ -266,8 +275,8 @@ Current behavior:
 - any process of the same application spool may send old rows from another process;
 - pending rows are not bound to the endpoint or bearer token of the process that created them;
 - the process owning the current claim sends with its own configured endpoint and bearer token;
-- non-2xx releases the claim before that process enters retry backoff, allowing another version
-  to take over; a 2xx received by the current claim owner marks the claimed rows delivered;
+- non-204 releases the claim before that process enters retry backoff, allowing another version
+  to take over; a complete HTTP 204 received by the current claim owner marks the claimed rows delivered;
 - only one sender owns a row's active claim at a time;
 - expired claims become available after process death;
 - the sending process uses its own `Delivery` and `EndpointRetry` settings;
@@ -311,9 +320,16 @@ selection cannot be coordinated at startup, that instance stays in RAM mode unti
 SerilogRelay targets a generic HTTP receiver. The endpoint is supplied by the application and is
 not persisted with individual spool rows.
 
-Any HTTP 2xx received by the current claim owner is treated as successful delivery. Non-2xx or
-transport failure keeps the rows unsent and releases the claim before process-local retry
-backoff.
+The receiver must return **204 No Content** after completing its processing of the entire batch
+under its own acceptance policy. Only this completed response confirms delivery; no response
+body or extra acknowledgment header is required. HTTP 200, 201, 202, and every other status
+leave events unacknowledged. Durable rows remain unsent and their claims are released before
+process-local retry backoff; RAM events remain in the emergency retry path.
+
+Redirects follow the HTTP handler's policy; the final response must still be 204. A login page
+returning HTTP 200 therefore cannot acknowledge delivery. Receivers that previously returned
+another successful status must change their acknowledgment to 204. The status confirms processing
+according to the receiver's policy; it does not prove remote persistence.
 
 Bearer authentication is supported with one optional opaque token:
 
@@ -345,9 +361,9 @@ The current sink design also does not introduce:
 - alternate spool storage backends or an ORM/provider abstraction;
 - a server-driven configuration/handshake protocol;
 - an application-wide retry gate or shared `Retry-After` cooldown across processes;
-- a dead-letter queue for non-2xx responses.
+- a dead-letter queue for non-204 responses.
 
-Non-2xx deliveries remain unsent for later retry or takeover by another process/version, subject
+Non-204 deliveries remain unsent for later retry or takeover by another process/version, subject
 to configured `UnsentEventMaxAge` and shared-spool capacity reclamation.
 
 ## Repository structure

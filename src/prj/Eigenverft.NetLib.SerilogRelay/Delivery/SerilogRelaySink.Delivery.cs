@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -143,8 +144,7 @@ namespace Eigenverft.NetLib.SerilogRelay
 
         private async Task WaitForSenderDelayAsync(TimeSpan delay, CancellationToken token)
         {
-            // Retry-After can be farther away than Task.Delay supports. The retry gate keeps
-            // the absolute deadline; recheck it after this bounded wait.
+            // Bound waits to the timer range and recheck the absolute retry deadline after waking.
             using var waitCancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
             Task deadline = Task.Delay(delay > MaximumSenderDelay ? MaximumSenderDelay : delay,
                 _timeProvider, waitCancellation.Token);
@@ -295,6 +295,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                 return false;
 
             bool renewingClaim = false;
+            DateTimeOffset? retryAfter = null;
             try
             {
                 LogBatchPayload payload = CreateBatchPayload(entries);
@@ -341,22 +342,27 @@ namespace Eigenverft.NetLib.SerilogRelay
                     request,
                     HttpCompletionOption.ResponseHeadersRead,
                     requestCancellation.Token).ConfigureAwait(false);
+                // A server retry hint controls failure pacing even if its body is rejected.
+                // Reading it never acknowledges delivery; success requires a complete HTTP 204 response.
+                if (resp.StatusCode != HttpStatusCode.NoContent && resp.Headers.RetryAfter is not null)
+                {
+                    if (resp.Headers.RetryAfter.Delta.HasValue)
+                    {
+                        // Cap before date arithmetic so an excessive delta cannot overflow.
+                        TimeSpan delay = resp.Headers.RetryAfter.Delta.Value;
+                        retryAfter = DateTimeOffset.UtcNow + (delay > _retryGate.MaximumDelay ? _retryGate.MaximumDelay : delay);
+                    }
+                    else if (resp.Headers.RetryAfter.Date.HasValue)
+                        retryAfter = resp.Headers.RetryAfter.Date.Value;
+                }
+
                 await DrainResponseContentAsync(resp.Content, requestCancellation.Token).ConfigureAwait(false);
-                if (resp.IsSuccessStatusCode)
+                if (resp.StatusCode == HttpStatusCode.NoContent)
                 {
                     Interlocked.Exchange(ref _lastHttpSuccessUnixMs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                     RecordEndpointDeliveryState(failed: false);
                     _retryGate.RecordSuccess();
                     return true;
-                }
-
-                DateTimeOffset? retryAfter = null;
-                if (resp.Headers.RetryAfter is not null)
-                {
-                    if (resp.Headers.RetryAfter.Delta.HasValue)
-                        retryAfter = DateTimeOffset.UtcNow + resp.Headers.RetryAfter.Delta.Value;
-                    else if (resp.Headers.RetryAfter.Date.HasValue)
-                        retryAfter = resp.Headers.RetryAfter.Date.Value;
                 }
 
                 _retryGate.RecordFailure(DateTimeOffset.UtcNow, retryAfter);
@@ -377,7 +383,7 @@ namespace Eigenverft.NetLib.SerilogRelay
             }
             catch (Exception ex)
             {
-                _retryGate.RecordFailure(DateTimeOffset.UtcNow, retryAfter: null);
+                _retryGate.RecordFailure(DateTimeOffset.UtcNow, retryAfter);
                 RecordEndpointDeliveryState(failed: true);
                 SelfLog.WriteLine("HTTP relay request failed: {0}", ex.Message);
                 return false;

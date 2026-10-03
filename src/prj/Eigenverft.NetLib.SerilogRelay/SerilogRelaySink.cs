@@ -35,7 +35,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// Configures Serilog to try local SQLite persistence first, attempt bounded volatile buffering when storage fails or rejects an event, and optionally relay events to an HTTP endpoint.
         /// </summary>
         /// <remarks>
-        /// Processes sharing one application spool may send each other's pending rows. Each new event records the originating application's version once, independently of the process that later sends it. The process that owns the current claim uses its own endpoint and bearer token. A 2xx response marks the still-owned claim delivered; non-2xx releases the claim before process-local retry backoff so another process/version may take over.
+        /// Processes sharing one application spool may send each other's pending rows. Each new event records the originating application's version once, independently of the process that later sends it. The process that owns the current claim uses its own endpoint and bearer token. Only a complete HTTP 204 response marks the still-owned claim delivered; every other status releases the claim before process-local retry backoff so another process/version may take over.
         /// </remarks>
         /// <param name="loggerConfiguration">The Serilog sink configuration.</param>
         /// <param name="endpoint">The optional HTTP endpoint used by this sink/process for batched delivery of any shared-spool rows it claims. Pending rows do not retain the endpoint of their creating process.</param>
@@ -379,7 +379,10 @@ CREATE TABLE IF NOT EXISTS {0} (
             _ownsHttpClient = options.HttpClient is null;
             _httpClient = options.HttpClient ?? new HttpClient(
                 GetHttpClientHandler(dangerousAcceptAnyServerCertificate),
-                disposeHandler: false);
+                disposeHandler: false)
+            {
+                MaxResponseContentBufferSize = 4 * 1024,
+            };
             if (!string.IsNullOrWhiteSpace(bearerToken))
                 _authorizationHeader = new AuthenticationHeaderValue("Bearer", bearerToken);
             _cts = new CancellationTokenSource();

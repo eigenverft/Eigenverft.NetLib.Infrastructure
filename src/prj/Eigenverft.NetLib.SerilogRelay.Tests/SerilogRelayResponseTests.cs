@@ -58,7 +58,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         [DataRow(false, false)]
         [DataRow(true, true)]
         [DataRow(false, true)]
-        public async Task ResponseSizeLimitAcknowledgesOnlyCompleteBodiesWithinTheLimit(bool knownLength, bool oversized)
+        public async Task ResponseSizeLimitBoundsBodiesWithoutAcknowledgingHttp200(bool knownLength, bool oversized)
         {
             int length = oversized ? 9 : 8;
             int copiedBytes = 0;
@@ -80,17 +80,17 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             await RunResponseScenarioAsync(client, new SerilogRelayOptions(), async sink =>
             {
                 bool delivered = await InvokePrivateTaskMethod<bool>(sink, "ProcessPendingAsync", true, CancellationToken.None, false);
-                Assert.AreEqual(!oversized, delivered);
+                Assert.IsFalse(delivered);
                 Assert.AreEqual(!oversized, bodyCompleted);
                 Assert.AreEqual(oversized ? (knownLength ? 0 : 4) : 8, copiedBytes);
-                Assert.AreEqual(oversized ? 1L : 0L, GetUnsentCount(GetPrivateField<string>(sink, "_connectionString")));
-                Assert.AreEqual(oversized ? 1 : 0, GetPrivateField<RetryGate>(sink, "_retryGate").ConsecutiveFailures);
+                Assert.AreEqual(1L, GetUnsentCount(GetPrivateField<string>(sink, "_connectionString")));
+                Assert.AreEqual(1, GetPrivateField<RetryGate>(sink, "_retryGate").ConsecutiveFailures);
                 Assert.IsNull(GetClaimOwnerId(GetPrivateField<string>(sink, "_connectionString")));
             });
         }
 
         [TestMethod]
-        public async Task ResponseHeadersDoNotAcknowledgeAnUnfinishedBody()
+        public async Task Http200RemainsUnacknowledgedAfterItsBodyCompletes()
         {
             var started = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             var finish = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -117,9 +117,9 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                     Assert.AreEqual(1L, GetUnsentCount(GetPrivateField<string>(sink, "_connectionString")));
                     Assert.AreEqual(0L, GetPrivateField<long>(sink, "_lastHttpSuccessUnixMs"));
                     finish.SetResult(true);
-                    Assert.IsTrue(await delivery.WaitAsync(TimeSpan.FromSeconds(5)));
-                    Assert.AreEqual(0L, GetUnsentCount(GetPrivateField<string>(sink, "_connectionString")));
-                    Assert.IsGreaterThan(0L, GetPrivateField<long>(sink, "_lastHttpSuccessUnixMs"));
+                    Assert.IsFalse(await delivery.WaitAsync(TimeSpan.FromSeconds(5)));
+                    Assert.AreEqual(1L, GetUnsentCount(GetPrivateField<string>(sink, "_connectionString")));
+                    Assert.AreEqual(0L, GetPrivateField<long>(sink, "_lastHttpSuccessUnixMs"));
                 });
             }
             finally { finish.TrySetResult(true); }
@@ -194,7 +194,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             };
             await RunResponseScenarioAsync(client, new SerilogRelayOptions(), async sink =>
             {
-                Assert.IsTrue(await InvokePrivateTaskMethod<bool>(sink, "ProcessPendingAsync", true, CancellationToken.None, false));
+                Assert.IsFalse(await InvokePrivateTaskMethod<bool>(sink, "ProcessPendingAsync", true, CancellationToken.None, false));
                 Assert.AreEqual(bodyBytes, copiedBytes);
                 Assert.IsLessThan(1024L * 1024L, allocatedBytes, "Discarding a 64 MiB body must not allocate a growing body buffer.");
             });

@@ -11,7 +11,7 @@ The relay bridges periods when an HTTP receiver is unavailable. It stores events
 
 Shutdown delivery handles the last events of a healthy application run, including batches below the preferred minimum count. It sends immediately and stops when empty or when the configured time budget expires. Outage recovery continues through the durable spool on a later run.
 
-The sender and receiver are deliberately loosely coupled. Any HTTP 2xx is the receiver's acknowledgment that the sender may release the events. The receiver owns its acceptance policy: it may persist, forward, filter, or deliberately discard an event and still acknowledge it. Acknowledgment does not require proof of remote persistence or a particular receiver package. The matching receiver's built-in EF Core handler saves the batch before acknowledgment.
+The sender and receiver are deliberately loosely coupled. Only a complete HTTP **204 No Content** is the receiver's acknowledgment that the sender may release the events. The receiver owns its acceptance policy: it may persist, forward, filter, or deliberately discard an event and still acknowledge it after processing the entire batch. No response body or extra acknowledgment header is required. Acknowledgment does not require proof of remote persistence or a particular receiver package. The matching receiver's built-in EF Core handler saves the batch before acknowledgment.
 
 ## Supported frameworks
 
@@ -202,12 +202,6 @@ configured values when it performs maintenance or reclamation:
 - `MaxPhysicalBytes` sets the SQLite page budget for the shared database, not a per-process row
   quota or a hard limit on all files. An existing larger database is not shrunk.
 
-Actively claimed unsent rows are protected from age cleanup and unsent capacity reclamation.
-After claim release or lease expiry, they become eligible again. Age cleanup runs periodically
-while the sink remains active; the configured age is an eligibility threshold rather than an
-exact deletion timestamp.
-
-`Delivery`, `EndpointRetry`, endpoint/bearer configuration, and `EmergencyMemoryBuffer` are
 `SentEventRetention` measures age since insertion into the spool (`CreatedAt`), not time since
 successful delivery. Acknowledgment does not restart this age. For example, with one-day
 retention, a row delivered after two days of backlog is eligible for removal on the next
@@ -215,6 +209,12 @@ maintenance pass. Zero deletes acknowledged rows immediately. This option does n
 unsent rows; `UnsentEventMaxAge` controls their age cleanup. Capacity reclamation may remove
 sent rows before the retention age is reached.
 
+Actively claimed unsent rows are protected from age cleanup and unsent capacity reclamation.
+After claim release or lease expiry, they become eligible again. Age cleanup runs periodically
+while the sink remains active; the configured age is an eligibility threshold rather than an
+exact deletion timestamp.
+
+`Delivery`, `EndpointRetry`, endpoint/bearer configuration, and `EmergencyMemoryBuffer` are
 runtime settings/state of one sink/process.
 `EmergencyMemoryBuffer.MaxBufferedPayloadBytes` counts estimated UTF-8 event-field bytes with
 fixed overhead, not exact JSON bytes or total process memory.
@@ -232,7 +232,7 @@ The relay currently provides:
 - byte-aware batching with a configurable 4 MiB UTF-8 JSON target, including batch metadata and escaping;
 - low-volume delivery after `MaximumBatchWait`;
 - immediate startup backlog delivery opportunity;
-- process-local exponential endpoint retry with jitter and HTTP `Retry-After` on every non-2xx response;
+- process-local exponential endpoint retry with jitter and HTTP `Retry-After` on every non-204 response;
 - process-local Emergency memory bounds of 16384 events and 64 MiB payload bytes by default;
 - direct emergency HTTP batches without a minimum count or batch wait, with separate event-count
   and JSON-size targets;
@@ -240,13 +240,15 @@ The relay currently provides:
 - at-least-once HTTP delivery without imposing receiver-side storage/deduplication semantics.
 
 `Delivery.PollInterval` must be at least one millisecond and no longer than the supported sender
-timer delay (about 49.7 days); `EndpointRetry.MaximumDelay` has the same upper bound. A later
-HTTP `Retry-After` time remains effective across repeated bounded waits.
+timer delay (about 49.7 days); `EndpointRetry.MaximumDelay` has the same upper bound.
+`MaximumDelay` caps both local backoff and HTTP `Retry-After`, with a default of five minutes.
+A server hint can extend local backoff up to this cap, but cannot shorten it. The cap applies
+to both delta-seconds and absolute dates, including a hint a year in the future.
 
 
 ## Capacity and emergency behavior
 
-Normal delivery stores events in SQLite first. A successful HTTP 2xx deletes the still-owned claimed rows immediately by default. `SentEventRetention` greater than zero explicitly opts into keeping delivered rows locally.
+Normal delivery stores events in SQLite first. A successful HTTP 204 deletes the still-owned claimed rows immediately by default. `SentEventRetention` greater than zero explicitly opts into keeping delivered rows locally.
 
 The insert capacity policy leaves room inside `MaxPhysicalBytes` for delivery claim metadata and index growth. The reserve scales with `MaximumBatchEvents` and is capped at a quarter of the configured page budget for small spools. Both normal inserts and the empty-spool capacity probe apply it.
 
@@ -262,7 +264,7 @@ The emergency worker retries durable storage during normal operation. If storage
 
 `Delivery.TargetBatchPayloadBytes` defaults to 4 MiB. The sender measures the serialized UTF-8 JSON, including escaping, commas, count digits, and batch metadata. It stops filling a batch before another event would exceed the target and releases unused claims before sending. A batch filled by bytes can be sent below `MinimumBatchEvents`; low-volume batches still use `MaximumBatchWait`.
 
-This is a batching target, not an event-size admission limit. An individual event larger than the target is sent alone and without truncation, so the target cannot strand it in the spool. The value belongs to the sender and does not negotiate or impose a receiver body limit. HTTP non-2xx responses retain the events for the existing retry policy.
+This is a batching target, not an event-size admission limit. An individual event larger than the target is sent alone and without truncation, so the target cannot strand it in the spool. The value belongs to the sender and does not negotiate or impose a receiver body limit. HTTP non-204 responses retain the events for the existing retry policy.
 
 The direct emergency HTTP path has independent count and JSON-size targets. Its JSON target likewise allows one individually oversized event to be attempted alone. RAM and spool events are never combined in one HTTP request.
 
@@ -319,14 +321,20 @@ the attempt is skipped. Receiver activity does not renew claims.
 A receiver taking 10, 30, or 60 seconds to finish its response does not extend the client timeout. An HTTP timeout records an endpoint failure, leaves durable events unacknowledged, and releases the still-owned claim for retry. If claim release fails or the process exits first, the lease provides the fallback. Only one client HTTP attempt per sink is active at a time; a timed-out server operation may still overlap later retries or attempts from other processes.
 
 Relay reads and discards the entire response body as it arrives, without buffering it as a whole.
-The client's `MaxResponseContentBufferSize` remains the response-size limit, including when the
-body length is unknown. Request, client, and shutdown timeouts cover both headers and body.
-Even received 2xx headers cannot acknowledge a response whose body stalls past the timeout or
-exceeds the size limit. A completed response on a connection kept open for HTTP keep-alive is
-already complete and can be acknowledged normally. During shutdown, the remaining shutdown
-budget may cancel a request earlier.
+The built-in client limits complete response bodies to 4 KiB. A supplied client's
+`MaxResponseContentBufferSize` remains its response-size limit, including when the body length
+is unknown; the sink does not change it. Request, client, and shutdown timeouts cover both headers and body.
+Only a complete HTTP 204 response within these limits confirms delivery. HTTP 204 carries no
+response body, and a connection kept open for HTTP keep-alive does not delay acknowledgment.
+Any response-body failure leaves the batch unacknowledged. During shutdown, the remaining
+shutdown budget may cancel a request earlier.
 
-A server can commit successfully after the client has timed out. Retries preserve `EventId` but create a new `BatchId`; the receiver owns handling repeat delivery, including any deduplication it requires. The relay cannot infer the outcome of a request without a completed 2xx response.
+A valid `Retry-After` received with non-204 headers still controls failure pacing if reading the
+body fails, including on a size-limit rejection or request timeout. The hint is capped by
+`EndpointRetry.MaximumDelay`. The batch remains unacknowledged; using the retry hint does not
+accept the failed response as a successful delivery.
+
+A server can commit successfully after the client has timed out. Retries preserve `EventId` but create a new `BatchId`; the receiver owns handling repeat delivery, including any deduplication it requires. The relay cannot infer the outcome of a request without a completed HTTP 204 response.
 
 ## Shutdown
 
@@ -351,8 +359,8 @@ Current behavior:
 - any process of the same application spool may send old rows from another process;
 - pending rows are not bound to the endpoint or bearer token of the process that created them;
 - the process owning the current claim sends with its own configured endpoint and bearer token;
-- non-2xx releases the claim before that process enters retry backoff, allowing another version
-  to take over; a 2xx received by the current claim owner marks the claimed rows delivered;
+- non-204 releases the claim before that process enters retry backoff, allowing another version
+  to take over; a complete HTTP 204 received by the current claim owner marks the claimed rows delivered;
 - only one sender owns a row's active claim at a time;
 - expired claims become available after process death;
 - the sending process uses its own `Delivery` and `EndpointRetry` settings;
@@ -396,9 +404,14 @@ selection cannot be coordinated at startup, that instance stays in RAM mode unti
 SerilogRelay targets a generic HTTP receiver. The endpoint is supplied by the application and is
 not persisted with individual spool rows.
 
-Any HTTP 2xx received by the current claim owner is treated as successful delivery. Non-2xx or
-transport failure keeps the rows unsent and releases the claim before process-local retry
-backoff.
+Only a completed **204 No Content** confirms delivery of the entire batch, for spool, emergency
+RAM, and shutdown delivery alike. HTTP 200, 201, 202, and every other status keep events
+unacknowledged. Durable rows remain unsent and their claims are released before process-local
+retry backoff; RAM events remain in the emergency retry path.
+
+Redirects follow the HTTP handler's policy; the final response must still be 204. A login page
+returning HTTP 200 therefore cannot acknowledge delivery. Receivers that previously returned
+another successful status must change their acknowledgment to 204.
 
 Bearer authentication is supported with one optional opaque token:
 
@@ -430,7 +443,7 @@ The current sink design also does not introduce:
 - alternate spool storage backends or an ORM/provider abstraction;
 - a server-driven configuration/handshake protocol;
 - an application-wide retry gate or shared `Retry-After` cooldown across processes;
-- a dead-letter queue for non-2xx responses.
+- a dead-letter queue for non-204 responses.
 
-Non-2xx deliveries remain unsent for later retry or takeover by another process/version, subject
+Non-204 deliveries remain unsent for later retry or takeover by another process/version, subject
 to configured `UnsentEventMaxAge` and shared-spool capacity reclamation.

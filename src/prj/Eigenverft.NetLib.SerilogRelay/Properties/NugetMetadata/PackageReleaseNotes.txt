@@ -5,12 +5,14 @@ Initial public SerilogRelay package.
 - Targets .NET 8 and .NET 10.
 - Adds the Serilog `.WriteTo.SerilogRelay(...)` sink for HTTP log delivery.
 - Uses one configuration method with optional grouped SerilogRelayOptions for delivery, retention, and other relay settings.
+- Requires a completed HTTP 204 No Content response to acknowledge a batch; other statuses remain eligible for retry, and redirects follow the HTTP handler's policy.
+- Limits built-in HTTP response bodies to 4 KiB and retains valid non-204 Retry-After hints when body reading fails; supplied HTTP clients keep their own size limits.
 - Persists events to a bounded local SQLite application spool before normal network delivery.
 - Reuses stable `EventId` values across retries and restarts while using `BatchId` for delivery-attempt correlation.
 - Supports shared application spools across multiple processes with atomic short-lived delivery claims and takeover after process failure.
 - Allows surviving or newer processes to drain backlog created by another process of the same application.
 - Provides configurable sent retention, optional unsent maximum age, and physical spool-size limits.
-- Adds process-local exponential endpoint retry with jitter and optional HTTP `Retry-After` handling on every non-2xx response.
+- Adds process-local exponential endpoint retry with jitter and optional HTTP `Retry-After` handling on every non-204 response, capped by EndpointRetry.MaximumDelay (five minutes by default).
 - Deletes successfully acknowledged spool rows immediately by default; sent retention remains an explicit opt-in.
 - Uses the complete spool schema for capacity probes and rolls back reclaimed rows when replacement fails.
 - Adds a bounded emergency memory buffer for persistence failures and capacity rejection, evicting the oldest queued events when necessary.
@@ -19,5 +21,5 @@ Initial public SerilogRelay package.
 - Uses normal platform TLS certificate validation by default; accepting any server certificate requires an explicit dangerous opt-in.
 - Supports an optional opaque bearer token sent as `Authorization: Bearer <token>`.
 - Includes `ApplicationId`, `MachineId`, and `ProcessId` producer metadata in the relay payload; normalized ApplicationId values are limited to 256 characters.
-- Uses at-least-once HTTP delivery semantics: non-2xx/transport failures remain pending for later retry or takeover.
+- Uses at-least-once HTTP delivery semantics: non-204/transport failures remain pending for later retry or takeover.
 - Keeps receiver persistence, duplicate presentation, and server-side storage policy outside the sink contract.

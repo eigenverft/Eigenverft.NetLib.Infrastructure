@@ -37,6 +37,8 @@ namespace Eigenverft.NetLib.SerilogRelay
             _nextDouble = nextDouble ?? Random.Shared.NextDouble;
         }
 
+        internal TimeSpan MaximumDelay => _options.MaximumDelay;
+
         internal int ConsecutiveFailures
         {
             get
@@ -121,7 +123,8 @@ namespace Eigenverft.NetLib.SerilogRelay
                     && retryAfter.HasValue
                     && retryAfter.Value > nextAttempt)
                 {
-                    nextAttempt = retryAfter.Value;
+                    DateTimeOffset latestAttempt = now + _options.MaximumDelay;
+                    nextAttempt = retryAfter.Value > latestAttempt ? latestAttempt : retryAfter.Value;
                 }
 
                 _nextAttemptAt = nextAttempt;

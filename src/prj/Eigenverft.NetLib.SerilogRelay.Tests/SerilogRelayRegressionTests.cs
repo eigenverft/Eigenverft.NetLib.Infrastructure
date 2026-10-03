@@ -101,7 +101,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                     Assert.AreEqual(clock.GetUtcNow().AddSeconds(30).ToUnixTimeMilliseconds(), ReadLease(connectionString));
                     ClaimedLogBatch competing = await InvokePrivateTaskMethod<ClaimedLogBatch>(second, "ClaimPendingAsync", 1, token);
                     Assert.AreEqual(0, competing.Entries.Count);
-                    return new HttpResponseMessage(HttpStatusCode.OK);
+                    return new HttpResponseMessage(HttpStatusCode.NoContent);
                 }));
                 SetPrivateField(first, "_httpClient", client);
                 SetPrivateField(first, "_endpoint", "http://localhost/relay");
@@ -132,7 +132,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 ClaimedLogBatch competing = await InvokePrivateTaskMethod<ClaimedLogBatch>(second, "ClaimPendingAsync", 1, CancellationToken.None);
                 int requests = 0;
                 using var client = new HttpClient(new RegressionHttpHandler((_, _) =>
-                { requests++; return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)); }));
+                { requests++; return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent)); }));
                 SetPrivateField(first, "_httpClient", client);
                 SetPrivateField(first, "_endpoint", "http://localhost/relay");
                 Assert.IsFalse(await InvokePrivateTaskMethod<bool>(first, "SendBatchAsync", claimed.Entries, CancellationToken.None, claimed));
@@ -166,7 +166,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 ClaimedLogBatch claimed = await InvokePrivateTaskMethod<ClaimedLogBatch>(sink, "ClaimPendingAsync", 1, CancellationToken.None);
                 int requests = 0;
                 using var client = new HttpClient(new RegressionHttpHandler(async (_, token) =>
-                { requests++; await Task.Delay(Timeout.Infinite, token); return new HttpResponseMessage(HttpStatusCode.OK); }));
+                { requests++; await Task.Delay(Timeout.Infinite, token); return new HttpResponseMessage(HttpStatusCode.NoContent); }));
                 SetPrivateField(sink, "_httpClient", client);
                 SetPrivateField(sink, "_endpoint", "http://localhost/relay");
                 SetPrivateField(sink, "_timeProvider", new DelayedLeaseClock(TimeSpan.FromSeconds(delaySeconds)));

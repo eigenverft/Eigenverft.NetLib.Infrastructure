@@ -202,7 +202,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 using var client = new HttpClient(new RegressionHttpHandler(async (request, token) =>
                 {
                     sentBody = await request.Content!.ReadAsStringAsync(token);
-                    return new HttpResponseMessage(HttpStatusCode.OK);
+                    return new HttpResponseMessage(HttpStatusCode.NoContent);
                 }));
                 sink = new SerilogRelaySink(connectionString, null, new SerilogRelayOptions { HttpClient = client });
                 await StopRelayWorkers(sink);
@@ -260,7 +260,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 {
                     requests++;
                     InvokePrivateMethod<object?>(sink!, "MarkSpoolUnavailable", new IOException("concurrent storage failure"));
-                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
                 }));
                 var options = new SerilogRelayOptions { HttpClient = client };
                 options.Delivery.MinimumBatchEvents = 1;
