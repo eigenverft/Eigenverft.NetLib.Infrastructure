@@ -1,3 +1,9 @@
+Current changes
+
+- Limits new effective ApplicationId values to 255 ASCII characters. Longer normalized IDs retain their first 189 characters in a reserved representation with the complete normalized ID's lowercase SHA-256 hash.
+- Limits configured and entry-assembly ApplicationVersion values to 255 UTF-16 code units without splitting surrogate pairs.
+- Keeps historical spool metadata unchanged. Existing 256-character IDs now resolve to a different effective identity and default spool directory; coordinate upgrades with receivers enforcing the new limit.
+
 0.1.0
 
 Initial public SerilogRelay package.
@@ -20,7 +26,6 @@ Initial public SerilogRelay package.
 - Adds SQLite corruption quarantine/recovery and recreates the spool when corruption is detected.
 - Uses normal platform TLS certificate validation by default; accepting any server certificate requires an explicit dangerous opt-in.
 - Supports an optional opaque bearer token sent as `Authorization: Bearer <token>`.
-- Includes `ApplicationId`, `MachineId`, and `ProcessId` producer metadata in the relay payload; effective ApplicationId values are limited to 255 ASCII characters; longer normalized IDs retain a readable prefix and the complete ID's SHA-256 hash.
-- Records the event creator's ApplicationVersion once at startup, trimming long assembly or configured versions to 255 UTF-16 code units without splitting surrogate pairs; older spool rows retain their stored metadata.
+- Includes `ApplicationId`, `MachineId`, and `ProcessId` producer metadata in the relay payload; normalized ApplicationId values are limited to 256 characters.
 - Uses at-least-once HTTP delivery semantics: non-204/transport failures remain pending for later retry or takeover.
 - Keeps receiver persistence, duplicate presentation, and server-side storage policy outside the sink contract.

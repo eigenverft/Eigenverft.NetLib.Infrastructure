@@ -274,10 +274,12 @@ At shutdown, any already active normal request finishes first. Direct RAM batche
 afterward, separate claimed spool batches are sent.
 RAM and spool events are not combined in one HTTP batch.
 
-The matching receiver defaults to accepting 256 events per request. It therefore accepts
-both sender count defaults (100 spool / 256 emergency), including during shutdown, without
-an options override. If either sender count maximum changes, keep the receiver maximum at
-least as large as both. Host/proxy byte limits and request timeouts remain independent.
+The accompanying receiver source update defaults to accepting 256 events per request,
+covering both sender count defaults (100 spool / 256 emergency), including during shutdown.
+Receiver package `1.0.0.8` still defaults to 100: configure `MaximumBatchEvents = 256` when
+using that package. The override becomes unnecessary after installing the receiver update
+with the 256-event default. If either sender count maximum changes, keep the receiver maximum
+at least as large as both. Host/proxy byte limits and request timeouts remain independent.
 
 
 ## Multi-process coordination
