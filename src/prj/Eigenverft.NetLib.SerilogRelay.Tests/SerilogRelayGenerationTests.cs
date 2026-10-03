@@ -19,10 +19,10 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             Assert.AreEqual("CON", directoryName.Invoke(null, new object[] { "CON", false }));
             string reserved = (string)directoryName.Invoke(null, new object[] { "CON", true })!;
             Assert.AreEqual(65, reserved.Length); Assert.IsTrue(reserved.StartsWith('_'));
-            string longId = new string('a', 256);
-            string hashed = (string)directoryName.Invoke(null, new object[] { longId, false })!;
-            Assert.AreEqual(65, hashed.Length);
-            Assert.AreEqual(hashed, directoryName.Invoke(null, new object[] { longId, true }));
+            string longId = LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(new string('a', 256));
+            Assert.AreEqual(255, longId.Length);
+            Assert.AreEqual(longId, directoryName.Invoke(null, new object[] { longId, false }));
+            Assert.AreEqual(longId, directoryName.Invoke(null, new object[] { longId, true }));
             Assert.AreEqual("app", directoryName.Invoke(null, new object[] { "app", true }));
 
             string directory = CreateTemporaryDirectory();

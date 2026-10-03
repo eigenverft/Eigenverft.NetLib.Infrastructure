@@ -90,9 +90,9 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 "1.2.3+commit");
             Assert.AreEqual("1.2.3+commit", SerilogRelaySink.ResolveApplicationVersion(null, withInformationalVersion));
             Assert.AreEqual("manual", SerilogRelaySink.ResolveApplicationVersion(" manual ", withInformationalVersion));
-            Assert.AreEqual(new string('v', 256), SerilogRelaySink.ResolveApplicationVersion(new string('v', 256), null));
+            Assert.AreEqual(new string('v', 255), SerilogRelaySink.ResolveApplicationVersion(new string('v', 255), null));
             Assert.ThrowsExactly<ArgumentException>(() => SerilogRelaySink.ResolveApplicationVersion("  ", null));
-            Assert.ThrowsExactly<ArgumentException>(() => SerilogRelaySink.ResolveApplicationVersion(new string('v', 257), null));
+            Assert.AreEqual(new string('v', 255), SerilogRelaySink.ResolveApplicationVersion(new string('v', 256), null));
 
             Assembly withoutInformationalVersion = CreateAssembly(new Version(4, 5, 6, 7), null);
             Assert.AreEqual("4.5.6.7", SerilogRelaySink.ResolveApplicationVersion(null, withoutInformationalVersion));
@@ -101,9 +101,31 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             Assert.IsNull(SerilogRelaySink.ResolveApplicationVersion(null, null));
             Assert.AreEqual("0.0.0.0", SerilogRelaySink.ResolveApplicationVersion(null, CreateAssembly(null, null)));
             Assert.IsNull(SerilogRelaySink.ResolveApplicationVersion(null, new VersionlessAssembly()));
-            Assert.ThrowsExactly<InvalidOperationException>(() => SerilogRelaySink.ResolveApplicationVersion(
+            Assert.AreEqual(new string('v', 255), SerilogRelaySink.ResolveApplicationVersion(
                 null,
                 CreateAssembly(new Version(1, 0), new string('v', 257))));
+            Assert.AreEqual("trimmed", SerilogRelaySink.ResolveApplicationVersion(
+                null, CreateAssembly(new Version(1, 0), new string(' ', 300) + "trimmed ")));
+        }
+
+        [TestMethod]
+        [DataRow(253, false)]
+        [DataRow(254, false)]
+        [DataRow(255, false)]
+        [DataRow(253, true)]
+        [DataRow(254, true)]
+        [DataRow(255, true)]
+        public void ApplicationVersionTruncationKeepsSurrogatePairsIntact(int prefixLength, bool fromAssembly)
+        {
+            string prefix = new string('v', prefixLength);
+            string input = prefix + "\U0001F600suffix";
+            string expected = prefixLength == 253 ? prefix + "\U0001F600" : prefix;
+            string? actual = fromAssembly
+                ? SerilogRelaySink.ResolveApplicationVersion(null, CreateAssembly(new Version(1, 0), input))
+                : SerilogRelaySink.ResolveApplicationVersion(input, null);
+
+            Assert.AreEqual(expected, actual);
+            Assert.IsTrue(actual!.Length <= 255);
         }
 
         [TestMethod]

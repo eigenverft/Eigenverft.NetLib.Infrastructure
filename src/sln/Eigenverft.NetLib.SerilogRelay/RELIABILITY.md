@@ -90,10 +90,23 @@ For example, `Payroll/Worker` and `Payroll:Worker` both become `Payroll_Worker`:
 the same logical application and share the default spool. Choose distinct normalized IDs for
 separate applications, and ensure their resolved spool paths are distinct.
 
+The effective `ApplicationId` never exceeds 255 ASCII characters. Normalized IDs of at
+most 255 characters stay unchanged. Longer IDs become `_` + their first 189 normalized
+characters + `_` + the lowercase SHA-256 hash of the complete normalized ID (64 hexadecimal
+characters). The result is exactly 255 ASCII characters. The leading `_` reserves this
+representation because ordinary normalized IDs cannot start with it. Long IDs with the
+same readable prefix therefore retain distinct hash suffixes.
+
+The effective ID is recorded on each new event and used as the default application directory
+name. Reserved Windows device names still use `_` followed by their SHA-256 hash as the
+directory name while retaining their event identity. Ordinary IDs keep their existing paths.
+An absolute `spoolDirectory` does not depend on the OS user-data directory; default and
+relative paths can create a user-data directory that does not yet exist.
+
 The spool records `ApplicationId` and `ProcessId` on every event. New rows also record the
 originating application's `ApplicationVersion`, resolved once from the entry assembly when the
 sink is created or supplied through the options. Existing rows retain a null version after the
-schema upgrade. A later sender does not substitute its own version for an older row.
+schema upgrade. New versions are trimmed to at most 255 UTF-16 code units without splitting a surrogate pair. A later sender does not substitute its own version for an older row.
 `ProcessId` identifies which OS process originally created a row.
 
 Multiple active sinks can open and persist into the same file-backed spool. There is no

@@ -50,12 +50,18 @@ separate applications, and ensure their resolved spool paths are distinct.
 
 Processes of the same logical application therefore share the same default spool path.
 
-The normalized logical `ApplicationId` accepts up to 256 characters and stays unchanged in
-events. Longer values fail during configuration rather than being truncated. IDs longer than
-a 255-character filesystem component, or reserved Windows device names,
-use `_` followed by their SHA-256 hash as the application directory name. Ordinary IDs retain
-their existing directory names. An absolute `spoolDirectory` does not depend on the OS user-data
-directory; default and relative paths can create a user-data directory that does not yet exist.
+The effective `ApplicationId` never exceeds 255 ASCII characters. Normalized IDs of at
+most 255 characters stay unchanged. Longer IDs become `_` + their first 189 normalized
+characters + `_` + the lowercase SHA-256 hash of the complete normalized ID (64 hexadecimal
+characters). The result is exactly 255 ASCII characters. The leading `_` reserves this
+representation because ordinary normalized IDs cannot start with it. Long IDs with the
+same readable prefix therefore retain distinct hash suffixes.
+
+The effective ID is recorded on each new event and used as the default application directory
+name. Reserved Windows device names still use `_` followed by their SHA-256 hash as the
+directory name while retaining their event identity. Ordinary IDs keep their existing paths.
+An absolute `spoolDirectory` does not depend on the OS user-data directory; default and
+relative paths can create a user-data directory that does not yet exist.
 
 Multiple active sinks can open and persist into that spool. Rows contain `ProcessId`, so their
 originating OS process is visible, but rows are not restricted to being sent by their original
@@ -71,8 +77,15 @@ needed. A generic host can override it with `SerilogRelayOptions.ApplicationVers
 The value is stored on each event, including emergency-memory events, so a newer process that
 sends older spool rows does not replace their origin version. Rows created before this field was
 added have no version, and their HTTP payload omits `applicationVersion`.
-The resolved version is limited to 256 characters. Longer values fail sink configuration instead
-of being truncated, preserving version and commit suffixes.
+Surrounding whitespace is removed. Versions longer than 255 UTF-16 code units retain their
+prefix without splitting a Unicode surrogate pair, for both assembly metadata and explicit
+overrides. An explicit blank override remains invalid. Shortening can remove a trailing
+commit suffix; configure a shorter version if that suffix must be retained.
+
+This 255-character contract applies to new events. Existing spool rows keep their stored
+identity and version. Older 256-character IDs now resolve to a different effective identity
+and default spool directory. A receiver enforcing the new limit rejects historical
+256-character values; coordinate package upgrades and drain incompatible backlog beforehand.
 To retain this metadata with the matching receiver, use its updated contract. An older receiver
 can acknowledge a batch while ignoring the new field.
 
@@ -267,6 +280,11 @@ The emergency worker retries durable storage during normal operation. If storage
 This is a batching target, not an event-size admission limit. An individual event larger than the target is sent alone and without truncation, so the target cannot strand it in the spool. The value belongs to the sender and does not negotiate or impose a receiver body limit. HTTP non-204 responses retain the events for the existing retry policy.
 
 The direct emergency HTTP path has independent count and JSON-size targets. Its JSON target likewise allows one individually oversized event to be attempted alone. RAM and spool events are never combined in one HTTP request.
+
+The matching receiver defaults to accepting 256 events per request. It therefore accepts
+both sender count defaults (100 spool / 256 emergency), including during shutdown, without
+an options override. If either sender count maximum changes, keep the receiver maximum at
+least as large as both. Host/proxy byte limits and request timeouts remain independent.
 
 ## HTTP transport
 

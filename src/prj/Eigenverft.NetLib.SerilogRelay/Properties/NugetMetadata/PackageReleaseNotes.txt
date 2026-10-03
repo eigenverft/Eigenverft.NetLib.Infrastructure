@@ -20,6 +20,7 @@ Initial public SerilogRelay package.
 - Adds SQLite corruption quarantine/recovery and recreates the spool when corruption is detected.
 - Uses normal platform TLS certificate validation by default; accepting any server certificate requires an explicit dangerous opt-in.
 - Supports an optional opaque bearer token sent as `Authorization: Bearer <token>`.
-- Includes `ApplicationId`, `MachineId`, and `ProcessId` producer metadata in the relay payload; normalized ApplicationId values are limited to 256 characters.
+- Includes `ApplicationId`, `MachineId`, and `ProcessId` producer metadata in the relay payload; effective ApplicationId values are limited to 255 ASCII characters; longer normalized IDs retain a readable prefix and the complete ID's SHA-256 hash.
+- Records the event creator's ApplicationVersion once at startup, trimming long assembly or configured versions to 255 UTF-16 code units without splitting surrogate pairs; older spool rows retain their stored metadata.
 - Uses at-least-once HTTP delivery semantics: non-204/transport failures remain pending for later retry or takeover.
 - Keeps receiver persistence, duplicate presentation, and server-side storage policy outside the sink contract.

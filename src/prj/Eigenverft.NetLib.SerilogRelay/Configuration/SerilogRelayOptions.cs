@@ -13,8 +13,9 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <summary>
         /// Gets or sets the version of the application that creates new events. Null resolves the
         /// entry assembly's informational version once when the sink is created, falling back to
-        /// its assembly version. The resolved value must not exceed 256 characters; it is never
-        /// truncated. Existing spool rows keep their original version.
+        /// its assembly version. Surrounding whitespace is removed, and values longer than 255
+        /// UTF-16 code units keep their prefix without splitting a surrogate pair. An explicit
+        /// blank value is invalid. Existing spool rows keep their original version.
         /// </summary>
         public string? ApplicationVersion { get; set; }
 

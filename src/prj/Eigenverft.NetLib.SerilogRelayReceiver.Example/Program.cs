@@ -37,7 +37,8 @@ namespace Eigenverft.NetLib.SerilogRelayReceiver.Example
                 await database.Database.EnsureCreatedAsync();
             }
 
-            // Accept both default spool batches (100) and emergency RAM batches (256).
+            // The pinned receiver package predates the compatible 256-event default.
+            // Remove this override when updating to the receiver release with that default.
             app.MapSerilogRelayReceiverEntityFrameworkCore<LoggingDbContext>(
                 "/api/v1/logs",
                 options => options.MaximumBatchEvents = 256);

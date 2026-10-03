@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -462,15 +463,64 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         }
 
         [TestMethod]
-        public void ApplicationIdAccepts256CharactersAndRejectsLongerNormalizedIdentity()
+        public void ApplicationIdKeeps255CharactersUnchanged()
         {
-            string maximumLengthId = new string('a', 256);
+            string maximumLengthId = new string('a', 255);
             Assert.AreEqual(maximumLengthId, LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(maximumLengthId));
             Assert.AreEqual(maximumLengthId, LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId($" {maximumLengthId} "));
+        }
 
-            ArgumentException exception = Assert.ThrowsExactly<ArgumentException>(
-                () => LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(new string('a', 257)));
-            Assert.AreEqual("applicationId", exception.ParamName);
+        [TestMethod]
+        [DataRow(256)]
+        [DataRow(257)]
+        [DataRow(1000)]
+        public void LongApplicationIdKeepsReadablePrefixAndHashesCompleteNormalizedValue(int length)
+        {
+            string normalized = new string('a', length - 1) + "b";
+            string expected = "_" + normalized[..189] + "_"
+                + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
+            string resolved = LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(normalized);
+
+            Assert.AreEqual(expected, resolved);
+            Assert.AreEqual(255, Encoding.UTF8.GetByteCount(resolved));
+            Assert.AreEqual(resolved, LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(" ._" + normalized + "_. "));
+            Assert.AreNotEqual(resolved, LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(new string('a', length)));
+            Assert.AreNotEqual(resolved, LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(resolved));
+
+            string path = LoggerConfigurationSerilogRelayExtensions.ResolveSpoolPath(null, "relay.db", normalized, Path.GetTempPath());
+            Assert.AreEqual(resolved, Path.GetFileName(Path.GetDirectoryName(path)));
+        }
+
+        [TestMethod]
+        public async Task EffectiveApplicationIdentityAndVersionArePersistedOnNewEvents()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
+            string applicationId = new string('a', 300);
+            var options = new SerilogRelayOptions
+            {
+                ApplicationVersion = new string('v', 254) + "\U0001F600suffix",
+            };
+
+            try
+            {
+                await using var sink = new SerilogRelaySink(connectionString, null, options, applicationId);
+                sink.Emit(CreateLogEvent("bounded application metadata"));
+
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT ApplicationId, ApplicationVersion FROM SerilogRelayEvents;";
+                using SqliteDataReader reader = command.ExecuteReader();
+                Assert.IsTrue(reader.Read());
+                Assert.AreEqual(LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(applicationId), reader.GetString(0));
+                Assert.AreEqual(new string('v', 254), reader.GetString(1));
+                Assert.IsFalse(reader.Read());
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(directory);
+            }
         }
 
         [TestMethod]

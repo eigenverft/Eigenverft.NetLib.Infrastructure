@@ -28,7 +28,7 @@ namespace Eigenverft.NetLib.SerilogRelay
     /// </summary>
     public static class LoggerConfigurationSerilogRelayExtensions
     {
-        private const int MaximumApplicationIdLength = 256;
+        private const int MaximumApplicationIdLength = 255;
         private const string DefaultSpoolFileName = "SerilogRelay.db";
 
         /// <summary>
@@ -49,7 +49,10 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// Defaults to the entry-assembly name. Runs of characters outside A-Z, a-z, 0-9, dot, underscore,
         /// and hyphen become one underscore; leading/trailing dots and underscores are removed.
         /// An empty normalized result becomes "Application". Different inputs with the same normalized
-        /// value identify the same logical application. The normalized identity must not exceed 256 characters.
+        /// value identify the same logical application. Values longer than 255 characters become
+        /// an underscore, their first 189 characters, another underscore, and their full SHA-256
+        /// hash in lowercase hexadecimal. This effective identity is recorded on events and used
+        /// by the default spool directory; it is resolved during sink creation, not per event.
         /// </param>
         /// <param name="dangerousAcceptAnyServerCertificate">When <see langword="true"/>, disables server-certificate validation for relay HTTP requests. Defaults to <see langword="false"/> and should only be enabled deliberately for trusted private/development infrastructure.</param>
         /// <param name="bearerToken">Optional raw bearer token sent as <c>Authorization: Bearer &lt;token&gt;</c> on this sink/process's HTTP requests for claimed spool rows and direct emergency batches. The token is not persisted with spool rows. Null, empty, or whitespace disables the header.</param>
@@ -150,15 +153,14 @@ namespace Eigenverft.NetLib.SerilogRelay
 
         private static string ResolveApplicationSpoolDirectoryName(string applicationId, bool isWindows)
         {
-            // The logical ID may contain 256 ASCII characters; a filesystem component may not.
             bool reservedWindowsName = isWindows
                 && Regex.IsMatch(applicationId, @"^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)",
                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-            if (applicationId.Length <= 255 && !reservedWindowsName)
+            if (!reservedWindowsName)
                 return applicationId;
 
-            // Normalized IDs cannot start with '_', so the hash namespace cannot collide
-            // with an ordinary ID's directory. The event's ApplicationId stays unchanged.
+            // Ordinary normalized IDs cannot start with '_'; shortened IDs have 255 characters.
+            // Neither can overlap this 65-character reserved-name directory. The event ID stays unchanged.
             return "_" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(applicationId)))
                 .ToLowerInvariant();
         }
@@ -171,7 +173,13 @@ namespace Eigenverft.NetLib.SerilogRelay
 
             string normalized = Regex.Replace(candidate, "[^A-Za-z0-9._-]+", "_").Trim('.', '_');
             if (normalized.Length > MaximumApplicationIdLength)
-                throw new ArgumentException("ApplicationId must not exceed 256 characters after normalization.", nameof(applicationId));
+            {
+                // Reserve a prefix that ordinary normalized IDs cannot have. Hash the complete
+                // identity so long IDs with the same readable prefix keep distinct spools.
+                return "_" + normalized[..189] + "_"
+                    + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)))
+                        .ToLowerInvariant();
+            }
 
             return string.IsNullOrWhiteSpace(normalized) ? "Application" : normalized;
         }
@@ -201,7 +209,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         };
 
         private const int MaxBusyRetries = 5;
-        private const int MaximumApplicationVersionLength = 256;
+        private const int MaximumApplicationVersionLength = 255;
         private const int BusyRetryDelayMs = 100;
         private const int EmergencyRetryDelayMs = 250;
         private static readonly TimeSpan MaximumSenderDelay = TimeSpan.FromMilliseconds(uint.MaxValue - 1L);
@@ -562,26 +570,33 @@ CREATE TABLE IF NOT EXISTS {0} (
 
         internal static string? ResolveApplicationVersion(string? configuredVersion, Assembly? entryAssembly)
         {
+            string? version;
             if (configuredVersion is not null)
             {
-                string version = configuredVersion.Trim();
-                if (version.Length == 0 || version.Length > MaximumApplicationVersionLength)
-                    throw new ArgumentException("ApplicationVersion must contain 1 to 256 characters.", nameof(configuredVersion));
-                return version;
+                version = configuredVersion.Trim();
+                if (version.Length == 0)
+                    throw new ArgumentException("ApplicationVersion must not be blank.", nameof(configuredVersion));
+            }
+            else
+            {
+                if (entryAssembly is null)
+                    return null;
+
+                string? informationalVersion = entryAssembly
+                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                    .InformationalVersion;
+                version = !string.IsNullOrWhiteSpace(informationalVersion)
+                    ? informationalVersion.Trim()
+                    : entryAssembly.GetName().Version?.ToString();
             }
 
-            if (entryAssembly is null)
-                return null;
+            if (version is null || version.Length <= MaximumApplicationVersionLength)
+                return version;
 
-            string? informationalVersion = entryAssembly
-                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-                .InformationalVersion;
-            string? versionFromAssembly = !string.IsNullOrWhiteSpace(informationalVersion)
-                ? informationalVersion
-                : entryAssembly.GetName().Version?.ToString();
-            if (versionFromAssembly?.Length > MaximumApplicationVersionLength)
-                throw new InvalidOperationException("Entry-assembly ApplicationVersion exceeds 256 characters; configure a shorter ApplicationVersion.");
-            return versionFromAssembly;
+            int length = MaximumApplicationVersionLength;
+            if (char.IsHighSurrogate(version[length - 1]))
+                length--;
+            return version[..length];
         }
 
 
