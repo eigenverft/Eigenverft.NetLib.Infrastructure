@@ -37,7 +37,10 @@ namespace Eigenverft.NetLib.SerilogRelayReceiver.Example
                 await database.Database.EnsureCreatedAsync();
             }
 
-            app.MapSerilogRelayReceiverEntityFrameworkCore<LoggingDbContext>("/api/v1/logs");
+            // Accept both default spool batches (100) and emergency RAM batches (256).
+            app.MapSerilogRelayReceiverEntityFrameworkCore<LoggingDbContext>(
+                "/api/v1/logs",
+                options => options.MaximumBatchEvents = 256);
 
             // Local-only inspection endpoint for the demo.
             app.MapGet("/demo/events", async (IDbContextFactory<LoggingDbContext> factory) =>

@@ -21,3 +21,5 @@ Inspect the stored message in the second terminal:
 ```
 
 The result contains `Hello from the example`. Both programs use loopback without authentication. These projects are examples and are not packed or published.
+
+The receiver accepts up to 256 events per batch and acknowledges successful storage with HTTP 204. Receiver package `1.0.0.8` accepts the sender's additional `ApplicationVersion` field but does not persist or expose it.
