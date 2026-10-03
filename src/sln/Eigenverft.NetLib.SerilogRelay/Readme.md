@@ -41,6 +41,14 @@ Without overrides, the durable spool is application based:
 <LocalApplicationData>/Eigenverft/SerilogRelay/<ApplicationId>/SerilogRelay.db
 ```
 
+`ApplicationId` is normalized before it is recorded on events or used by the default spool path.
+After trimming surrounding whitespace, each run of characters outside `A-Z`, `a-z`, `0-9`, `.`,
+`_`, and `-` becomes one `_`; leading and trailing `.` and `_` are removed. An empty result
+becomes `Application`. Without an explicit value, the entry-assembly name is used.
+For example, `Payroll/Worker` and `Payroll:Worker` both become `Payroll_Worker`: they identify
+the same logical application and share the default spool. Choose distinct normalized IDs for
+separate applications, and ensure their resolved spool paths are distinct.
+
 Processes of the same logical application therefore share the same default spool path.
 
 The normalized logical `ApplicationId` accepts up to 256 characters and stays unchanged in
@@ -191,6 +199,13 @@ while the sink remains active; the configured age is an eligibility threshold ra
 exact deletion timestamp.
 
 `Delivery`, `EndpointRetry`, endpoint/bearer configuration, and `EmergencyMemoryBuffer` are
+`SentEventRetention` measures age since insertion into the spool (`CreatedAt`), not time since
+successful delivery. Acknowledgment does not restart this age. For example, with one-day
+retention, a row delivered after two days of backlog is eligible for removal on the next
+maintenance pass. Zero deletes acknowledged rows immediately. This option does not expire
+unsent rows; `UnsentEventMaxAge` controls their age cleanup. Capacity reclamation may remove
+sent rows before the retention age is reached.
+
 runtime settings/state of one sink/process.
 `EmergencyMemoryBuffer.MaxBufferedPayloadBytes` counts estimated UTF-8 event-field bytes with
 fixed overhead, not exact JSON bytes or total process memory.

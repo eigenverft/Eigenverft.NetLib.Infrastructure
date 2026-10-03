@@ -106,7 +106,10 @@ namespace Eigenverft.NetLib.SerilogRelay
     public sealed class ApplicationSpoolOptions
     {
         /// <summary>
-        /// Gets or sets optional retention for successfully delivered events. Zero deletes acknowledged events immediately.
+        /// Gets or sets the age since spool insertion (CreatedAt) at which successfully delivered events
+        /// become eligible for retention cleanup. Acknowledgment does not restart the age; an older backlog
+        /// row can be removed on the next maintenance pass after delivery. Zero deletes acknowledged events
+        /// immediately. Capacity reclamation may remove sent rows earlier.
         /// This process applies the value during spool-wide maintenance; cleanup is not limited to rows created by this process.
         /// </summary>
         public TimeSpan SentEventRetention { get; set; } = TimeSpan.Zero;

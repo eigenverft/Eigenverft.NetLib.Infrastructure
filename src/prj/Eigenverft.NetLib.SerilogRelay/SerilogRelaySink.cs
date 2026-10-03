@@ -41,7 +41,13 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// <param name="endpoint">The optional HTTP endpoint used by this sink/process for batched delivery of any shared-spool rows it claims. Pending rows do not retain the endpoint of their creating process.</param>
         /// <param name="spoolDirectory">Optional spool directory. Relative paths are resolved below the application-specific default directory.</param>
         /// <param name="spoolFileName">Optional spool filename. Defaults to <c>SerilogRelay.db</c>.</param>
-        /// <param name="applicationId">Optional application identity used by the default spool directory. Defaults to the entry-assembly name. The normalized identity must not exceed 256 characters.</param>
+        /// <param name="applicationId">
+        /// Optional logical application identity recorded on events and used by the default spool directory.
+        /// Defaults to the entry-assembly name. Runs of characters outside A-Z, a-z, 0-9, dot, underscore,
+        /// and hyphen become one underscore; leading/trailing dots and underscores are removed.
+        /// An empty normalized result becomes "Application". Different inputs with the same normalized
+        /// value identify the same logical application. The normalized identity must not exceed 256 characters.
+        /// </param>
         /// <param name="dangerousAcceptAnyServerCertificate">When <see langword="true"/>, disables server-certificate validation for relay HTTP requests. Defaults to <see langword="false"/> and should only be enabled deliberately for trusted private/development infrastructure.</param>
         /// <param name="minimumBatchSize">The preferred minimum count of claimable spool events for normal background delivery; startup backlog, batch wait, and shutdown can bypass it.</param>
         /// <param name="maximumBatchSize">The maximum count in a claimed-spool HTTP batch. Direct emergency batches have a separate limit in the options overload.</param>

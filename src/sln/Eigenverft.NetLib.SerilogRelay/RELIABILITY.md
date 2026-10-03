@@ -82,6 +82,14 @@ The default file-backed spool path is application based:
 Therefore multiple processes of the same logical application resolve to the same durable spool
 unless the caller overrides the spool path.
 
+`ApplicationId` is normalized before it is recorded on events or used by the default spool path.
+After trimming surrounding whitespace, each run of characters outside `A-Z`, `a-z`, `0-9`, `.`,
+`_`, and `-` becomes one `_`; leading and trailing `.` and `_` are removed. An empty result
+becomes `Application`. Without an explicit value, the entry-assembly name is used.
+For example, `Payroll/Worker` and `Payroll:Worker` both become `Payroll_Worker`: they identify
+the same logical application and share the default spool. Choose distinct normalized IDs for
+separate applications, and ensure their resolved spool paths are distinct.
+
 The spool records `ApplicationId` and `ProcessId` on every event. New rows also record the
 originating application's `ApplicationVersion`, resolved once from the entry assembly when the
 sink is created or supplied through the options. Existing rows retain a null version after the
@@ -108,6 +116,13 @@ Consequently:
   process sharing the spool;
 - capacity reclamation may reclaim eligible rows created by any process;
 - row origin / `ProcessId` does not create a retention or capacity quota boundary.
+
+`SentEventRetention` measures age since insertion into the spool (`CreatedAt`), not time since
+successful delivery. Acknowledgment does not restart this age. For example, with one-day
+retention, a row delivered after two days of backlog is eligible for removal on the next
+maintenance pass. Zero deletes acknowledged rows immediately. This option does not expire
+unsent rows; `UnsentEventMaxAge` controls their age cleanup. Capacity reclamation may remove
+sent rows before the retention age is reached.
 
 Active delivery claims are an exception: an unsent row with a still-active claim is not removed
 by `UnsentEventMaxAge` cleanup or unsent capacity reclamation. Once that claim is released or

@@ -14,7 +14,8 @@ namespace Eigenverft.NetLib.SerilogRelay
     public partial class SerilogRelaySink
     {
         /// <summary>
-        /// Deletes sent entries older than the configured retention and optionally expires unsent entries.
+        /// Deletes sent entries whose age since spool insertion (CreatedAt) reaches the configured retention
+        /// and optionally expires unsent entries. Acknowledgment does not restart the age.
         /// </summary>
         private void CleanupApplicationSpoolRetentionCore(TimeSpan sentRetention, TimeSpan? unsentRetention)
         {
