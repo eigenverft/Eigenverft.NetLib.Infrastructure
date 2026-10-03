@@ -49,13 +49,10 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// value identify the same logical application. The normalized identity must not exceed 256 characters.
         /// </param>
         /// <param name="dangerousAcceptAnyServerCertificate">When <see langword="true"/>, disables server-certificate validation for relay HTTP requests. Defaults to <see langword="false"/> and should only be enabled deliberately for trusted private/development infrastructure.</param>
-        /// <param name="minimumBatchSize">The preferred minimum count of claimable spool events for normal background delivery; startup backlog, batch wait, and shutdown can bypass it.</param>
-        /// <param name="maximumBatchSize">The maximum count in a claimed-spool HTTP batch. Direct emergency batches have a separate limit in the options overload.</param>
-        /// <param name="baseInterval">The normal sender polling interval; new events may wake it earlier. Spool maintenance runs at the shorter of this interval and one minute.</param>
-        /// <param name="sentRetention">Optional retention for successfully sent events. The default is zero, which deletes acknowledged events immediately.</param>
-        /// <param name="unsentRetention">Optional maximum age for unsent events in the shared application spool. This applies spool-wide across processes using the same spool path.</param>
         /// <param name="bearerToken">Optional raw bearer token sent as <c>Authorization: Bearer &lt;token&gt;</c> on this sink/process's HTTP requests for claimed spool rows and direct emergency batches. The token is not persisted with spool rows. Null, empty, or whitespace disables the header.</param>
         /// <param name="restrictedToMinimumLevel">The minimum Serilog event level accepted by the sink.</param>
+        /// <param name="options">Optional grouped relay settings, including delivery, retention, retry, and a caller-owned HTTP client. Null uses complete defaults.</param>
+        /// <returns>The original Serilog logger configuration.</returns>
         public static LoggerConfiguration SerilogRelay(
             this LoggerSinkConfiguration loggerConfiguration,
             string? endpoint = null,
@@ -63,61 +60,11 @@ namespace Eigenverft.NetLib.SerilogRelay
             string spoolFileName = DefaultSpoolFileName,
             string? applicationId = null,
             bool dangerousAcceptAnyServerCertificate = false,
-            int minimumBatchSize = 20,
-            int maximumBatchSize = 100,
-            TimeSpan? baseInterval = null,
-            TimeSpan? sentRetention = null,
-            TimeSpan? unsentRetention = null,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
-            string? bearerToken = null)
+            string? bearerToken = null,
+            SerilogRelayOptions? options = null)
         {
-            var options = new SerilogRelayOptions();
-            options.Delivery.MinimumBatchEvents = minimumBatchSize;
-            options.Delivery.MaximumBatchEvents = maximumBatchSize;
-            options.Delivery.PollInterval = baseInterval ?? TimeSpan.FromSeconds(5);
-            options.ApplicationSpool.SentEventRetention = sentRetention ?? TimeSpan.Zero;
-            options.ApplicationSpool.UnsentEventMaxAge = unsentRetention;
-
-            return SerilogRelay(
-                loggerConfiguration,
-                endpoint,
-                options,
-                spoolDirectory,
-                spoolFileName,
-                applicationId,
-                dangerousAcceptAnyServerCertificate,
-                restrictedToMinimumLevel,
-                bearerToken);
-        }
-
-        /// <summary>
-        /// Configures SerilogRelay with grouped reliability options while preserving the simple default overload.
-        /// </summary>
-        /// <remarks>
-        /// Processes sharing one application spool may send each other's pending rows. Endpoint and bearer-token configuration belong to the sending process, not to the row that originally created the event.
-        /// </remarks>
-        /// <param name="loggerConfiguration">The Serilog sink configuration.</param>
-        /// <param name="endpoint">The optional HTTP endpoint that receives batched log events.</param>
-        /// <param name="options">Relay behavior options, including an optional caller-owned HTTP client. All nested option groups have complete defaults.</param>
-        /// <param name="spoolDirectory">Optional spool directory.</param>
-        /// <param name="spoolFileName">Optional spool filename.</param>
-        /// <param name="applicationId">Optional logical application identity. The normalized identity must not exceed 256 characters.</param>
-        /// <param name="dangerousAcceptAnyServerCertificate">Whether relay HTTP requests should bypass server-certificate validation.</param>
-        /// <param name="bearerToken">Optional raw bearer token sent as <c>Authorization: Bearer &lt;token&gt;</c>. Null, empty, or whitespace disables the header.</param>
-        /// <param name="restrictedToMinimumLevel">The minimum Serilog event level accepted by the sink.</param>
-        /// <returns>The original Serilog logger configuration.</returns>
-        public static LoggerConfiguration SerilogRelay(
-            this LoggerSinkConfiguration loggerConfiguration,
-            string? endpoint,
-            SerilogRelayOptions options,
-            string? spoolDirectory = null,
-            string spoolFileName = DefaultSpoolFileName,
-            string? applicationId = null,
-            bool dangerousAcceptAnyServerCertificate = false,
-            LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
-            string? bearerToken = null)
-        {
-            ArgumentNullException.ThrowIfNull(options);
+            options ??= new SerilogRelayOptions();
             if (options.HttpClient is not null && dangerousAcceptAnyServerCertificate)
                 throw new ArgumentException(
                     "Configure certificate validation on the supplied HttpClient instead.",

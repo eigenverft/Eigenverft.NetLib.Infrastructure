@@ -4,6 +4,7 @@ Initial public SerilogRelay package.
 
 - Targets .NET 8 and .NET 10.
 - Adds the Serilog `.WriteTo.SerilogRelay(...)` sink for HTTP log delivery.
+- Uses one configuration method with optional grouped SerilogRelayOptions for delivery, retention, and other relay settings.
 - Persists events to a bounded local SQLite application spool before normal network delivery.
 - Reuses stable `EventId` values across retries and restarts while using `BatchId` for delivery-attempt correlation.
 - Supports shared application spools across multiple processes with atomic short-lived delivery claims and takeover after process failure.

@@ -28,7 +28,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
     public sealed partial class SerilogRelayReliabilityTests
     {
         [TestMethod]
-        public void OptionsOverloadKeepsSimpleDurableUsage()
+        public void GroupedOptionsKeepSimpleDurableUsage()
         {
             string directory = CreateTemporaryDirectory();
             string databasePath = Path.Combine(directory, "options.db");
@@ -50,14 +50,14 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                         applicationId: "Options.Api.App")
                     .CreateLogger())
                 {
-                    logger.Information("options overload");
+                    logger.Information("grouped options");
                 }
 
                 using var connection = new SqliteConnection($"Data Source={databasePath}");
                 connection.Open();
                 using var command = connection.CreateCommand();
                 command.CommandText =
-                    "SELECT COUNT(*) FROM SerilogRelayEvents WHERE Sent = 0 AND ApplicationId = 'Options.Api.App' AND RenderMessage = 'options overload';";
+                    "SELECT COUNT(*) FROM SerilogRelayEvents WHERE Sent = 0 AND ApplicationId = 'Options.Api.App' AND RenderMessage = 'grouped options';";
                 Assert.AreEqual(
                     1L,
                     Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture));
@@ -2026,9 +2026,15 @@ CREATE TABLE SerilogRelayEvents (
                     .WriteTo.SerilogRelay(
                         endpoint: $"http://127.0.0.1:{port}/logs",
                         spoolDirectory: directory,
-                        minimumBatchSize: 1,
-                        baseInterval: TimeSpan.FromMilliseconds(10),
-                        bearerToken: "relay-secret-token")
+                        bearerToken: "relay-secret-token",
+                        options: new SerilogRelayOptions
+                        {
+                            Delivery =
+                            {
+                                MinimumBatchEvents = 1,
+                                PollInterval = TimeSpan.FromMilliseconds(10),
+                            },
+                        })
                     .CreateLogger();
 
                 logger.Information("bearer token test");

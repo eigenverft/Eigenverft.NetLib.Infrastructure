@@ -527,9 +527,15 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                         spoolDirectory: directory,
                         spoolFileName: "relay.db",
                         applicationId: "Test.App",
-                        minimumBatchSize: 20,
-                        maximumBatchSize: 100,
-                        baseInterval: TimeSpan.FromMilliseconds(20))
+                        options: new SerilogRelayOptions
+                        {
+                            Delivery =
+                            {
+                                MinimumBatchEvents = 20,
+                                MaximumBatchEvents = 100,
+                                PollInterval = TimeSpan.FromMilliseconds(20),
+                            },
+                        })
                     .CreateLogger())
                 {
                     logger.Information("Hello {Value}", 42);
@@ -584,9 +590,15 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                         endpoint: null,
                         spoolDirectory: directory,
                         spoolFileName: "relay.db",
-                        minimumBatchSize: 20,
-                        maximumBatchSize: 100,
-                        baseInterval: TimeSpan.FromMilliseconds(20))
+                        options: new SerilogRelayOptions
+                        {
+                            Delivery =
+                            {
+                                MinimumBatchEvents = 20,
+                                MaximumBatchEvents = 100,
+                                PollInterval = TimeSpan.FromMilliseconds(20),
+                            },
+                        })
                     .CreateLogger())
                 {
                     logger.Information("Value {Value:0.0}", 1.5m);
@@ -756,12 +768,21 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                         endpoint: null,
                         spoolDirectory: directory,
                         spoolFileName: "explicit.db",
-                        minimumBatchSize: 2,
-                        maximumBatchSize: 3,
-                        baseInterval: TimeSpan.FromMilliseconds(17),
-                        sentRetention: new TimeSpan(1, 2, 3, 4),
-                        unsentRetention: TimeSpan.FromHours(2),
-                        restrictedToMinimumLevel: LogEventLevel.Verbose)
+                        restrictedToMinimumLevel: LogEventLevel.Verbose,
+                        options: new SerilogRelayOptions
+                        {
+                            Delivery =
+                            {
+                                MinimumBatchEvents = 2,
+                                MaximumBatchEvents = 3,
+                                PollInterval = TimeSpan.FromMilliseconds(17),
+                            },
+                            ApplicationSpool =
+                            {
+                                SentEventRetention = new TimeSpan(1, 2, 3, 4),
+                                UnsentEventMaxAge = TimeSpan.FromHours(2),
+                            },
+                        })
                     .CreateLogger())
                 {
                 }
@@ -1263,9 +1284,15 @@ END;";
                         endpoint: $"http://127.0.0.1:{port}/logs",
                         spoolDirectory: blockedParent,
                         applicationId: "Emergency.Startup.App",
-                        minimumBatchSize: 1,
-                        maximumBatchSize: 10,
-                        baseInterval: TimeSpan.FromMilliseconds(20))
+                        options: new SerilogRelayOptions
+                        {
+                            Delivery =
+                            {
+                                MinimumBatchEvents = 1,
+                                MaximumBatchEvents = 10,
+                                PollInterval = TimeSpan.FromMilliseconds(20),
+                            },
+                        })
                     .CreateLogger();
 
                 logger.Information("startup rescue");

@@ -101,7 +101,7 @@ Serilog.ILogger? applicationLogger = null;
 options.StatusEvents.Mode = SerilogRelayStatusEventMode.AllSinks;
 options.StatusEvents.LoggerProvider = () => applicationLogger;
 applicationLogger = new LoggerConfiguration()
-    .WriteTo.SerilogRelay("https://logging.example/api/v1/logs", options)
+    .WriteTo.SerilogRelay("https://logging.example/api/v1/logs", options: options)
     .CreateLogger();
 ```
 
@@ -139,6 +139,12 @@ state transitions as Emit. Successful writes report recovery; a successful read 
 claim that durable persistence has resumed.
 
 ## Reliability options
+
+`SerilogRelay` has one configuration method. Omit `options` for defaults or pass
+`options: relayOptions` for grouped settings. Batch sizes, intervals, and retention are configured
+through `Delivery` and `ApplicationSpool`; they are not separate sink-method parameters.
+The existing positional `endpoint` and spool-path parameters remain available, including
+`.SerilogRelay(endpoint, null)` for the default spool directory.
 
 ```csharp
 var options = new SerilogRelayOptions
@@ -279,7 +285,7 @@ var options = new SerilogRelayOptions { HttpClient = relayClient };
 options.Delivery.RequestTimeout = TimeSpan.FromSeconds(10);
 
 using var logger = new LoggerConfiguration()
-    .WriteTo.SerilogRelay("https://logging.example/api/v1/logs", options)
+    .WriteTo.SerilogRelay("https://logging.example/api/v1/logs", options: options)
     .CreateLogger();
 ```
 
