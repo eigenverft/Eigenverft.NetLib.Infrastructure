@@ -39,7 +39,10 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// </remarks>
         /// <param name="loggerConfiguration">The Serilog sink configuration.</param>
         /// <param name="endpoint">The optional HTTP endpoint used by this sink/process for batched delivery of any shared-spool rows it claims. Pending rows do not retain the endpoint of their creating process.</param>
-        /// <param name="spoolDirectory">Optional spool directory. Relative paths are resolved below the application-specific default directory.</param>
+        /// <param name="spoolDirectory">
+        /// Optional spool directory. Non-rooted paths are resolved relative to the application-specific default directory.
+        /// Parent segments such as <c>..</c> can resolve outside it. Use distinct resolved paths for separate application spools.
+        /// </param>
         /// <param name="spoolFileName">Optional spool filename. Defaults to <c>SerilogRelay.db</c>.</param>
         /// <param name="applicationId">
         /// Optional logical application identity recorded on events and used by the default spool directory.
