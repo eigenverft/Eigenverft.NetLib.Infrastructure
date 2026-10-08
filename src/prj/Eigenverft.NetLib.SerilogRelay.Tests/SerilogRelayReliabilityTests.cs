@@ -3223,42 +3223,73 @@ VALUES
         }
 
         [TestMethod]
-        public async Task ShutdownShortensAnAlreadyRunningNormalHttpRequest()
+        public Task ShutdownShortensAnAlreadyRunningNormalHttpRequest()
+            => AssertRunningRequestShutdownAsync(elapsedBeforeShutdownMilliseconds: 350, remainingRequestMilliseconds: 200);
+
+        [TestMethod]
+        public Task ShutdownPreservesAnEarlierNormalRequestDeadline()
+            => AssertRunningRequestShutdownAsync(elapsedBeforeShutdownMilliseconds: 1900, remainingRequestMilliseconds: 100);
+
+        private static async Task AssertRunningRequestShutdownAsync(
+            int elapsedBeforeShutdownMilliseconds,
+            int remainingRequestMilliseconds)
         {
             string directory = CreateTemporaryDirectory();
             string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
-            using var listener = new TcpListener(IPAddress.Loopback, 0);
-            listener.Start();
-            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            var options = new SerilogRelayOptions();
+            var clock = new ManualRelayTimeProvider();
+            var firstRequest = new TaskCompletionSource<(string Body, CancellationToken Token)>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var repeatedRequest = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var releaseFirstRequest = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            int requestCount = 0;
+            using var client = new HttpClient(new RegressionHttpHandler(async (request, token) =>
+            {
+                string body = await request.Content!.ReadAsStringAsync(token);
+                if (Interlocked.Increment(ref requestCount) == 1)
+                {
+                    firstRequest.SetResult((body, token));
+                    await releaseFirstRequest.Task.WaitAsync(token);
+                }
+                else
+                {
+                    repeatedRequest.TrySetResult(body);
+                }
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            })) { Timeout = Timeout.InfiniteTimeSpan };
+            var options = new SerilogRelayOptions { HttpClient = client };
             options.Delivery.MinimumBatchEvents = 1;
             options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
+            // Leave real time only as a generous hang guard, independent of virtual HTTP deadlines.
+            options.Delivery.ShutdownTimeout = TimeSpan.FromMinutes(1);
             options.Delivery.ShutdownRequestTimeout = TimeSpan.FromMilliseconds(200);
             options.Delivery.ShutdownRetryInterval = TimeSpan.FromMilliseconds(200);
-            var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
-            var responseGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var receivedBody = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-            Task<string>? activeRequest = null;
+            var sink = new SerilogRelaySink(connectionString, endpoint: null, options);
 
             try
             {
-                activeRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent, responseGate: responseGate.Task,
-                    onBodyReceived: body => receivedBody.TrySetResult(body));
+                SetPrivateField(sink, "_timeProvider", clock);
+                SetPrivateField(sink, "_endpoint", "http://receiver.test/logs");
                 sink.Emit(CreateLogEvent("already running before shutdown"));
-                string originalBody = await receivedBody.Task.WaitAsync(TimeSpan.FromSeconds(5));
-                await Task.Delay(350);
+                // Start after clock installation and enqueueing, avoiding an initial polling wait.
+                Task sender = InvokePrivateTaskMethod(sink, "SenderLoopAsync");
+                SetPrivateField(sink, "_senderTask", sender);
+                (string originalBody, CancellationToken requestToken) =
+                    await firstRequest.Task.WaitAsync(TimeSpan.FromSeconds(30));
+                clock.Advance(TimeSpan.FromMilliseconds(elapsedBeforeShutdownMilliseconds));
+                Assert.IsFalse(requestToken.IsCancellationRequested);
                 Assert.AreEqual(0, GetPrivateField<RetryGate>(sink, "_retryGate").ConsecutiveFailures);
                 Assert.IsNotNull(GetClaimOwnerId(connectionString));
 
-                Task<string> repeatedRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent);
-                Stopwatch stopwatch = Stopwatch.StartNew();
-                await sink.DisposeAsync();
-                stopwatch.Stop();
-                string repeatedBody = await repeatedRequest.WaitAsync(TimeSpan.FromSeconds(5));
-                Assert.IsGreaterThanOrEqualTo(options.Delivery.ShutdownRequestTimeout, stopwatch.Elapsed);
-                Assert.IsLessThan(TimeSpan.FromSeconds(1.3), stopwatch.Elapsed);
-                Assert.IsFalse(activeRequest.IsCompleted);
+                Task shutdown = sink.DisposeAsync().AsTask();
+                clock.Advance(TimeSpan.FromMilliseconds(remainingRequestMilliseconds - 1));
+                Assert.IsFalse(requestToken.IsCancellationRequested, "The request was canceled before its earliest deadline.");
+                clock.Advance(TimeSpan.FromMilliseconds(1));
+                Assert.IsTrue(requestToken.IsCancellationRequested, "The request was not canceled at its earliest deadline.");
+                Assert.IsFalse(releaseFirstRequest.Task.IsCompleted);
+                string repeatedBody = await repeatedRequest.Task.WaitAsync(TimeSpan.FromSeconds(30));
+                await shutdown.WaitAsync(TimeSpan.FromSeconds(30));
+                Assert.AreEqual(2, requestCount);
                 Assert.AreEqual(0L, GetTotalRowCount(connectionString));
+                Assert.AreEqual(0, clock.ActiveTimers, "HTTP or sender timers survived shutdown.");
                 using JsonDocument original = JsonDocument.Parse(originalBody);
                 using JsonDocument repeated = JsonDocument.Parse(repeatedBody);
                 Assert.AreEqual(original.RootElement.GetProperty("logs")[0].GetProperty("eventId").GetString(),
@@ -3266,18 +3297,7 @@ VALUES
             }
             finally
             {
-                responseGate.TrySetResult(true);
-                listener.Stop();
-                if (activeRequest is not null)
-                {
-                    try
-                    {
-                        await activeRequest.WaitAsync(TimeSpan.FromSeconds(5));
-                    }
-                    catch (Exception exception) when (exception is IOException or SocketException)
-                    {
-                    }
-                }
+                releaseFirstRequest.TrySetResult(true);
                 await DisposeAndWaitForCleanupAsync(sink);
                 DeleteTemporaryDirectory(directory);
             }

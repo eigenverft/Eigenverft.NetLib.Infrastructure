@@ -331,12 +331,15 @@ namespace Eigenverft.NetLib.SerilogRelay
                 if (clientTimeout != Timeout.InfiniteTimeSpan && clientTimeout < timeout)
                     timeout = clientTimeout;
 
-                using var requestTimeout = new CancellationTokenSource(timeout);
+                using var requestTimeout = new CancellationTokenSource(timeout, _timeProvider);
+                using var shutdownRequestTimeout = new CancellationTokenSource(Timeout.InfiniteTimeSpan, _timeProvider);
                 using var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(
                     token,
-                    requestTimeout.Token);
+                    requestTimeout.Token,
+                    shutdownRequestTimeout.Token);
                 // Also shorten an HTTP attempt that was already running when shutdown began.
-                using var shutdownRegistration = _shutdownSignal.Token.Register(() => requestCancellation.CancelAfter(_shutdownRequestTimeout));
+                // Keep its original deadline independent so shutdown cannot extend it.
+                using var shutdownRegistration = _shutdownSignal.Token.Register(() => shutdownRequestTimeout.CancelAfter(_shutdownRequestTimeout));
                 Interlocked.Exchange(ref _lastHttpAttemptStartedTimestamp, Stopwatch.GetTimestamp());
                 using var resp = await _httpClient.SendAsync(
                     request,
