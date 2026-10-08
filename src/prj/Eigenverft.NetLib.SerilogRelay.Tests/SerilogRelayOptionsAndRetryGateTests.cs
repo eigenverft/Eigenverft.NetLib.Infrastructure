@@ -1,4 +1,6 @@
 using System;
+using System.Reflection;
+using System.Reflection.Emit;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -15,6 +17,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             Assert.AreEqual(TimeSpan.Zero, options.ApplicationSpool.SentEventRetention);
             Assert.IsNull(options.ApplicationSpool.UnsentEventMaxAge);
             Assert.AreEqual(64L * 1024L * 1024L, options.ApplicationSpool.MaxPhysicalBytes);
+            Assert.IsNull(options.HttpClient);
+            Assert.AreEqual(TimeSpan.FromSeconds(2), options.Delivery.RequestTimeout);
             Assert.AreEqual(20, options.Delivery.MinimumBatchEvents);
             Assert.AreEqual(100, options.Delivery.MaximumBatchEvents);
             Assert.AreEqual(4 * 1024 * 1024, options.Delivery.TargetBatchPayloadBytes);
@@ -36,6 +40,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             options.ApplicationSpool.SentEventRetention = TimeSpan.FromHours(12);
             options.ApplicationSpool.UnsentEventMaxAge = TimeSpan.FromDays(30);
             options.ApplicationSpool.MaxPhysicalBytes = 8192;
+            options.Delivery.RequestTimeout = TimeSpan.FromSeconds(10);
             options.Delivery.MinimumBatchEvents = 3;
             options.Delivery.MaximumBatchEvents = 9;
             options.Delivery.TargetBatchPayloadBytes = 1024;
@@ -57,6 +62,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             Assert.AreEqual(TimeSpan.FromHours(12), options.ApplicationSpool.SentEventRetention);
             Assert.AreEqual(TimeSpan.FromDays(30), options.ApplicationSpool.UnsentEventMaxAge);
             Assert.AreEqual(8192L, options.ApplicationSpool.MaxPhysicalBytes);
+            Assert.AreEqual(TimeSpan.FromSeconds(10), options.Delivery.RequestTimeout);
             Assert.AreEqual(3, options.Delivery.MinimumBatchEvents);
             Assert.AreEqual(9, options.Delivery.MaximumBatchEvents);
             Assert.AreEqual(1024, options.Delivery.TargetBatchPayloadBytes);
@@ -74,6 +80,52 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             Assert.IsFalse(options.EndpointRetry.RespectRetryAfter);
             Assert.AreEqual(123, options.EmergencyMemoryBuffer.MaxBufferedEvents);
             Assert.AreEqual(456L, options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes);
+        }
+
+        [TestMethod]
+        public void ApplicationVersionResolutionHandlesOverridesAndAssemblyMetadata()
+        {
+            Assembly withInformationalVersion = CreateAssembly(
+                new Version(1, 2, 3, 4),
+                "1.2.3+commit");
+            Assert.AreEqual("1.2.3+commit", SerilogRelaySink.ResolveApplicationVersion(null, withInformationalVersion));
+            Assert.AreEqual("manual", SerilogRelaySink.ResolveApplicationVersion(" manual ", withInformationalVersion));
+            Assert.AreEqual(new string('v', 255), SerilogRelaySink.ResolveApplicationVersion(new string('v', 255), null));
+            Assert.ThrowsExactly<ArgumentException>(() => SerilogRelaySink.ResolveApplicationVersion("  ", null));
+            Assert.AreEqual(new string('v', 255), SerilogRelaySink.ResolveApplicationVersion(new string('v', 256), null));
+
+            Assembly withoutInformationalVersion = CreateAssembly(new Version(4, 5, 6, 7), null);
+            Assert.AreEqual("4.5.6.7", SerilogRelaySink.ResolveApplicationVersion(null, withoutInformationalVersion));
+            Assembly withBlankInformationalVersion = CreateAssembly(new Version(4, 5), " ");
+            Assert.AreEqual("4.5.0.0", SerilogRelaySink.ResolveApplicationVersion(null, withBlankInformationalVersion));
+            Assert.IsNull(SerilogRelaySink.ResolveApplicationVersion(null, null));
+            Assert.AreEqual("0.0.0.0", SerilogRelaySink.ResolveApplicationVersion(null, CreateAssembly(null, null)));
+            Assert.IsNull(SerilogRelaySink.ResolveApplicationVersion(null, new VersionlessAssembly()));
+            Assert.AreEqual(new string('v', 255), SerilogRelaySink.ResolveApplicationVersion(
+                null,
+                CreateAssembly(new Version(1, 0), new string('v', 257))));
+            Assert.AreEqual("trimmed", SerilogRelaySink.ResolveApplicationVersion(
+                null, CreateAssembly(new Version(1, 0), new string(' ', 300) + "trimmed ")));
+        }
+
+        [TestMethod]
+        [DataRow(253, false)]
+        [DataRow(254, false)]
+        [DataRow(255, false)]
+        [DataRow(253, true)]
+        [DataRow(254, true)]
+        [DataRow(255, true)]
+        public void ApplicationVersionTruncationKeepsSurrogatePairsIntact(int prefixLength, bool fromAssembly)
+        {
+            string prefix = new string('v', prefixLength);
+            string input = prefix + "\U0001F600suffix";
+            string expected = prefixLength == 253 ? prefix + "\U0001F600" : prefix;
+            string? actual = fromAssembly
+                ? SerilogRelaySink.ResolveApplicationVersion(null, CreateAssembly(new Version(1, 0), input))
+                : SerilogRelaySink.ResolveApplicationVersion(input, null);
+
+            Assert.AreEqual(expected, actual);
+            Assert.IsTrue(actual!.Length <= 255);
         }
 
         [TestMethod]
@@ -142,16 +194,16 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         }
 
         [TestMethod]
-        public void RetryGateHonorsRetryAfterOnlyWhenConfigured()
+        public void RetryGateCapsRetryAfterAndIgnoresItWhenDisabled()
         {
             DateTimeOffset now = new DateTimeOffset(2026, 9, 26, 12, 0, 0, TimeSpan.Zero);
-            DateTimeOffset serverNotBefore = now.AddMinutes(1);
+            DateTimeOffset serverNotBefore = now.AddYears(1);
 
             var respectingGate = new RetryGate(
                 new EndpointRetryOptions
                 {
                     InitialDelay = TimeSpan.FromSeconds(5),
-                    MaximumDelay = TimeSpan.FromSeconds(5),
+                    MaximumDelay = TimeSpan.FromSeconds(15),
                     Multiplier = 1d,
                     JitterRatio = 0d,
                     RespectRetryAfter = true,
@@ -159,7 +211,7 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 nextDouble: () => 0.5d);
             Assert.IsTrue(respectingGate.TryAcquire(now));
             respectingGate.RecordFailure(now, serverNotBefore);
-            Assert.AreEqual(serverNotBefore, respectingGate.NextAttemptAt);
+            Assert.AreEqual(now.AddSeconds(15), respectingGate.NextAttemptAt);
 
             var ignoringGate = new RetryGate(
                 new EndpointRetryOptions
@@ -192,6 +244,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
             AssertInvalid(options => options.Delivery.EmergencyTargetBatchPayloadBytes = 0, typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.PollInterval = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.MaximumBatchWait = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.Delivery.RequestTimeout = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
+            AssertInvalid(options => options.Delivery.RequestTimeout = TimeSpan.FromSeconds(30), typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.ShutdownTimeout = TimeSpan.FromSeconds(-1), typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.ShutdownTimeout = TimeSpan.FromDays(50), typeof(ArgumentOutOfRangeException));
             AssertInvalid(options => options.Delivery.ShutdownRequestTimeout = TimeSpan.Zero, typeof(ArgumentOutOfRangeException));
@@ -225,6 +279,36 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
             Assert.IsNotNull(exception);
             Assert.AreEqual(expectedExceptionType, exception.GetType());
+        }
+
+        private static Assembly CreateAssembly(Version? version, string? informationalVersion)
+        {
+            var name = new AssemblyName($"SerilogRelayVersionTest{Guid.NewGuid():N}")
+            {
+                Version = version,
+            };
+            AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run);
+            if (informationalVersion is not null)
+            {
+                ConstructorInfo constructor = typeof(AssemblyInformationalVersionAttribute)
+                    .GetConstructor(new[] { typeof(string) })!;
+                assembly.SetCustomAttribute(new CustomAttributeBuilder(
+                    constructor,
+                    new object[] { informationalVersion }));
+            }
+            return assembly;
+        }
+
+        private sealed class VersionlessAssembly : Assembly
+        {
+            public override AssemblyName GetName()
+                => new AssemblyName("Versionless");
+
+            public override AssemblyName GetName(bool copiedName)
+                => GetName();
+
+            public override object[] GetCustomAttributes(Type attributeType, bool inherit)
+                => Array.Empty<Attribute>();
         }
     }
 }

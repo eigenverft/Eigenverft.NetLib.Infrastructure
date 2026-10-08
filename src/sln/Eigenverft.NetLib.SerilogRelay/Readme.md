@@ -24,6 +24,15 @@ dotnet add package Eigenverft.NetLib.SerilogRelay
 
 Normal .NET/platform TLS certificate validation is enabled by default.
 
+For a special proxy, client certificate, or custom authentication, supply a configured
+`HttpClient` through `SerilogRelayOptions.HttpClient`. Prefer an application-lifetime client:
+bounded logger disposal may return while canceled background cleanup finishes. The sink does not
+dispose a supplied client. `Delivery.RequestTimeout` defaults to two
+seconds and can be increased below the 30-second claim lease; a shorter timeout on the supplied
+client still applies. The built-in clients ignore server cookies, so separate relay sinks cannot
+share a cookie container. A supplied client controls its own cookie handling. The sink uses the
+same client for spool, RAM, and shutdown delivery.
+
 ## Application spool
 
 Without overrides, the durable spool is application based:
@@ -32,7 +41,28 @@ Without overrides, the durable spool is application based:
 <LocalApplicationData>/Eigenverft/SerilogRelay/<ApplicationId>/SerilogRelay.db
 ```
 
+`ApplicationId` is normalized before it is recorded on events or used by the default spool path.
+After trimming surrounding whitespace, each run of characters outside `A-Z`, `a-z`, `0-9`, `.`,
+`_`, and `-` becomes one `_`; leading and trailing `.` and `_` are removed. An empty result
+becomes `Application`. Without an explicit value, the entry-assembly name is used.
+For example, `Payroll/Worker` and `Payroll:Worker` both become `Payroll_Worker`: they identify
+the same logical application and share the default spool. Choose distinct normalized IDs for
+separate applications, and ensure their resolved spool paths are distinct.
+
 Processes of the same logical application therefore share the same default spool path.
+
+The effective `ApplicationId` never exceeds 255 ASCII characters. Normalized IDs of at
+most 255 characters stay unchanged. Longer IDs become `_` + their first 189 normalized
+characters + `_` + the lowercase SHA-256 hash of the complete normalized ID (64 hexadecimal
+characters). The result is exactly 255 ASCII characters. The leading `_` reserves this
+representation because ordinary normalized IDs cannot start with it. Long IDs with the
+same readable prefix therefore retain distinct hash suffixes.
+
+The effective ID is recorded on each new event and used as the default application directory
+name. Reserved Windows device names still use `_` followed by their SHA-256 hash as the
+directory name while retaining their event identity. Ordinary IDs keep their existing paths.
+An absolute `spoolDirectory` does not depend on the OS user-data directory; default and
+relative paths can create a user-data directory that does not yet exist.
 
 Multiple active sinks can open and persist into that spool. Rows contain `ProcessId`, so their
 originating OS process is visible, but rows are not restricted to being sent by their original
@@ -40,7 +70,95 @@ process. Another process may drain older backlog from the same application spool
 
 Shared-spool multi-process claim/lease coordination is implemented.
 
+## Application version on events
+
+New events carry `ApplicationVersion` from the consuming application's entry assembly. The sink
+resolves its informational version once at startup, falling back to the assembly version when
+needed. A generic host can override it with `SerilogRelayOptions.ApplicationVersion`.
+The value is stored on each event, including emergency-memory events, so a newer process that
+sends older spool rows does not replace their origin version. Rows created before this field was
+added have no version, and their HTTP payload omits `applicationVersion`.
+Surrounding whitespace is removed. Versions longer than 255 UTF-16 code units retain their
+prefix without splitting a Unicode surrogate pair, for both assembly metadata and explicit
+overrides. An explicit blank override remains invalid. Shortening can remove a trailing
+commit suffix; configure a shorter version if that suffix must be retained.
+
+This 255-character contract applies to new events. Existing spool rows keep their stored
+identity and version. Older 256-character IDs now resolve to a different effective identity
+and default spool directory. A receiver enforcing the new limit rejects historical
+256-character values; coordinate package upgrades and drain incompatible backlog beforehand.
+To retain this metadata with the matching receiver, use its updated contract. An older receiver
+can acknowledge a batch while ignoring the new field.
+
+## Relay status events
+
+Relay operational events are off by default. To see important relay problems and their recovery
+at the receiver, configure:
+
+```csharp
+var options = new SerilogRelayOptions();
+options.StatusEvents.Mode = SerilogRelayStatusEventMode.RelayOnly;
+options.StatusEvents.MinimumLevel = Serilog.Events.LogEventLevel.Warning;
+```
+
+`RelayOnly` sends status events through this relay without writing them to the application's
+other Serilog sinks. It uses `StatusEvents.MinimumLevel` independently of the application's
+logger and the Relay sink's `restrictedToMinimumLevel`. `AllSinks` writes through the application
+logger, so its level filters and the Relay sink's own minimum level must allow each status event
+that should reach the receiver. `AllSinks` requires `StatusEvents.LoggerProvider`; the delegate
+must return null until `CreateLogger()` has completed, whether the application uses a local or
+global logger. This keeps startup status transitions pending for a later attempt instead of
+writing them to an earlier, possibly silent logger. For example:
+
+```csharp
+Serilog.ILogger? applicationLogger = null;
+options.StatusEvents.Mode = SerilogRelayStatusEventMode.AllSinks;
+options.StatusEvents.LoggerProvider = () => applicationLogger;
+applicationLogger = new LoggerConfiguration()
+    .WriteTo.SerilogRelay("https://logging.example/api/v1/logs", options: options)
+    .CreateLogger();
+```
+
+`Off` keeps Serilog's separate `SelfLog` diagnostics available.
+
+Warnings describe spool failures, HTTP delivery failures, recovery, and buffer or spool-budget
+pressure; errors summarize dropped events. Startup is Information. An optional Debug summary is
+enabled by setting both `MinimumLevel = LogEventLevel.Debug` and `SummaryInterval` to at least
+one minute. No event is emitted for every request or batch. Status events carry structured
+backlog, emergency-buffer, drop-count, and last-success fields. Spool-budget percentage refers
+to SQLite's configured page budget, not free space on the filesystem.
+
+Spool, HTTP, and emergency-buffer changes wake the status worker when they occur; it does not
+poll them every second. Up to 64 pending transitions retain their individual timestamps and
+order. Further transitions are summarized with counts and their first and last times, while
+cumulative transition counters remain on status events. The shared spool's SQLite budget is
+sampled every 30 seconds; the optional Debug summary uses its configured interval. Pending
+transitions remain volatile until their status events reach the spool or application logger;
+process shutdown can lose transitions that have not yet been published.
+In `RelayOnly`, a transition remains pending for retry when neither storage path accepts it.
+
+Status events use the same spool, emergency RAM buffer, batching, and shutdown delivery as
+application events. On admission they can use free capacity and reclaim sent spool rows, but do
+not evict waiting spool or RAM events. They still occupy capacity; later normal reclamation can
+evict eligible unsent rows and report that loss. When neither buffer has room, a `RelayOnly`
+transition remains pending for retry.
+In `AllSinks` mode, Console or other sinks may receive a status event even when Relay cannot
+retain its copy. Dropped status events in RAM remain in cumulative counters without generating
+another loss report.
+
+Emergency pressure thresholds count application events only, so status events cannot generate
+their own repeating pressure warnings. All events still count toward the actual RAM capacity.
+Storage failures observed by delivery, maintenance, and diagnostic queries use the same spool
+state transitions as Emit. Successful writes report recovery; a successful read alone does not
+claim that durable persistence has resumed.
+
 ## Reliability options
+
+`SerilogRelay` has one configuration method. Omit `options` for defaults or pass
+`options: relayOptions` for grouped settings. Batch sizes, intervals, and retention are configured
+through `Delivery` and `ApplicationSpool`; they are not separate sink-method parameters.
+The existing positional `endpoint` and spool-path parameters remain available, including
+`.SerilogRelay(endpoint, null)` for the default spool directory.
 
 ```csharp
 var options = new SerilogRelayOptions
@@ -53,6 +171,7 @@ var options = new SerilogRelayOptions
     },
     Delivery =
     {
+        RequestTimeout = TimeSpan.FromSeconds(2),
         MinimumBatchEvents = 20,
         MaximumBatchEvents = 100,
         TargetBatchPayloadBytes = 4 * 1024 * 1024,
@@ -94,6 +213,13 @@ configured values when it performs maintenance or reclamation:
 - `MaxPhysicalBytes` sets the SQLite page budget for the shared database, not a per-process row
   quota or a hard limit on all files. An existing larger database is not shrunk.
 
+`SentEventRetention` measures age since insertion into the spool (`CreatedAt`), not time since
+successful delivery. Acknowledgment does not restart this age. For example, with one-day
+retention, a row delivered after two days of backlog is eligible for removal on the next
+maintenance pass. Zero deletes acknowledged rows immediately. This option does not expire
+unsent rows; `UnsentEventMaxAge` controls their age cleanup. Capacity reclamation may remove
+sent rows before the retention age is reached.
+
 Actively claimed unsent rows are protected from age cleanup and unsent capacity reclamation.
 After claim release or lease expiry, they become eligible again. Age cleanup runs periodically
 while the sink remains active; the configured age is an eligibility threshold rather than an
@@ -123,6 +249,19 @@ The relay currently provides:
 - a real bounded shutdown deadline;
 - at-least-once HTTP delivery without imposing receiver-side storage/deduplication semantics.
 
+`Delivery.PollInterval` must be at least one millisecond and no longer than the supported sender
+timer delay (about 49.7 days); `EndpointRetry.MaximumDelay` has the same upper bound.
+`MaximumDelay` caps both local backoff and HTTP `Retry-After`, with a default of five minutes.
+A server hint can extend local backoff up to this cap, but cannot shorten it. The cap applies
+to both delta-seconds and absolute dates, including a hint a year in the future.
+
+The built-in HTTP client limits complete response bodies to 4 KiB. A supplied client's
+`MaxResponseContentBufferSize` remains its response-body limit; the sink does not change it.
+Bodies are streamed and discarded under the size and request-time limits. A body that exceeds a
+limit or ends unsuccessfully never confirms delivery. A valid `Retry-After` received with non-204
+headers still controls failure pacing, capped by `MaximumDelay`, if reading that body fails;
+it does not confirm delivery.
+
 During normal operation, the emergency worker retries durable storage for buffered events. If
 storage fails, it sends the remaining events in that selected batch directly rather than repeat
 the same failing storage operation for every event. Only events still in RAM are sent directly.
@@ -135,11 +274,21 @@ At shutdown, any already active normal request finishes first. Direct RAM batche
 afterward, separate claimed spool batches are sent.
 RAM and spool events are not combined in one HTTP batch.
 
+The accompanying receiver source update defaults to accepting 256 events per request,
+covering both sender count defaults (100 spool / 256 emergency), including during shutdown.
+Receiver package `1.0.0.8` still defaults to 100: configure `MaximumBatchEvents = 256` when
+using that package. The override becomes unnecessary after installing the receiver update
+with the 256-event default. If either sender count maximum changes, keep the receiver maximum
+at least as large as both. Host/proxy byte limits and request timeouts remain independent.
+
 
 ## Multi-process coordination
 
 Shared-spool senders use atomic short-lived claims/leases so two processes do not intentionally
 send the same pending rows at the same time. The internal default lease is 30 seconds.
+The lease clock starts after acquiring SQLite write access. After preparing the HTTP payload,
+the sender verifies ownership of the entire batch and renews its lease. A lost or incomplete
+claim is not sent. The request deadline also respects the remaining lease with a one-second margin.
 
 Current behavior:
 
@@ -147,27 +296,61 @@ Current behavior:
 - any process of the same application spool may send old rows from another process;
 - pending rows are not bound to the endpoint or bearer token of the process that created them;
 - the process owning the current claim sends with its own configured endpoint and bearer token;
-- non-2xx releases the claim before that process enters retry backoff, allowing another version
-  to take over; a 2xx received by the current claim owner marks the claimed rows delivered;
+- non-204 releases the claim before that process enters retry backoff, allowing another version
+  to take over; a complete HTTP 204 received by the current claim owner marks the claimed rows delivered;
 - only one sender owns a row's active claim at a time;
 - expired claims become available after process death;
 - the sending process uses its own `Delivery` and `EndpointRetry` settings;
 - the spool is periodically checked for work created by other processes;
-- physical corruption recovery receives separate short-lived cross-process coordination.
+- startup generation selection and corruption recovery use separate short-lived cross-process coordination.
 
-Existing spools are upgraded in place with the claim columns/indexes. Graceful shutdown releases
+Existing spools are upgraded in place with the claim columns/indexes and optional
+nullable application-version column. Graceful shutdown releases
 owned claims immediately; after an ungraceful process exit, expired claims become available to
 another sender. A stale sender cannot mark a row sent after another sender has taken over its
 expired claim.
+
+## Spool generations after corruption
+
+Each sink instance selects the highest numeric spool generation once at startup and keeps it
+for its lifetime: `SerilogRelay.db`, `SerilogRelay.g0001.db`, `SerilogRelay.g0002.db`, and so on.
+Custom spool filenames use the same `.gNNNN` suffix before their extension.
+
+On `SQLITE_CORRUPT` or `SQLITE_NOTADB`, the affected instance permanently stops all SQLite
+access, including claims, diagnostics, maintenance, and shutdown spool delivery. It continues
+with the configured RAM buffer and direct HTTP batches. Under the shared recovery lock it
+reserves the next generation, unless another process has already done so. The successor starts
+empty and its schema is initialized by a new sink instance. Existing healthy instances can
+continue using their older generation; no open database is renamed or replaced.
+
+At startup, older generations and their WAL/SHM files can be deleted after a proven change of
+OS boot session. An internal Windows/Linux/macOS helper reads the platform boot identifier.
+The existing `<base-spool-filename>.recovery.lock` records the latest generation number and
+its boot identifier; no additional metadata file or SQL table is created. Missing, incomplete,
+or mismatched records defer cleanup until a later boot. Wall-clock changes and file timestamps
+are not used as reboot evidence. Unsupported platforms can still spool and recover into new
+generations, but skip automatic deletion.
+
+This protocol requires participating sink versions to select generations at startup. Corrupt
+older data is not salvaged; recovery preserves the next generation's operation. The configured
+spool budget applies to each active database, not retained obsolete generations. If generation
+selection cannot be coordinated at startup, that instance stays in RAM mode until replaced.
 
 ## Receiver/security scope
 
 SerilogRelay targets a generic HTTP receiver. The endpoint is supplied by the application and is
 not persisted with individual spool rows.
 
-Any HTTP 2xx received by the current claim owner is treated as successful delivery. Non-2xx or
-transport failure keeps the rows unsent and releases the claim before process-local retry
-backoff.
+The receiver must return **204 No Content** after completing its processing of the entire batch
+under its own acceptance policy. Only this completed response confirms delivery; no response
+body or extra acknowledgment header is required. HTTP 200, 201, 202, and every other status
+leave events unacknowledged. Durable rows remain unsent and their claims are released before
+process-local retry backoff; RAM events remain in the emergency retry path.
+
+Redirects follow the HTTP handler's policy; the final response must still be 204. A login page
+returning HTTP 200 therefore cannot acknowledge delivery. Receivers that previously returned
+another successful status must change their acknowledgment to 204. The status confirms processing
+according to the receiver's policy; it does not prove remote persistence.
 
 Bearer authentication is supported with one optional opaque token:
 
@@ -177,14 +360,16 @@ Bearer authentication is supported with one optional opaque token:
     bearerToken: "replace-with-secret")
 ```
 
-Pass only the token value, not the `Bearer ` scheme prefix. Null, empty, or whitespace means no
-Authorization header is sent. The token belongs to the sending sink/process and is not persisted
-with spool rows, so an updated process draining old backlog uses its own current token.
+Pass only the token value, not the `Bearer ` scheme prefix. Null, empty, or whitespace means the
+sink does not add an Authorization header; a supplied client may still provide one. The token
+belongs to the sending sink/process and is not persisted with spool rows, so an updated process
+draining old backlog uses its own current token.
 
-SerilogRelay does not parse JWT claims or perform token refresh. Receiver persistence,
+SerilogRelay does not parse JWT claims or refresh its `bearerToken` parameter. A supplied client
+can implement its own authentication handler. Receiver persistence,
 duplicate-handling, and server-side storage policies are receiver concerns.
 
-`ApplicationId`, `MachineId`, `ProcessId`, and other payload fields remain
+`ApplicationId`, `ApplicationVersion`, `MachineId`, `ProcessId`, and other payload fields remain
 diagnostic/protocol identity, not authenticated sender identity.
 
 ## Scope boundaries
@@ -197,9 +382,9 @@ The current sink design also does not introduce:
 - alternate spool storage backends or an ORM/provider abstraction;
 - a server-driven configuration/handshake protocol;
 - an application-wide retry gate or shared `Retry-After` cooldown across processes;
-- a dead-letter queue for non-2xx responses.
+- a dead-letter queue for non-204 responses.
 
-Non-2xx deliveries remain unsent for later retry or takeover by another process/version, subject
+Non-204 deliveries remain unsent for later retry or takeover by another process/version, subject
 to configured `UnsentEventMaxAge` and shared-spool capacity reclamation.
 
 ## Repository structure

@@ -16,18 +16,28 @@ namespace Eigenverft.NetLib.SerilogRelay
         {
             ArgumentNullException.ThrowIfNull(options);
 
-            if (options.InitialDelay <= TimeSpan.Zero)
-                throw new ArgumentOutOfRangeException(nameof(options), "Retry initial delay must be greater than zero.");
-            if (options.Multiplier < 1d)
-                throw new ArgumentOutOfRangeException(nameof(options), "Retry multiplier must be at least 1.");
-            if (options.MaximumDelay < options.InitialDelay)
-                throw new ArgumentOutOfRangeException(nameof(options), "Retry maximum delay must be greater than or equal to the initial delay.");
-            if (options.JitterRatio < 0d || options.JitterRatio > 1d)
-                throw new ArgumentOutOfRangeException(nameof(options), "Retry jitter ratio must be between 0 and 1.");
+            _options = new EndpointRetryOptions
+            {
+                InitialDelay = options.InitialDelay,
+                Multiplier = options.Multiplier,
+                MaximumDelay = options.MaximumDelay,
+                JitterRatio = options.JitterRatio,
+                RespectRetryAfter = options.RespectRetryAfter,
+            };
 
-            _options = options;
+            if (_options.InitialDelay <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(options), "Retry initial delay must be greater than zero.");
+            if (!double.IsFinite(_options.Multiplier) || _options.Multiplier < 1d)
+                throw new ArgumentOutOfRangeException(nameof(options), "Retry multiplier must be finite and at least 1.");
+            if (_options.MaximumDelay < _options.InitialDelay)
+                throw new ArgumentOutOfRangeException(nameof(options), "Retry maximum delay must be greater than or equal to the initial delay.");
+            if (!double.IsFinite(_options.JitterRatio) || _options.JitterRatio < 0d || _options.JitterRatio > 1d)
+                throw new ArgumentOutOfRangeException(nameof(options), "Retry jitter ratio must be finite and between 0 and 1.");
+
             _nextDouble = nextDouble ?? Random.Shared.NextDouble;
         }
+
+        internal TimeSpan MaximumDelay => _options.MaximumDelay;
 
         internal int ConsecutiveFailures
         {
@@ -89,9 +99,10 @@ namespace Eigenverft.NetLib.SerilogRelay
             lock (_sync)
             {
                 _attemptInFlight = false;
-                _consecutiveFailures++;
+                if (_consecutiveFailures < int.MaxValue)
+                    _consecutiveFailures++;
 
-                double exponent = Math.Pow(_options.Multiplier, Math.Min(_consecutiveFailures - 1, 30));
+                double exponent = Math.Pow(_options.Multiplier, _consecutiveFailures - 1);
                 double baseMilliseconds = Math.Min(
                     _options.InitialDelay.TotalMilliseconds * exponent,
                     _options.MaximumDelay.TotalMilliseconds);
@@ -112,7 +123,8 @@ namespace Eigenverft.NetLib.SerilogRelay
                     && retryAfter.HasValue
                     && retryAfter.Value > nextAttempt)
                 {
-                    nextAttempt = retryAfter.Value;
+                    DateTimeOffset latestAttempt = now + _options.MaximumDelay;
+                    nextAttempt = retryAfter.Value > latestAttempt ? latestAttempt : retryAfter.Value;
                 }
 
                 _nextAttemptAt = nextAttempt;

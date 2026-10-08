@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,7 +14,8 @@ namespace Eigenverft.NetLib.SerilogRelay
     public partial class SerilogRelaySink
     {
         /// <summary>
-        /// Deletes sent entries older than the configured retention and optionally expires unsent entries.
+        /// Deletes sent entries whose age since spool insertion (CreatedAt) reaches the configured retention
+        /// and optionally expires unsent entries. Acknowledgment does not restart the age.
         /// </summary>
         private void CleanupApplicationSpoolRetentionCore(TimeSpan sentRetention, TimeSpan? unsentRetention)
         {
@@ -62,6 +62,18 @@ DELETE FROM {TableName}
             => span == TimeSpan.Zero
                 ? "0 seconds"
                 : FormattableString.Invariant($"{-span.TotalSeconds:R} seconds");
+
+        private bool TryPersistLogEntryWithRecovery(LogEntry entry)
+        {
+            // Capacity rejection is not write recovery. Observe acceptance under the database gate.
+            return ExecuteDatabaseWithRecovery(() =>
+            {
+                bool persisted = TryPersistLogEntryWithReclamationCore(entry);
+                if (persisted)
+                    MarkSpoolRecovered();
+                return persisted;
+            }, updatesSpool: false);
+        }
 
         // On SQLITE_FULL, sent and then oldest eligible unsent rows may be reclaimed.
         // False means the new event was rejected by capacity; other storage errors propagate.
@@ -123,12 +135,13 @@ DELETE FROM {TableName}
             cmd.Transaction = transaction;
             cmd.CommandText = $@"
 INSERT INTO {TableName}
-  (EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
+  (EventId, ApplicationId, ApplicationVersion, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
 VALUES
-  ($eventId, $applicationId, $machineId, $processId, $ts, $lvl, $rendered, $tmpl, $tid, $sid, $ex, $props, 0);";
+  ($eventId, $applicationId, $applicationVersion, $machineId, $processId, $ts, $lvl, $rendered, $tmpl, $tid, $sid, $ex, $props, 0);";
 
             cmd.Parameters.AddWithValue("$eventId", entry.EventId);
             cmd.Parameters.AddWithValue("$applicationId", entry.ApplicationId);
+            cmd.Parameters.AddWithValue("$applicationVersion", (object?)entry.ApplicationVersion ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$machineId", (object?)entry.MachineId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$processId", entry.ProcessId);
             cmd.Parameters.AddWithValue("$ts", entry.Timestamp);
@@ -166,7 +179,9 @@ VALUES
             conn.Open();
             ConfigurePragmas(conn);
 
-            for (int unsentLimit = 0; unsentLimit <= 512; unsentLimit += 64)
+            // Status may reclaim sent rows, but must leave every unsent row in place.
+            int maximumUnsentLimit = entry.IsRelayStatusEvent ? 0 : 512;
+            for (int unsentLimit = 0; unsentLimit <= maximumUnsentLimit; unsentLimit += 64)
             {
                 using var transaction = conn.BeginTransaction();
                 DeleteOldestApplicationSpoolRowsCore(conn, transaction, sent: true, limit: int.MaxValue);
@@ -181,7 +196,7 @@ VALUES
                 catch (SqliteException ex) when (IsFullError(ex))
                 {
                     // The transaction restores reclaimed rows when the replacement still does not fit.
-                    if (deletedUnsent < unsentLimit)
+                    if (entry.IsRelayStatusEvent || deletedUnsent < unsentLimit)
                         return false;
                     continue;
                 }
@@ -200,6 +215,8 @@ VALUES
         private void ReportApplicationSpoolEvictions(int count)
         {
             Interlocked.Add(ref _applicationSpoolDroppedCount, count);
+            if (Interlocked.Exchange(ref _spoolDropWakePending, 1) == 0)
+                WakeStatusLoop();
             Volatile.Write(ref _pendingCountNeedsRefresh, 1);
             if (Interlocked.Exchange(ref _applicationSpoolOverflowReported, 1) == 0)
                 SelfLog.WriteLine("SerilogRelay spool reached its {0}-byte budget; {1} oldest unsent events were evicted to keep disk usage bounded.", _maxApplicationSpoolPhysicalBytes, count);
@@ -250,8 +267,13 @@ DELETE FROM {TableName}
 
         private void MarkSpoolUnavailable(Exception exception)
         {
-            if (Interlocked.CompareExchange(ref _spoolUnavailable, 1, 0) != 0)
-                return;
+            lock (_statusTransitionLock)
+            {
+                if (Interlocked.CompareExchange(ref _spoolUnavailable, 1, 0) != 0)
+                    return;
+                RecordStatusTransitionCore(StatusTransitionKind.SpoolUnavailable);
+            }
+            WakeStatusLoop();
 
             SelfLog.WriteLine(
                 "SerilogRelay local spool is unavailable; using the bounded volatile emergency buffer. Error: {0}",
@@ -260,8 +282,15 @@ DELETE FROM {TableName}
 
         private void MarkSpoolRecovered()
         {
-            if (Interlocked.Exchange(ref _spoolUnavailable, 0) == 0)
-                return;
+            lock (_statusTransitionLock)
+            {
+                if (_spoolDisabledForLifetime)
+                    return;
+                if (Interlocked.Exchange(ref _spoolUnavailable, 0) == 0)
+                    return;
+                RecordStatusTransitionCore(StatusTransitionKind.SpoolRecovered);
+            }
+            WakeStatusLoop();
 
             Interlocked.Exchange(ref _emergencyOverflowReported, 0);
             SelfLog.WriteLine("SerilogRelay local spool recovered; durable persistence resumed.");
@@ -269,12 +298,9 @@ DELETE FROM {TableName}
 
         private async Task<ClaimedLogBatch> ClaimPendingAsync(
             int limit,
-            DateTimeOffset now,
             CancellationToken token)
         {
             string claimBatchId = Guid.NewGuid().ToString("N");
-            long nowUnixMs = now.ToUnixTimeMilliseconds();
-            long claimUntilUnixMs = now.Add(ClaimLeaseDuration).ToUnixTimeMilliseconds();
 
             return await ExecuteDatabaseWithRecoveryAsync(
                 async () =>
@@ -313,15 +339,15 @@ UPDATE {TableName}
        );";
                         claim.Parameters.AddWithValue("$owner", _claimOwnerId);
                         claim.Parameters.AddWithValue("$claimBatchId", claimBatchId);
-                        claim.Parameters.AddWithValue("$claimUntil", claimUntilUnixMs);
-                        claim.Parameters.AddWithValue("$now", nowUnixMs);
+                        claim.Parameters.AddWithValue("$claimUntil", 0L);
+                        claim.Parameters.AddWithValue("$now", 0L);
                         claim.Parameters.AddWithValue("$limit", limit);
                         int claimLimit = limit;
                         int reclaimLimit = -1;
                         while (true)
                         {
                             token.ThrowIfCancellationRequested();
-                            using var transaction = conn.BeginTransaction();
+                            using var transaction = conn.BeginTransaction(deferred: false);
                             claim.Transaction = transaction;
                             claim.Parameters["$limit"].Value = claimLimit;
                             int deletedUnsent = 0;
@@ -333,6 +359,9 @@ UPDATE {TableName}
 
                             try
                             {
+                                DateTimeOffset now = _timeProvider.GetUtcNow();
+                                claim.Parameters["$now"].Value = now.ToUnixTimeMilliseconds();
+                                claim.Parameters["$claimUntil"].Value = now.Add(ClaimLeaseDuration).ToUnixTimeMilliseconds();
                                 int claimedCount = await claim.ExecuteNonQueryAsync(token).ConfigureAwait(false);
                                 if (claimedCount == 0 && deletedUnsent > 0)
                                     throw new SqliteException("Capacity reclamation left no event to reserve.", SQLitePCL.raw.SQLITE_FULL);
@@ -363,7 +392,7 @@ UPDATE {TableName}
                     var entries = new List<LogEntry>();
                     using var select = conn.CreateCommand();
                     select.CommandText = $@"
-SELECT Id, EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties
+SELECT Id, EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, ApplicationVersion
   FROM {TableName}
  WHERE Sent = 0
    AND ClaimOwnerId = $owner
@@ -393,6 +422,7 @@ SELECT Id, EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, Rende
                                 SpanId = reader.IsDBNull(10) ? null : reader.GetString(10),
                                 Exception = reader.IsDBNull(11) ? null : reader.GetString(11),
                                 Properties = reader.IsDBNull(12) ? null : reader.GetString(12),
+                                ApplicationVersion = reader.IsDBNull(13) ? null : reader.GetString(13),
                             };
                             long nextPayloadBytes = GetBatchPayloadBytesWithNextEntry(payloadBytes, entries.Count, entry);
 
@@ -471,6 +501,34 @@ UPDATE {TableName}
                 token).ConfigureAwait(false);
         }
 
+        private async Task<DateTimeOffset?> RenewClaimLeaseAsync(ClaimedLogBatch batch, CancellationToken token)
+        {
+            return await ExecuteDatabaseWithRecoveryAsync<DateTimeOffset?>(
+                async () =>
+                {
+                    using var conn = new SqliteConnection(_connectionString);
+                    await conn.OpenAsync(token).ConfigureAwait(false);
+                    ConfigurePragmas(conn);
+                    // Acquire the SQLite writer before starting the lease clock. Recheck ownership
+                    // after payload preparation: another process may already have taken over.
+                    using var transaction = conn.BeginTransaction(deferred: false);
+                    DateTimeOffset expiresAt = _timeProvider.GetUtcNow().Add(ClaimLeaseDuration);
+                    using var renew = conn.CreateCommand();
+                    renew.Transaction = transaction;
+                    renew.CommandText = $@"
+UPDATE {TableName}
+   SET ClaimUntilUnixMs = $claimUntil
+ WHERE Sent = 0 AND ClaimOwnerId = $owner AND ClaimBatchId = $batch;";
+                    renew.Parameters.AddWithValue("$claimUntil", expiresAt.ToUnixTimeMilliseconds());
+                    renew.Parameters.AddWithValue("$owner", _claimOwnerId);
+                    renew.Parameters.AddWithValue("$batch", batch.ClaimBatchId);
+                    if (await renew.ExecuteNonQueryAsync(token).ConfigureAwait(false) != batch.Entries.Count)
+                        return null;
+                    transaction.Commit();
+                    return expiresAt;
+                }, token).ConfigureAwait(false);
+        }
+
         private async Task ReleaseClaimAsync(ClaimedLogBatch batch, CancellationToken token)
         {
             await ReleaseClaimsCoreAsync(batch.ClaimBatchId, token).ConfigureAwait(false);
@@ -547,7 +605,7 @@ SELECT COUNT(*)
             return Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
 
-        // Ensure the logs table and multi-process claim columns/indexes exist.
+        // Ensure the logs table, origin metadata, and multi-process claim columns/indexes exist.
         private void EnsureTableCreatedCore()
         {
             using var conn = new SqliteConnection(_connectionString);
@@ -568,6 +626,7 @@ SELECT COUNT(*)
             EnsureColumnExistsCore(conn, migration, "ClaimOwnerId", "TEXT");
             EnsureColumnExistsCore(conn, migration, "ClaimBatchId", "TEXT");
             EnsureColumnExistsCore(conn, migration, "ClaimUntilUnixMs", "INTEGER");
+            EnsureColumnExistsCore(conn, migration, "ApplicationVersion", "TEXT");
 
             using var index = conn.CreateCommand();
             index.Transaction = migration;
@@ -638,21 +697,42 @@ PRAGMA journal_size_limit = {journalSizeLimit};");
             budgetCommand.ExecuteNonQuery();
         }
 
-        private T ExecuteDatabaseWithRecovery<T>(Func<T> operation)
+        private bool EnsureSpoolInitializedCore()
+        {
+            if (_spoolInitialized)
+                return false;
+
+            EnsureTableCreatedCore();
+            _spoolInitialized = true;
+            return true;
+        }
+
+        private T ExecuteDatabaseWithRecovery<T>(Func<T> operation, bool updatesSpool = true)
         {
             _databaseGate.Wait();
             try
             {
+                if (_spoolDisabledForLifetime)
+                    throw new InvalidOperationException("This relay instance has permanently disabled its spool; emergency memory delivery remains available.");
                 try
                 {
-                    return operation();
+                    bool initializedNow = EnsureSpoolInitializedCore();
+                    T result = operation();
+                    // A successful read alone does not prove that a previously failed
+                    // write can resume. Schema initialization itself does prove write access.
+                    if (updatesSpool || initializedNow)
+                        MarkSpoolRecovered();
+                    return result;
                 }
                 catch (SqliteException ex) when (IsCorruptionError(ex))
                 {
-                    if (!TryRecoverCorruptedSpool(ex))
-                        throw;
-
-                    return operation();
+                    TryRecoverCorruptedSpool(ex);
+                    throw;
+                }
+                catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
+                {
+                    MarkSpoolUnavailable(ex);
+                    throw;
                 }
             }
             finally
@@ -661,13 +741,13 @@ PRAGMA journal_size_limit = {journalSizeLimit};");
             }
         }
 
-        private void ExecuteDatabaseWithRecovery(Action operation)
+        private void ExecuteDatabaseWithRecovery(Action operation, bool updatesSpool = true)
             => ExecuteDatabaseWithRecovery(
                 () =>
                 {
                     operation();
                     return true;
-                });
+                }, updatesSpool);
 
         private async Task<T> ExecuteDatabaseWithRecoveryAsync<T>(
             Func<Task<T>> operation,
@@ -677,16 +757,23 @@ PRAGMA journal_size_limit = {journalSizeLimit};");
             T result;
             try
             {
+                if (_spoolDisabledForLifetime)
+                    throw new InvalidOperationException("This relay instance has permanently disabled its spool; emergency memory delivery remains available.");
                 try
                 {
+                    EnsureSpoolInitializedCore();
                     result = await operation().ConfigureAwait(false);
+                    MarkSpoolRecovered();
                 }
                 catch (SqliteException ex) when (IsCorruptionError(ex))
                 {
-                    if (!TryRecoverCorruptedSpool(ex))
-                        throw;
-
-                    result = await operation().ConfigureAwait(false);
+                    TryRecoverCorruptedSpool(ex);
+                    throw;
+                }
+                catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
+                {
+                    MarkSpoolUnavailable(ex);
+                    throw;
                 }
             }
             finally
@@ -709,228 +796,6 @@ PRAGMA journal_size_limit = {journalSizeLimit};");
                 },
                 token).ConfigureAwait(false);
         }
-
-        private bool TryRecoverCorruptedSpool(SqliteException exception)
-        {
-            if (_databasePath is null || !File.Exists(_databasePath))
-            {
-                SelfLog.WriteLine(
-                    "SQLite corruption was detected but the relay spool is not a recoverable file-backed database. ErrorCode={0}, ExtendedErrorCode={1}.",
-                    exception.SqliteErrorCode,
-                    exception.SqliteExtendedErrorCode);
-                return false;
-            }
-
-            using FileStream? recoveryLock = TryAcquireRecoveryLock(RecoveryLockTimeout);
-            if (recoveryLock is null)
-            {
-                SelfLog.WriteLine(
-                    "SerilogRelay could not acquire cross-process corruption-recovery coordination for spool '{0}'.",
-                    _databasePath);
-                return false;
-            }
-
-            if (IsCurrentSpoolHealthyCore())
-                return true;
-
-            string quarantineId =
-                DateTimeOffset.UtcNow.ToString("yyyyMMddTHHmmss.fffffff'Z'", CultureInfo.InvariantCulture)
-                + "-"
-                + Guid.NewGuid().ToString("N")[..8];
-
-            string databaseDirectory = Path.GetDirectoryName(_databasePath)!;
-            string quarantineDirectory = Path.Combine(
-                databaseDirectory,
-                CorruptionDirectoryName,
-                quarantineId);
-
-            try
-            {
-                SqliteConnection.ClearAllPools();
-                Directory.CreateDirectory(quarantineDirectory);
-
-                MoveToQuarantineIfPresent(_databasePath + "-wal", quarantineDirectory);
-                MoveToQuarantineIfPresent(_databasePath + "-shm", quarantineDirectory);
-                MoveToQuarantineIfPresent(_databasePath, quarantineDirectory);
-
-                WriteCorruptionMetadata(quarantineDirectory, quarantineId, exception);
-
-                EnsureTableCreatedCore();
-                InsertCorruptionEventCore(quarantineId, exception);
-
-                Interlocked.Exchange(
-                    ref _pendingCount,
-                    GetClaimablePendingCountCore(DateTimeOffset.UtcNow));
-                lock (_signalLock)
-                {
-                    _hasNewLogs = true;
-                }
-
-                SelfLog.WriteLine(
-                    "SerilogRelay quarantined a corrupted SQLite spool and created a new spool. QuarantineId={0}, ErrorCode={1}, ExtendedErrorCode={2}.",
-                    quarantineId,
-                    exception.SqliteErrorCode,
-                    exception.SqliteExtendedErrorCode);
-                return true;
-            }
-            catch (Exception recoveryException)
-            {
-                SelfLog.WriteLine(
-                    "SerilogRelay failed to quarantine/recreate a corrupted SQLite spool. OriginalErrorCode={0}, OriginalExtendedErrorCode={1}, RecoveryError={2}",
-                    exception.SqliteErrorCode,
-                    exception.SqliteExtendedErrorCode,
-                    recoveryException.Message);
-                return false;
-            }
-        }
-
-        private FileStream? TryAcquireRecoveryLock(TimeSpan timeout)
-        {
-            if (_databasePath is null)
-                return null;
-
-            string lockPath = _databasePath + ".recovery.lock";
-            DateTimeOffset deadline = DateTimeOffset.UtcNow + timeout;
-            while (true)
-            {
-                try
-                {
-                    return new FileStream(
-                        lockPath,
-                        FileMode.OpenOrCreate,
-                        FileAccess.ReadWrite,
-                        FileShare.None);
-                }
-                catch (IOException)
-                {
-                    if (DateTimeOffset.UtcNow >= deadline)
-                        return null;
-
-                    Thread.Sleep(50);
-                }
-            }
-        }
-
-        private bool IsCurrentSpoolHealthyCore()
-        {
-            try
-            {
-                using var conn = new SqliteConnection(_connectionString);
-                conn.Open();
-                ConfigurePragmas(conn);
-                using var command = conn.CreateCommand();
-                command.CommandText = "PRAGMA quick_check(1);";
-                return string.Equals(
-                    Convert.ToString(command.ExecuteScalar(), CultureInfo.InvariantCulture),
-                    "ok",
-                    StringComparison.OrdinalIgnoreCase);
-            }
-            catch (SqliteException ex) when (IsCorruptionError(ex))
-            {
-                return false;
-            }
-        }
-
-        private void InsertCorruptionEventCore(string quarantineId, SqliteException exception)
-        {
-            var properties = new Dictionary<string, string>
-            {
-                ["RelayEventType"] = CorruptionEventType,
-                ["QuarantineId"] = quarantineId,
-                ["SpoolFileName"] = Path.GetFileName(_databasePath!),
-                ["SqliteErrorCode"] = exception.SqliteErrorCode.ToString(CultureInfo.InvariantCulture),
-                ["SqliteExtendedErrorCode"] = exception.SqliteExtendedErrorCode.ToString(CultureInfo.InvariantCulture),
-                ["RecoveryAction"] = "quarantined_and_recreated",
-            };
-
-            string propertiesJson = JsonSerializer.Serialize(
-                properties,
-                typeof(Dictionary<string, string>),
-                LogBatchJsonContext.Default);
-
-            const string message =
-                "SerilogRelay quarantined a corrupted SQLite spool and created a new spool.";
-
-            using var conn = new SqliteConnection(_connectionString);
-            conn.Open();
-            ConfigurePragmas(conn);
-            using var tx = conn.BeginTransaction();
-            using var cmd = conn.CreateCommand();
-            cmd.Transaction = tx;
-            cmd.CommandText = $@"
-INSERT INTO {TableName}
-  (EventId, ApplicationId, MachineId, ProcessId, Timestamp, Level, RenderMessage, MessageTemplate, TraceId, SpanId, Exception, Properties, Sent)
-VALUES
-  ($eventId, $applicationId, $machineId, $processId, $ts, $lvl, $rendered, $tmpl, NULL, NULL, $ex, $props, 0);";
-
-            cmd.Parameters.AddWithValue("$eventId", Guid.NewGuid().ToString("D"));
-            cmd.Parameters.AddWithValue("$applicationId", _applicationId);
-            cmd.Parameters.AddWithValue("$machineId", (object?)_machineId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("$processId", _processId);
-            cmd.Parameters.AddWithValue(
-                "$ts",
-                DateTimeOffset.UtcNow.UtcDateTime.ToString("o", CultureInfo.InvariantCulture));
-            cmd.Parameters.AddWithValue("$lvl", "Error");
-            cmd.Parameters.AddWithValue("$rendered", message);
-            cmd.Parameters.AddWithValue("$tmpl", message);
-            cmd.Parameters.AddWithValue(
-                "$ex",
-                $"{exception.GetType().FullName}: {exception.Message}");
-            cmd.Parameters.AddWithValue("$props", propertiesJson);
-
-            cmd.ExecuteNonQuery();
-            tx.Commit();
-        }
-
-        private void WriteCorruptionMetadata(
-            string quarantineDirectory,
-            string quarantineId,
-            SqliteException exception)
-        {
-            try
-            {
-                var metadata = new Dictionary<string, string>
-                {
-                    ["DetectedUtc"] = DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture),
-                    ["QuarantineId"] = quarantineId,
-                    ["SpoolFileName"] = Path.GetFileName(_databasePath!),
-                    ["SqliteErrorCode"] = exception.SqliteErrorCode.ToString(CultureInfo.InvariantCulture),
-                    ["SqliteExtendedErrorCode"] = exception.SqliteExtendedErrorCode.ToString(CultureInfo.InvariantCulture),
-                    ["SqliteMessage"] = exception.Message,
-                    ["RecoveryAction"] = "quarantined_and_recreated",
-                };
-
-                string json = JsonSerializer.Serialize(
-                    metadata,
-                    typeof(Dictionary<string, string>),
-                    LogBatchJsonContext.Default);
-
-                File.WriteAllText(
-                    Path.Combine(quarantineDirectory, "corruption.json"),
-                    json);
-            }
-            catch (Exception metadataException)
-            {
-                SelfLog.WriteLine(
-                    "SerilogRelay could not write corruption metadata: {0}",
-                    metadataException.Message);
-            }
-        }
-
-        private static void MoveToQuarantineIfPresent(
-            string sourcePath,
-            string quarantineDirectory)
-        {
-            if (!File.Exists(sourcePath))
-                return;
-
-            string targetPath = Path.Combine(
-                quarantineDirectory,
-                Path.GetFileName(sourcePath));
-
-            File.Move(sourcePath, targetPath);
-        }
-
 
         private static string? ResolveDatabasePath(string connectionString)
         {

@@ -15,8 +15,10 @@ namespace Eigenverft.NetLib.SerilogRelay
         private readonly List<EmergencyEntry> _emergencyInFlight = new List<EmergencyEntry>();
         private readonly LinkedList<EmergencyEntry> _emergencyRetryEntries = new LinkedList<EmergencyEntry>();
         private long _emergencyInFlightPayloadBytes;
+        private long _emergencyApplicationEventCount;
+        private long _emergencyApplicationPayloadBytes;
 
-        private void EnqueueEmergency(LogEntry entry, Exception? exception)
+        private bool EnqueueEmergency(LogEntry entry, Exception? exception, bool reportRejectedEvent)
         {
             if (exception is not null)
                 MarkSpoolUnavailable(exception);
@@ -26,8 +28,20 @@ namespace Eigenverft.NetLib.SerilogRelay
             {
                 if (payloadBytes > _maxEmergencyBufferedPayloadBytes - _emergencyInFlightPayloadBytes)
                 {
-                    RecordEmergencyDrop();
-                    return;
+                    if (reportRejectedEvent)
+                        RecordEmergencyDrop(entry.IsRelayStatusEvent);
+                    return false;
+                }
+
+                // Operational status can wait for capacity; it must not displace a queued log.
+                if (entry.IsRelayStatusEvent
+                    && (_emergencyBufferedCount >= _emergencyBufferCapacity
+                        || payloadBytes > _maxEmergencyBufferedPayloadBytes - _emergencyBufferedPayloadBytes))
+                {
+                    if (reportRejectedEvent)
+                        RecordEmergencyDrop(droppedStatusEvent: true);
+                    ObserveEmergencyPressureUnderLock();
+                    return false;
                 }
 
                 while (_emergencyBufferedCount >= _emergencyBufferCapacity
@@ -41,33 +55,50 @@ namespace Eigenverft.NetLib.SerilogRelay
                     }
                     else if (!_emergencyChannel.Reader.TryRead(out oldest))
                     {
-                        RecordEmergencyDrop();
-                        return;
+                        if (reportRejectedEvent)
+                            RecordEmergencyDrop(entry.IsRelayStatusEvent);
+                        ObserveEmergencyPressureUnderLock();
+                        return false;
                     }
 
-                    CompleteEmergencyEntry(oldest);
-                    RecordEmergencyDrop();
+                    CompleteEmergencyEntry(oldest, observePressure: false);
+                    RecordEmergencyDrop(oldest.Entry.IsRelayStatusEvent);
                 }
 
                 var bufferedEntry = new EmergencyEntry(entry, payloadBytes);
                 Interlocked.Increment(ref _emergencyBufferedCount);
                 Interlocked.Add(ref _emergencyBufferedPayloadBytes, payloadBytes);
+                if (!entry.IsRelayStatusEvent)
+                {
+                    _emergencyApplicationEventCount++;
+                    _emergencyApplicationPayloadBytes += payloadBytes;
+                }
                 if (_emergencyChannel.Writer.TryWrite(bufferedEntry))
-                    return;
+                {
+                    ObserveEmergencyPressureUnderLock();
+                    return true;
+                }
 
-                CompleteEmergencyEntry(bufferedEntry);
-                RecordEmergencyDrop();
+                CompleteEmergencyEntry(bufferedEntry, observePressure: false);
+                if (reportRejectedEvent)
+                    RecordEmergencyDrop(entry.IsRelayStatusEvent);
+                ObserveEmergencyPressureUnderLock();
+                return false;
             }
         }
 
-        private void RecordEmergencyDrop()
+        private void RecordEmergencyDrop(bool droppedStatusEvent)
         {
+            if (droppedStatusEvent)
+                Interlocked.Increment(ref _statusEmergencyDroppedCount);
             long dropped = Interlocked.Increment(ref _emergencyDroppedCount);
+            if (!droppedStatusEvent && Interlocked.Exchange(ref _emergencyDropWakePending, 1) == 0)
+                WakeStatusLoop();
             if (Interlocked.Exchange(ref _emergencyOverflowReported, 1) != 0)
                 return;
 
             SelfLog.WriteLine(
-                "SerilogRelay emergency buffer limit reached ({0} events / {1} payload bytes). Oldest waiting events are evicted when possible; total dropped: {2}.",
+                "SerilogRelay emergency buffer limit reached ({0} events / {1} payload bytes). Application events may evict waiting events; status events are rejected instead. Total dropped: {2}.",
                 _emergencyBufferCapacity,
                 _maxEmergencyBufferedPayloadBytes,
                 dropped);
@@ -79,6 +110,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                 + sizeof(int)
                 + GetUtf8ByteCount(entry.EventId)
                 + GetUtf8ByteCount(entry.ApplicationId)
+                + GetUtf8ByteCount(entry.ApplicationVersion)
                 + GetUtf8ByteCount(entry.MachineId)
                 + GetUtf8ByteCount(entry.Timestamp)
                 + GetUtf8ByteCount(entry.Level)
@@ -210,12 +242,14 @@ namespace Eigenverft.NetLib.SerilogRelay
             token.ThrowIfCancellationRequested();
 
             // On shutdown prioritize sending volatile events before the process exits.
-            if (Volatile.Read(ref _disposeStarted) == 0 || string.IsNullOrEmpty(_endpoint))
+            if (!_spoolDisabledForLifetime
+                && (Volatile.Read(ref _disposeStarted) == 0 || string.IsNullOrEmpty(_endpoint)))
             {
                 for (int index = 0; index < batch.Count;)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (Volatile.Read(ref _disposeStarted) != 0 && !string.IsNullOrEmpty(_endpoint))
+                    if (_spoolDisabledForLifetime
+                        || (Volatile.Read(ref _disposeStarted) != 0 && !string.IsNullOrEmpty(_endpoint)))
                         break;
 
                     LogEntry entry = batch[index].Entry;
@@ -223,24 +257,29 @@ namespace Eigenverft.NetLib.SerilogRelay
                     bool storageFailed = false;
                     try
                     {
-                        persisted = ExecuteDatabaseWithRecovery(() => TryPersistLogEntryWithReclamationCore(entry));
+                        persisted = TryPersistLogEntryWithRecovery(entry);
                         if (persisted)
                             OnPersistedToSpool();
-                        else
-                            MarkSpoolRecovered();
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        MarkSpoolUnavailable(ex);
                         try
                         {
-                            persisted = ExecuteDatabaseWithRecovery(() => EventExistsCore(entry.EventId));
+                            persisted = !_spoolDisabledForLifetime
+                                && ExecuteDatabaseWithRecovery(() =>
+                                {
+                                    bool exists = EventExistsCore(entry.EventId);
+                                    // The exact EventId confirms that the prior write became durable.
+                                    if (exists)
+                                        MarkSpoolRecovered();
+                                    return exists;
+                                }, updatesSpool: false);
                             if (persisted)
                                 OnPersistedToSpool();
                         }
-                        catch (Exception verificationException)
+                        catch (Exception)
                         {
-                            MarkSpoolUnavailable(verificationException);
+                            // Database wrappers already recorded storage failures under the gate.
                         }
                         storageFailed = !persisted;
                     }
@@ -273,7 +312,7 @@ namespace Eigenverft.NetLib.SerilogRelay
             return await SendBatchAsync(entries, token).ConfigureAwait(false);
         }
 
-        private void CompleteEmergencyEntry(EmergencyEntry entry)
+        private void CompleteEmergencyEntry(EmergencyEntry entry, bool observePressure = true)
         {
             lock (_emergencyBufferLock)
             {
@@ -282,6 +321,13 @@ namespace Eigenverft.NetLib.SerilogRelay
 
                 Interlocked.Decrement(ref _emergencyBufferedCount);
                 Interlocked.Add(ref _emergencyBufferedPayloadBytes, -entry.PayloadBytes);
+                if (!entry.Entry.IsRelayStatusEvent)
+                {
+                    _emergencyApplicationEventCount--;
+                    _emergencyApplicationPayloadBytes -= entry.PayloadBytes;
+                }
+                if (observePressure)
+                    ObserveEmergencyPressureUnderLock();
             }
         }
 

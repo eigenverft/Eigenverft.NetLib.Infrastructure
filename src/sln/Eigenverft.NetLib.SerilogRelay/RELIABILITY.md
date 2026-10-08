@@ -25,6 +25,7 @@ SerilogRelayOptions
     MinimumBatchEvents        = 20
     MaximumBatchEvents        = 100
     TargetBatchPayloadBytes   = 4 MiB
+    RequestTimeout            = 2 seconds
     EmergencyMaximumBatchEvents      = 256
     EmergencyTargetBatchPayloadBytes = 4 MiB
     PollInterval              = 5 seconds
@@ -40,6 +41,11 @@ SerilogRelayOptions
   EmergencyMemoryBuffer
     MaxBufferedEvents         = 16384
     MaxBufferedPayloadBytes   = 64 MiB
+
+  StatusEvents
+    Mode                      = Off
+    MinimumLevel              = Warning
+    SummaryInterval           = none
 ```
 
 The normal call remains:
@@ -47,6 +53,23 @@ The normal call remains:
 ```csharp
 .WriteTo.SerilogRelay("https://logging.example/api/v1/logs")
 ```
+
+`StatusEvents` is a process-local operational output. `RelayOnly` stores and sends marked
+status events through this sink; `AllSinks` publishes them through the application logger;
+`AllSinks` requires a `LoggerProvider` that returns null until that logger is ready;
+`Off` leaves only Serilog SelfLog diagnostics. Status events use the same spool, emergency RAM
+buffer, batching, and shutdown delivery as application events. On admission they may reclaim sent
+spool rows, but do not evict waiting spool or RAM events. They still occupy capacity, and later
+normal reclamation can evict eligible unsent rows with a loss report. If both buffers reject a
+`RelayOnly` status transition, it remains pending for retry. Warnings cover outages, recovery,
+and pressure; errors
+summarize event loss. An optional Debug summary has its own interval. Dropped status events in
+RAM remain in cumulative counters but do not trigger another status event.
+Known state transitions wake the status worker immediately and remain ordered in a bounded
+64-entry queue; further rapid changes are summarized with counts and first/last timestamps.
+The shared SQLite page budget is sampled every 30 seconds because other processes can change it.
+Pending transitions are volatile until publication; process shutdown can lose them.
+In `RelayOnly`, failed spool and RAM admission leaves the transition pending for retry.
 
 ## Application spool
 
@@ -59,8 +82,32 @@ The default file-backed spool path is application based:
 Therefore multiple processes of the same logical application resolve to the same durable spool
 unless the caller overrides the spool path.
 
-The spool schema already records both `ApplicationId` and `ProcessId` on every event.
-`ProcessId` therefore identifies which OS process originally created a row.
+`ApplicationId` is normalized before it is recorded on events or used by the default spool path.
+After trimming surrounding whitespace, each run of characters outside `A-Z`, `a-z`, `0-9`, `.`,
+`_`, and `-` becomes one `_`; leading and trailing `.` and `_` are removed. An empty result
+becomes `Application`. Without an explicit value, the entry-assembly name is used.
+For example, `Payroll/Worker` and `Payroll:Worker` both become `Payroll_Worker`: they identify
+the same logical application and share the default spool. Choose distinct normalized IDs for
+separate applications, and ensure their resolved spool paths are distinct.
+
+The effective `ApplicationId` never exceeds 255 ASCII characters. Normalized IDs of at
+most 255 characters stay unchanged. Longer IDs become `_` + their first 189 normalized
+characters + `_` + the lowercase SHA-256 hash of the complete normalized ID (64 hexadecimal
+characters). The result is exactly 255 ASCII characters. The leading `_` reserves this
+representation because ordinary normalized IDs cannot start with it. Long IDs with the
+same readable prefix therefore retain distinct hash suffixes.
+
+The effective ID is recorded on each new event and used as the default application directory
+name. Reserved Windows device names still use `_` followed by their SHA-256 hash as the
+directory name while retaining their event identity. Ordinary IDs keep their existing paths.
+An absolute `spoolDirectory` does not depend on the OS user-data directory; default and
+relative paths can create a user-data directory that does not yet exist.
+
+The spool records `ApplicationId` and `ProcessId` on every event. New rows also record the
+originating application's `ApplicationVersion`, resolved once from the entry assembly when the
+sink is created or supplied through the options. Existing rows retain a null version after the
+schema upgrade. New versions are trimmed to at most 255 UTF-16 code units without splitting a surrogate pair. A later sender does not substitute its own version for an older row.
+`ProcessId` identifies which OS process originally created a row.
 
 Multiple active sinks can open and persist into the same file-backed spool. There is no
 lifetime-exclusive owner lock.
@@ -82,6 +129,13 @@ Consequently:
   process sharing the spool;
 - capacity reclamation may reclaim eligible rows created by any process;
 - row origin / `ProcessId` does not create a retention or capacity quota boundary.
+
+`SentEventRetention` measures age since insertion into the spool (`CreatedAt`), not time since
+successful delivery. Acknowledgment does not restart this age. For example, with one-day
+retention, a row delivered after two days of backlog is eligible for removal on the next
+maintenance pass. Zero deletes acknowledged rows immediately. This option does not expire
+unsent rows; `UnsentEventMaxAge` controls their age cleanup. Capacity reclamation may remove
+sent rows before the retention age is reached.
 
 Active delivery claims are an exception: an unsent row with a still-active claim is not removed
 by `UnsentEventMaxAge` cleanup or unsent capacity reclamation. Once that claim is released or
@@ -152,6 +206,7 @@ Pending rows carry:
 
 ```text
 Origin:
+  ApplicationVersion (nullable on older rows)
   ProcessId
 
 Delivery coordination:
@@ -160,8 +215,9 @@ Delivery coordination:
   ClaimUntilUnixMs
 ```
 
-Existing spool schemas are upgraded in place. Claim-column migration is serialized through an
-immediate SQLite transaction, and claim lookup/ownership indexes are created idempotently.
+Existing spool schemas are upgraded in place. Claim-column and application-version migration is
+serialized through an immediate SQLite transaction, and claim lookup/ownership indexes are
+created idempotently.
 
 ### Atomic claim behavior
 
@@ -173,6 +229,11 @@ A sender atomically claims up to `Delivery.MaximumBatchEvents` from rows that ar
 
 The default internal claim lease is 30 seconds. It is a crash/active-delivery safety window,
 not a retry-backoff timer.
+Its clock starts after the SQLite write lock is acquired. Immediately before HTTP delivery,
+after preparing the payload, the sender verifies ownership of the entire batch and renews the
+lease. A lost or incomplete claim is not sent. The request deadline is also bounded by the
+remaining renewed lease, with a one-second margin; a renewal that leaves no usable time skips
+the HTTP attempt. A renewal failure is reported as a spool failure rather than an endpoint failure.
 
 A process may claim rows created by another process of the same application spool. Only rows
 matching the current `ClaimOwnerId` and `ClaimBatchId` are marked sent after HTTP success.
@@ -200,6 +261,7 @@ same logical event may be delivered again. How a receiver stores or presents rep
 The process currently sending a claimed row uses its own runtime configuration:
 
 - its `Delivery` batch/cycle settings;
+- its HTTP client, authentication, and request timeout;
 - its `EndpointRetry` state;
 - its shutdown deadline.
 
@@ -218,16 +280,21 @@ without a separate cross-process notification subsystem.
 
 ### Recovery coordination
 
-Physical corruption quarantine/recreate is coordinated separately from row claims. A short-lived
-file-backed recovery lock serializes recovery for a shared spool. After acquiring the lock, the
-process runs a SQLite quick check first; if another process already recovered the spool, no
-second quarantine is performed.
+Startup generation selection and corruption recovery share one short-lived coordination lock
+at `<base-spool-filename>.recovery.lock`, independent of row claims. Its small versioned record
+contains the latest generation number and OS boot identifier, so cleanup needs no additional
+metadata file or SQL table. Marker replacement first flushes an empty record, then writes and
+flushes the replacement; interrupted or mismatched records cannot authorize cleanup.
 
-Normal persistence, claiming, and sending are not serialized behind that recovery lock.
+Normal persistence, claiming, and sending are not serialized behind that recovery lock. A local
+filesystem with working cross-process file locks is required for coordinated access.
 
 ## Endpoint outage and RetryGate
 
 Each sink/process owns its own in-memory `RetryGate`.
+
+Retry settings are captured when the sink is created. The multiplier must be finite and at
+least one; jitter must be finite and between zero and one.
 
 Default failed-attempt progression:
 
@@ -237,8 +304,19 @@ Default failed-attempt progression:
 
 with +/-20% jitter.
 
-A valid HTTP `Retry-After` is honored on every non-2xx response. A successful delivery resets that process's retry state
-immediately.
+A valid HTTP `Retry-After` is captured on every non-204 response before reading its body. The
+hint still controls failure pacing if the body is rejected or cannot be read completely; the
+failed response never confirms delivery. `EndpointRetry.MaximumDelay` caps both local backoff
+and server hints, defaulting to five minutes. A hint can extend, but never shorten, local backoff.
+Both delta-seconds and absolute dates are capped; an excessive delta is bounded before date
+arithmetic. Set `RespectRetryAfter` to false to ignore server hints. A successful delivery resets
+that process's retry state immediately.
+
+Response bodies are read and discarded as they arrive instead of being buffered in full.
+The built-in HTTP client limits complete response bodies to 4 KiB. A supplied client's
+`MaxResponseContentBufferSize` remains its response-body limit, even for an unknown-length body;
+the sink does not change it. Request, client, lease, and shutdown deadlines remain active through
+the body. A batch is acknowledged only after a complete HTTP 204 response within these limits.
 
 Normal endpoint outages remain in durable storage and do not consume Emergency memory.
 
@@ -268,12 +346,45 @@ active attempt ends. RAM and spool events are never mixed in one HTTP batch.
 
 ## Corruption recovery
 
-The current SQLite implementation can quarantine a corrupted spool and create a replacement.
+For ordinary storage failures, the selected generation remains fixed and database operations
+continue to retry. If initial schema creation or migration failed, the next database operation
+retries initialization under the same process-local gate before accessing that schema. Delayed
+initialization still preserves the startup delivery opportunity before unsent-age cleanup.
+Storage failures from delivery, maintenance, and diagnostic access share the Emit/Emergency
+availability state. Successful writes (or successful schema initialization) mark recovery;
+reads alone do not establish that writes can resume. Confirmation of the exact EventId after an
+ambiguous write also establishes that the affected event became durable. A capacity rejection
+that leaves the event only in RAM does not establish recovery.
 
-Concurrent recovery of one shared application spool is coordinated by the short-lived recovery
-lock described above. The lock is used only for quarantine/recreate and is automatically
-released when its file handle closes; a dead process therefore does not leave a lifetime spool
-owner behind.
+Each instance selects the highest numeric generation once at startup: the configured base
+filename is generation zero, followed by `.g0001`, `.g0002`, etc. before its extension. The
+connection string is fixed for that instance; healthy older instances are not forced to switch.
+
+A first `SQLITE_CORRUPT` or `SQLITE_NOTADB` sets a permanent process-visible flag on the
+affected sink instance. All its SQLite access stops, including emergency repersistence,
+claiming/acknowledgment, maintenance, diagnostic queries, and shutdown spool draining. Its RAM
+buffer retains the existing admission, batching, retry, and shutdown rules. Already active HTTP
+requests may finish; the disabled instance does not acknowledge them through SQLite.
+
+Under the recovery lock, the instance reserves the next generation with create-new semantics,
+or accepts that another process already reserved a higher generation. The new filename is an
+empty database; a new instance initializes its normal schema. The detecting instance remains in
+RAM mode even after creating the successor. Failures to reserve it are diagnosed through
+`SelfLog`, while RAM delivery remains available. Other SQLite errors keep their normal retry
+behavior. No database or WAL/SHM file is moved, replaced, or salvaged in a running boot session.
+
+At startup, a valid marker matching the highest generation and a different current OS boot
+identifier permits deletion of lower generations and their WAL/SHM files under the same lock.
+The helper uses the Windows native boot-environment query, Linux
+`/proc/sys/kernel/random/boot_id`, or macOS `kern.bootsessionuuid`. Missing, incomplete, or
+mismatched records are conservatively initialized for the current boot and defer deletion until
+a later boot. Unavailable boot information skips deletion without preventing spool use.
+
+Cleanup does not infer reboot from wall-clock or filesystem timestamps. Participating versions
+must all follow generation selection; binaries predating this protocol are not coordinated by
+it. Corrupt older data may be lost, and retained obsolete generations are outside the active
+database's configured size budget. Startup coordination/selection failure leaves that instance
+in RAM mode until it is replaced, rather than risking access to a stale generation.
 
 ## Shutdown
 
@@ -296,21 +407,21 @@ Pending rows are not bound to the endpoint or bearer token of the process that c
 process that currently owns a claim sends those rows using its own configured endpoint and
 bearer token.
 
-A non-2xx response releases the claim before that process enters its own retry delay. A different
+A non-204 response releases the claim before that process enters its own retry delay. A different
 process/version can therefore claim the same row and attempt delivery through different current
-credentials or a different endpoint. A 2xx response received by the current claim owner marks
+credentials or a different endpoint. A complete HTTP 204 response received by the current claim owner marks
 the claimed row delivered regardless of which process originally wrote it.
 
 This exact shape is covered by a separate-OS-process regression: the old sender remains alive
-after receiving non-2xx, its claim is released, and a second process sends the same `EventId`
-with its own endpoint/token and marks it sent after 2xx.
+after receiving non-204, its claim is released, and a second process sends the same `EventId`
+with its own endpoint/token and marks it sent after HTTP 204.
 
 `ProcessId` remains useful row-origin metadata. It is not an ownership, endpoint, retention, or
 capacity boundary.
 
 ## Dead-letter direction
 
-The sink intentionally has no dead-letter path. A non-2xx response does not permanently classify
+The sink intentionally has no dead-letter path. A non-204 response does not permanently classify
 or move the row; it remains unsent for later delivery attempts or takeover by an updated
 application version.
 
@@ -321,9 +432,16 @@ Those rows are still subject to the configured shared-spool bounds:
 
 The sink targets a generic HTTP receiver rather than one mandatory server implementation.
 
-For normal delivery, any HTTP 2xx received by the current claim owner is treated as successful
-delivery. Non-2xx or transport failure leaves the row unsent and releases its claim before the
-process-local retry delay.
+The receiver must return **204 No Content** after processing the entire batch under its own
+acceptance policy. No response body or extra acknowledgment header is required. Only a completed
+204 confirms delivery, for durable, emergency RAM, and shutdown batches alike. HTTP 200, 201,
+202, and every other status leave events unacknowledged. A durable row remains unsent and its
+claim is released before the process-local retry delay; an emergency event remains available
+for retry within the configured memory and shutdown limits.
+
+Redirects remain subject to the HTTP handler's policy, with 204 required from the final response.
+A login page returning HTTP 200 cannot acknowledge the batch. Receivers using another successful
+status must change their acknowledgment to 204.
 
 Receiver persistence, duplicate presentation, and server-side storage policies remain receiver
 concerns. Optional bearer authentication only controls the Authorization header emitted by the

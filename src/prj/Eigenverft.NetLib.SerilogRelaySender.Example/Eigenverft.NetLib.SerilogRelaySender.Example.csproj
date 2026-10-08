@@ -80,7 +80,7 @@
 
   <!-- The relay is consumed exactly as it would be by an external application. -->
   <ItemGroup>
-    <PackageReference Include="Eigenverft.NetLib.SerilogRelay" Version="0.1.0.26" />
+    <PackageReference Include="Eigenverft.NetLib.SerilogRelay" Version="1.0.0.10" />
     <PackageReference Include="Serilog" Version="4.4.0" />
   </ItemGroup>
 
