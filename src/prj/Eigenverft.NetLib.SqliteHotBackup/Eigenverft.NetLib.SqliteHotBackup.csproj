@@ -71,7 +71,16 @@
     </PackageReference>
   </ItemGroup>
 
-  <!-- Package metadata -->
+  <!-- Runtime dependencies match the EF generation of each target framework. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.33" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.1" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
+  </ItemGroup>
+
   <!-- https://learn.microsoft.com/en-us/nuget/create-packages/package-authoring-best-practices -->
   <PropertyGroup>
     <Authors>Eigenverft</Authors>
@@ -83,7 +92,7 @@
     <RepositoryUrl>https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <!-- NuGet gallery blurb. CDATA is optional and keeps multiline text. -->
-    <Description><![CDATA[Preparation scaffold for SQLite hot backups in .NET applications. No backup implementation or public API is included yet.]]></Description>
+    <Description><![CDATA[Scheduler-independent SQLite online backups with EF Core discovery, explicit file targets, targeted execution, progress-stall limits, best-effort results, and optional ZIP publication.]]></Description>
     <PackageReadmeFile>Readme.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIcon>Icon-128x128.png</PackageIcon>

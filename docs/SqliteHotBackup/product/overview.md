@@ -1,82 +1,74 @@
-# SqliteHotBackup scope and design context
+# SqliteHotBackup scope and responsibility boundaries
 
-`Eigenverft.NetLib.SqliteHotBackup` is being prepared as an independently
-versioned package inside the Eigenverft.NetLib.Infrastructure repository.
-The package name remains its own identity within the collection.
+`Eigenverft.NetLib.SqliteHotBackup` is one independently versioned .NET 8/.NET 10
+package in the Eigenverft.NetLib.Infrastructure collection. It owns the complete
+awaitable backup workflow; consumers supply configuration and invoke it.
 
-## Current state
+## Delivered behavior
 
-The repository contains a library project, a matching empty test project, and
-a dedicated solution for .NET 8 and .NET 10. Build settings, analyzers,
-versioning, and NuGet metadata are prepared. There is no backup
-engine, public API, database discovery, archive creation, retention, scheduling,
-or restore capability. Build and distribution configuration follows the existing
-active packages.
+The library discovers registered concrete EF DbContexts and context factories
+from loaded assemblies, accepts explicit SQLite files, and exposes all-target,
+single-target and selected-target calls plus an inventory without database I/O.
+Stable IDs name logical targets; selected aliases resolving to the same normalized
+path share one copy and retain their ID associations.
 
-## Inherited purpose
+Each source uses the native SQLite page-stepped backup API with busy/locked
+retries, cancellation and a private progress-stall limit. Temporary raw files and
+ZIPs are published after completion without overwriting existing outputs. Optional
+ZIP packaging includes successful sources only and deletes raw files only after
+publication. A singleton gate coordinates in-process calls and optional shutdown
+WAL checkpoints. Structured logs and complete run reports expose outcomes.
 
-The original design repository,
-[`Eigenverft.NetLib.SqliteHotBackup`](https://github.com/eigenverft/Eigenverft.NetLib.SqliteHotBackup),
-describes an operational backup layer for live SQLite databases in .NET
-applications, especially long-running ASP.NET Core and EF Core workloads.
+An individual failure permits other selected sources and successful archiving to
+continue. The standard operation then throws `SqliteBackupException` with the full
+report. Cancellation stops the whole run. Future calls start fresh, including
+previously failed sources. Ineligible automatic candidates are explained skips
+in an all-target run; deliberate selection makes ineligibility a failure.
 
-Its README identifies existing GlobalServer/PWA implementations as the starting
-point, primarily `Features/SqliteDiscovery/`, `Features/SqliteHotBackup/`, and
-`Features/HangfireJobs/` in `Eigenverft.App.GlobalServerPwaHost`, with a
-near-duplicate in the PWA project. Those implementations have not been inspected
-or copied as part of this scaffold. The following account preserves the design
-context; it does not verify the behavior of those applications.
+## Consumer boundary
 
-According to that design, the existing engine uses SQLitePCL's native online
-backup calls (`sqlite3_backup_init`, stepped `sqlite3_backup_step`, and
-`sqlite3_backup_finish`), retries busy/locked conditions, supports cancellation,
-and publishes temporary output only after successful completion. The surrounding
-feature is described as providing discovery, WAL inspection/checkpoint behavior,
-naming, ZIP packaging, orchestration, and result reporting.
+The application owns its EF registration, database paths, scheduler registration,
+schedules, startup continuations and retry policy. Hangfire is a trigger outside
+the package; its SQLite store is an ordinary explicit file target. No Hangfire or
+ASP.NET Core runtime dependency exists. Registration and integration examples are
+in the [consumer guide](../user/availability.md).
 
-## Intended capabilities
+The optional shutdown checkpoint belongs to library host-lifecycle integration,
+independently enabled from backup triggering. Administrative endpoints, their
+authentication and authorization remain consumer concerns.
 
-These remain design goals whose first-release scope has not been finalized:
+## Execution limits
 
-- Online, incremental/page-stepped backups with retry/backoff, cancellation,
-  explicit results, and safe temporary-file publication.
-- WAL-aware operation with optional checkpoint-on-shutdown support.
-- Opt-in/configurable discovery of DI-registered EF Core `DbContext` types and
-  `IDbContextFactory<TContext>`, plus explicit SQLite-file targets.
-- One programmatic operation over the discovered/registered inventory, with
-  configurable destinations and filename patterns.
-- Optional ZIP packaging of successful backups, with raw files removed only
-  after successful archive creation, and results distinguishing success,
-  skipping, and failure.
-- Configurable cleanup/retention and structured logging.
+Global `ExecutionLimit = new ProgressStallLimitCalculation()` is inherited by all
+automatic and explicit targets, with partial per-ID overrides. Each deduplicated
+source attempt has private state. Defaults are five minutes without copied-prefix
+advance and observed rewind loss greater than twice the largest page count.
+Growth scales the rewind allowance without manufacturing progress or erasing
+prior loss. There is no fixed overall duration ceiling or historical abort model.
 
-The original discovery design scans loaded application assemblies and checks
-DI registrations. Explicit file registration remains the intended deterministic
-alternative, including for SQLite stores outside EF Core.
+The defaults derive from freely chosen theoretical size/rate/interruption/growth
+scenarios, not GlobalServer timings or hardware benchmarks. Deterministic tests
+verify the selected rules; real SQLite tests verify execution and failure paths.
+A productive copy can still delay subsequent serial targets for a long time.
+Native operations use cooperative limits rather than forced I/O interruption.
 
-## Trigger and dependency boundaries
+## Origin and limits
 
-The design calls for a programmatic orchestration API that the host may invoke
-from a scheduler, worker, startup/shutdown workflow, administrative tool, or
-controlled endpoint. The original examples use
-`ISqliteHotBackupOrchestrator.BackupAllAsync()`; this is reference context,
-not a declared API in the new package.
+The reference application is `Eigenverft.App.GlobalServerPwaHost` at commit
+`58bf56763a078f0a212b4b2b79d98064bd4b71a4`. Its GlobalServer and PWA backup
+features have equivalent inspected behavior: all 12 backup files match after
+normalizing application names and line endings. Their discovery differences are
+comments and formatting. The library retains the page-stepped algorithm and
+separates source discovery, copying, publication, archiving and lifecycle work.
+EF-only WAL eligibility is retained; explicit files can use other journal modes.
+No consumer repository is migrated in this implementation.
 
-Hangfire is described as an existing caller with quarter-hourly, hourly, daily,
-and startup schedules. Scheduler-specific packages and optional ASP.NET Core
-administrative endpoints should remain separate integration concerns.
-Authentication, authorization, and operational access belong to the host or an
-optional integration layer.
+The original design context is recorded in
+[Eigenverft.NetLib.SqliteHotBackup](https://github.com/eigenverft/Eigenverft.NetLib.SqliteHotBackup).
+Local product behavior and this package's contracts are authoritative here.
 
-No SQLite, EF Core, scheduler, or web-host runtime dependencies have been added
-to the scaffold. The eventual package split and public APIs remain open for
-implementation work.
-
-## Extraction direction
-
-The inherited direction is to compare the two application copies, preserve
-working behavior, remove application coupling, and establish tests before API
-redesign. The design names concurrency, WAL mode, interrupted backups, multiple
-databases, and archive publication as important future verification topics.
-Its eventual public NuGet ambition is conditional on portability beyond the
-original applications; this scaffold does not establish release readiness.
+Retention, restore, remote stores, cross-database transactional snapshots,
+periodic ETA/stall-warning reporting and distributed scheduling/locking are
+outside this delivery. A ZIP holds independent snapshots, not one transaction
+across all databases. Raw deletion after archiving is not retention. Publishing
+or deploying the package remains a separate operation.
