@@ -8,8 +8,9 @@ create, discover, archive, restore, or retain database backups.
 
 The project targets .NET 8 and .NET 10 and is maintained as an independently
 versioned package in the Eigenverft.NetLib.Infrastructure repository. Its
-prerelease version starts at `0.1-alpha`; the repository's automated distribution
-is disabled for this scaffold.
+versioning configuration uses the collection's `1.0.0` base and shared
+release-reference rules. Build and distribution follow the existing package
+configuration.
 
 The intended direction is to extract the existing GlobalServer/PWA backup
 behavior, preserving online backup, database discovery, orchestration, and

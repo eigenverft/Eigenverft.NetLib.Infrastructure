@@ -53,8 +53,6 @@
     <IsTestProject>false</IsTestProject>
     <PackAsTool>false</PackAsTool>
     <EnablePackageValidation>true</EnablePackageValidation>
-    <!-- Keep the empty scaffold out of automated distribution until backup behavior exists. -->
-    <IsCicdEnabled>false</IsCicdEnabled>
   </PropertyGroup>
 
   <!-- SDK defaults stay. CheckEol: true for exe, skipped for Library. InvariantGlobalization unset = cultures on. -->

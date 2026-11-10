@@ -10,6 +10,6 @@ installation or application-integration instructions for a working backup
 feature yet.
 
 The empty assembly targets .NET 8 and .NET 10. A local package can be generated
-to inspect its metadata, but automated distribution is disabled for this
-preparation stage. Package creation does not establish that backup behavior
-exists or has been tested.
+to inspect its metadata. The project uses the collection's `1.0.0` version base
+and standard build and distribution configuration. Package creation does not
+establish that backup behavior exists or has been tested.

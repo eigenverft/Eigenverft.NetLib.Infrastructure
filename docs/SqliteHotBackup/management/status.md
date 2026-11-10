@@ -6,10 +6,11 @@ existing repository model of independently versioned capabilities with shared
 development and delivery tooling.
 
 The delivered preparation consists of a .NET 8/.NET 10 library and test project,
-a dedicated solution, analyzer/build configuration, independent prerelease
+a dedicated solution, analyzer/build configuration, independent
 versioning, and NuGet metadata. There is no usable backup functionality and no
-behavioral test evidence yet. Both projects are excluded from automated
-distribution while the package remains empty.
+behavioral test evidence yet. Versioning uses the same `1.0.0` base and
+release-reference rules as the existing active packages. Both projects follow
+the normal shared CI configuration.
 
 Local verification completed restore, Release builds for both targets, and
 NuGet package generation. Package inspection confirmed both target assemblies

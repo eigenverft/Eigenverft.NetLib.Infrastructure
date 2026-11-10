@@ -8,9 +8,10 @@ The package name remains its own identity within the collection.
 
 The repository contains a library project, a matching empty test project, and
 a dedicated solution for .NET 8 and .NET 10. Build settings, analyzers,
-prerelease versioning, and NuGet metadata are prepared. There is no backup
+versioning, and NuGet metadata are prepared. There is no backup
 engine, public API, database discovery, archive creation, retention, scheduling,
-or restore capability. Automated distribution is disabled.
+or restore capability. Build and distribution configuration follows the existing
+active packages.
 
 ## Inherited purpose
 

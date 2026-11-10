@@ -20,8 +20,6 @@
     <IsPublishable>false</IsPublishable>
     <IsTestProject>true</IsTestProject>
     <PackAsTool>false</PackAsTool>
-    <!-- Activate with the library when real backup tests and implementation are added. -->
-    <IsCicdEnabled>false</IsCicdEnabled>
   </PropertyGroup>
 
   <!-- Test configuration -->
@@ -38,6 +36,7 @@
     <CollectCoverage>true</CollectCoverage>
     <CoverletOutputFormat>opencover,json</CoverletOutputFormat>
     <CoverletOutput>./CoverletOutput/</CoverletOutput>
+    <ExcludeByFile>**/obj/**/System.Text.Json.SourceGeneration/**/*.cs</ExcludeByFile>
     <Include>[Eigenverft.NetLib.SqliteHotBackup]*</Include>
     <Threshold>100</Threshold>
     <ThresholdType>line,branch,method</ThresholdType>
@@ -47,8 +46,7 @@
 
   <!-- Package inventory of the packable library, not this test project. -->
   <PropertyGroup>
-    <!-- Parallel framework builds otherwise overwrite or lock each other's report files. -->
-    <NugetReportDir Condition=" '$(NugetReportDir)' == '' ">$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'NugetReport', '$(TargetFramework)'))</NugetReportDir>
+    <NugetReportDir Condition=" '$(NugetReportDir)' == '' ">$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'NugetReport'))</NugetReportDir>
     <NugetReportProject Condition=" '$(NugetReportProject)' == '' ">$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '..', 'Eigenverft.NetLib.SqliteHotBackup', 'Eigenverft.NetLib.SqliteHotBackup.csproj'))</NugetReportProject>
   </PropertyGroup>
   <Target Name="WriteNugetReport" AfterTargets="PostBuildEvent">

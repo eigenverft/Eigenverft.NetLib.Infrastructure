@@ -42,7 +42,8 @@ The version and download badges are package-specific. The repository CI badge ab
 
 [`Eigenverft.NetLib.SqliteHotBackup`](src/sln/Eigenverft.NetLib.SqliteHotBackup/Readme.md)
 has a library/test scaffold and package metadata for .NET 8 and .NET 10. It has
-no backup implementation or public API, and automated distribution is disabled.
+no backup implementation or public API and follows the repository's standard
+build and distribution configuration.
 See its [documentation](docs/SqliteHotBackup/README.md) for status and design context.
 
 ## Legacy monolith reference

@@ -10,17 +10,16 @@ implementation, public API, or behavioral tests.
 | `../../prj/Eigenverft.NetLib.SqliteHotBackup.Tests/` | Matching MSTest project with coverage and package-report configuration, ready for future tests. |
 
 The common project setup was copied from SerilogRelay. Its implementation,
-examples, runtime dependencies, and feature-specific test settings were omitted.
-The library version starts at `0.1-alpha`. Both new projects set
-`IsCicdEnabled=false`, so recursive solution discovery finds them but the shared
-pipeline skips their build and distribution stages. Local builds and packing
-remain available.
+examples, and runtime dependencies were omitted. The library uses the same
+`1.0.0` version base, release-reference rules, and default CI activation as the
+existing active packages. Recursive solution discovery includes this solution
+in the shared build and distribution pipeline.
 
 From the repository root:
 
 ```powershell
 dotnet restore src/sln/Eigenverft.NetLib.SqliteHotBackup/Eigenverft.NetLib.SqliteHotBackup.slnx
-dotnet build src/sln/Eigenverft.NetLib.SqliteHotBackup/Eigenverft.NetLib.SqliteHotBackup.slnx --configuration Release --no-restore
+dotnet build src/sln/Eigenverft.NetLib.SqliteHotBackup/Eigenverft.NetLib.SqliteHotBackup.slnx --configuration Release --no-restore -m:1
 dotnet test src/sln/Eigenverft.NetLib.SqliteHotBackup/Eigenverft.NetLib.SqliteHotBackup.slnx --configuration Release --no-build --no-restore
 dotnet pack src/prj/Eigenverft.NetLib.SqliteHotBackup/Eigenverft.NetLib.SqliteHotBackup.csproj --configuration Release --no-build --no-restore
 ```
@@ -28,6 +27,9 @@ dotnet pack src/prj/Eigenverft.NetLib.SqliteHotBackup/Eigenverft.NetLib.SqliteHo
 The test command currently discovers zero tests and provides no evidence of
 backup correctness. A generated NuGet package contains only the empty assembly
 and package metadata.
+
+The build uses `-m:1`, as repository CI does, because the copied test template
+writes both frameworks' NuGet reports to the same directory.
 
 See the [developer guide](../../../docs/SqliteHotBackup/developer/setup.md),
 [product design context](../../../docs/SqliteHotBackup/product/overview.md), and
