@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/sln/Eigenverft.NetLib.SqliteHotBackup/">
+    <File Path="Readme.md" />
+  </Folder>
+  <Folder Name="/prj/">
+    <Project Path="../../prj/Eigenverft.NetLib.SqliteHotBackup.Tests/Eigenverft.NetLib.SqliteHotBackup.Tests.csproj" />
+    <Project Path="../../prj/Eigenverft.NetLib.SqliteHotBackup/Eigenverft.NetLib.SqliteHotBackup.csproj" />
+  </Folder>
+</Solution>

@@ -27,3 +27,6 @@ AGENTS/
 output/
 .github/workflows/.config/docfx/build/docfx_local.json
 distribute.ps1
+
+# Local product work history
+docs/*/workhistory.md

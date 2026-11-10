@@ -38,6 +38,13 @@ The version and download badges are package-specific. The repository CI badge ab
 | [`Eigenverft.NetLib.Security.MachineBinding`](https://www.nuget.org/packages/Eigenverft.NetLib.Security.MachineBinding) | A deployment needs a stable, non-secret machine factor derived from the operating-system platform UUID. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Security.MachineBinding?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Security.MachineBinding) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Security.MachineBinding?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Security.MachineBinding) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Security.MachineBinding/Readme.md) |
 | [`Eigenverft.NetLib.Transformations`](https://www.nuget.org/packages/Eigenverft.NetLib.Transformations) | String transformations must be composed and reversed independently of configuration, storage, or hosting. | [![NuGet Version](https://img.shields.io/nuget/v/Eigenverft.NetLib.Transformations?label=NuGet&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Transformations) | [![NuGet Downloads](https://img.shields.io/nuget/dt/Eigenverft.NetLib.Transformations?label=Downloads&logo=nuget)](https://www.nuget.org/packages/Eigenverft.NetLib.Transformations) | [Package guide](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/blob/main/src/sln/Eigenverft.NetLib.Transformations/Readme.md) |
 
+## Packages in preparation
+
+[`Eigenverft.NetLib.SqliteHotBackup`](src/sln/Eigenverft.NetLib.SqliteHotBackup/Readme.md)
+has a library/test scaffold and package metadata for .NET 8 and .NET 10. It has
+no backup implementation or public API, and automated distribution is disabled.
+See its [documentation](docs/SqliteHotBackup/README.md) for status and design context.
+
 ## Legacy monolith reference
 
 The historical overview and examples below describe the consolidated package surface. They are kept

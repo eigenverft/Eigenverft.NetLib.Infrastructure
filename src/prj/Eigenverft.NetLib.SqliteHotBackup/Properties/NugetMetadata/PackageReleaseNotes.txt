@@ -1,0 +1,1 @@
+Initial preparation scaffold: .NET 8/.NET 10 library and test projects, analyzer rules, independent prerelease versioning, and NuGet metadata. No backup implementation or public API is included. Automated distribution remains disabled.
