@@ -27,10 +27,25 @@ CI and an equivalent local run reproduced 204 passing tests with 99.95% line and
 99.88% branch coverage on .NET 8. Preserve the deterministic lifecycle case and the
 coverage gate; do not substitute longer sleeps or coverage exclusions.
 
+`ShutdownRetriesHangingResponsesAtOneSecondIntervals` checks durable and emergency
+delivery over TCP: two unacknowledged requests time out, the third is held behind
+an explicit response gate, and shutdown completes only after its acknowledgment.
+It uses a 30-second test budget while retaining one-second request/retry settings.
+The existing manual time provider drives the two HTTP cancellations; the
+successful response is not exposed to a racing real-time request deadline.
+Real retry spacing is still measured, and HTTP timers must be gone after cleanup.
+The original three-second overall budget left insufficient margin for two full
+request timeouts plus TCP and SQLite acknowledgment on a loaded CI runner.
+`ShutdownCancelsInFlightFlushAtDeadline` separately verifies the default
+three-second deadline and retention of the unsent row. The deterministic
+`ShutdownRetryDoesNotWaitAgainWhenRequestConsumedItsInterval` check protects
+against adding an extra retry interval after a timed-out request; it uses an
+already elapsed monotonic timestamp and requires no sleep.
+
 The runtime reliability contract, including spool ownership, delivery, shutdown
 and receiver behavior, is documented in
 [the reliability guide](../../../src/sln/Eigenverft.NetLib.SerilogRelay/RELIABILITY.md).
 
-Verified on 2026-11-11: the CI-equivalent full run passes 205 tests on each of
+Verified on 2026-11-11: the CI-equivalent full run passes 206 tests on each of
 .NET 8 and .NET 10 with 100% line, branch and method coverage. The runtime assembly
 and coverage configuration were unchanged by this correction.

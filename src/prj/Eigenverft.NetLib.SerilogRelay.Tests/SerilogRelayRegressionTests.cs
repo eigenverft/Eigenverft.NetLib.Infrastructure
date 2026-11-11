@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -15,6 +16,26 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 {
     public sealed partial class SerilogRelayReliabilityTests
     {
+        [TestMethod]
+        public async Task ShutdownRetryDoesNotWaitAgainWhenRequestConsumedItsInterval()
+        {
+            string directory = CreateTemporaryDirectory();
+            try
+            {
+                await using var sink = new SerilogRelaySink(
+                    $"Data Source={Path.Combine(directory, "retry.db")}", null, new SerilogRelayOptions());
+                await StopRelayWorkers(sink);
+                long completedAttempt = Stopwatch.GetTimestamp() - 2 * Stopwatch.Frequency;
+                SetPrivateField(sink, "_lastHttpAttemptStartedTimestamp", completedAttempt);
+
+                Task retry = InvokePrivateTaskMethod(sink, "WaitForShutdownRetryAsync", completedAttempt, CancellationToken.None);
+                Assert.IsTrue(retry.IsCompletedSuccessfully,
+                    "Time already spent in the request must not be followed by another retry-interval wait.");
+                await retry;
+            }
+            finally { DeleteTemporaryDirectory(directory); }
+        }
+
         [TestMethod]
         public async Task SpoolMaintenanceStopsWhenCancellationPrecedesWorkerStart()
         {

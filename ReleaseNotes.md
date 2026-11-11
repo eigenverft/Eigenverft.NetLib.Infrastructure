@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Separate SerilogRelay's hanging-response retry test from the default overall shutdown deadline. Give its TCP/SQLite acknowledgment a bounded test budget, retain one-second retry checks and stable event IDs, explicitly gate the successful response, and add a deterministic check that elapsed request time does not incur another retry wait. The production shutdown defaults and separate deadline/retention tests remain unchanged.
+
 - Stabilize SerilogRelay coverage by explicitly testing cancellation before the application-spool maintenance worker starts. The lifecycle case previously depended on incidental background-task scheduling and could leave one line/branch unexecuted despite all 204 tests passing. Runtime behavior and the 100% coverage requirement remain unchanged.
 
 - Fix CI project/version property queries failing when restore warnings are appended to JSON output. Read MSBuild's dedicated UTF-8 result file, retain restore diagnostics in the log, and clean up query files after success or failure. Add focused regression coverage for project metadata, Nerdbank version queries, diagnostic output and failed results. Package/runtime behavior is unchanged.

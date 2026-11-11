@@ -3154,18 +3154,27 @@ VALUES
             using var listener = new TcpListener(IPAddress.Loopback, 0);
             listener.Start();
             int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            var options = new SerilogRelayOptions();
+            var clock = new ManualRelayTimeProvider();
+            using var client = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
+            var options = new SerilogRelayOptions { HttpClient = client };
+            // Two request timeouts plus TCP/SQLite acknowledgment can exhaust the default
+            // three-second budget on CI. Its deadline has a separate test; retain real retry spacing here.
+            options.Delivery.ShutdownTimeout = TimeSpan.FromSeconds(30);
             if (emergency)
                 options.ApplicationSpool.MaxPhysicalBytes = 64L * 1024L;
             var sink = new SerilogRelaySink(connectionString, endpoint: null, options);
             var responseGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             var firstBody = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             var secondBody = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var successfulResponseGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var thirdBody = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             Task<string>? firstRequest = null;
             Task<string>? secondRequest = null;
+            Task<string>? thirdRequest = null;
 
             try
             {
+                SetPrivateField(sink, "_timeProvider", clock);
                 // Keep normal delivery out of the way; exercise the public shutdown path.
                 GetPrivateField<RetryGate>(sink, "_retryGate").RecordFailure(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddMinutes(1));
                 sink.Emit(CreateLogEvent(emergency ? new string('v', 128 * 1024) : "durable shutdown timeout"));
@@ -3175,25 +3184,35 @@ VALUES
                     onBodyReceived: body => firstBody.TrySetResult(body));
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 Task shutdown = sink.DisposeAsync().AsTask();
-                string first = await firstBody.Task.WaitAsync(TimeSpan.FromSeconds(2));
+                string first = await firstBody.Task.WaitAsync(TimeSpan.FromSeconds(30));
                 TimeSpan firstStarted = stopwatch.Elapsed;
 
                 secondRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent, responseGate: responseGate.Task,
                     onBodyReceived: body => secondBody.TrySetResult(body));
-                string second = await secondBody.Task.WaitAsync(TimeSpan.FromSeconds(2));
+                clock.Advance(TimeSpan.FromSeconds(1));
+                string second = await secondBody.Task.WaitAsync(TimeSpan.FromSeconds(30));
                 TimeSpan secondStarted = stopwatch.Elapsed;
-                Task<string> thirdRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent);
-                string third = await thirdRequest.WaitAsync(TimeSpan.FromSeconds(2));
+                thirdRequest = ReceiveSingleRequestAsync(listener, HttpStatusCode.NoContent,
+                    responseGate: successfulResponseGate.Task, onBodyReceived: body => thirdBody.TrySetResult(body));
+                clock.Advance(TimeSpan.FromSeconds(1));
+                string third = await thirdBody.Task.WaitAsync(TimeSpan.FromSeconds(30));
                 TimeSpan thirdStarted = stopwatch.Elapsed;
-                await shutdown.WaitAsync(TimeSpan.FromSeconds(4));
 
                 Assert.IsFalse(firstRequest.IsCompleted);
                 Assert.IsFalse(secondRequest.IsCompleted);
                 Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(800), secondStarted - firstStarted);
                 Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(800), thirdStarted - secondStarted);
                 Assert.IsLessThan(options.Delivery.ShutdownTimeout, thirdStarted);
+                Assert.IsFalse(thirdRequest.IsCompleted);
+                Assert.IsFalse(shutdown.IsCompleted);
+                Assert.AreEqual(emergency ? 1L : 0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+
+                successfulResponseGate.TrySetResult(true);
+                await thirdRequest.WaitAsync(TimeSpan.FromSeconds(30));
+                await shutdown.WaitAsync(TimeSpan.FromSeconds(30));
                 Assert.AreEqual(0L, GetTotalRowCount(connectionString));
                 Assert.AreEqual(0L, GetPrivateField<long>(sink, "_emergencyBufferedCount"));
+                Assert.AreEqual(0, clock.ActiveTimers);
                 using JsonDocument firstDocument = JsonDocument.Parse(first);
                 using JsonDocument secondDocument = JsonDocument.Parse(second);
                 using JsonDocument thirdDocument = JsonDocument.Parse(third);
@@ -3203,9 +3222,10 @@ VALUES
             }
             finally
             {
+                successfulResponseGate.TrySetResult(true);
                 responseGate.TrySetResult(true);
                 listener.Stop();
-                foreach (Task<string>? request in new[] { firstRequest, secondRequest })
+                foreach (Task<string>? request in new[] { firstRequest, secondRequest, thirdRequest })
                 {
                     if (request is null)
                         continue;
