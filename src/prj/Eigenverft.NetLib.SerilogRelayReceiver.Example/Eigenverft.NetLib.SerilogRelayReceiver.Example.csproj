@@ -80,8 +80,8 @@
 
   <!-- The receiver is consumed exactly as it would be by an external host. -->
   <ItemGroup>
-    <PackageReference Include="Eigenverft.WebLib.SerilogRelayReceiver" Version="1.0.0.8" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
+    <PackageReference Include="Eigenverft.WebLib.SerilogRelayReceiver" Version="1.0.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.15" />
   </ItemGroup>
 
   <!-- Assembly identity (also NuGet Authors/Company/Copyright/Description when packing). -->

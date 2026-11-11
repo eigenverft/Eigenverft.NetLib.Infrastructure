@@ -9,7 +9,7 @@ configured NuGet sources or an adequate package cache.
 The solution is
 `src/sln/Eigenverft.NetLib.SqliteHotBackup/Eigenverft.NetLib.SqliteHotBackup.slnx`.
 Its library and matching MSTest project live under `src/prj/`. The library uses
-EF Core SQLite 8.0.33 for .NET 8 and 10.0.14 for .NET 10, plus matching-generation
+EF Core SQLite 8.0.34 for .NET 8 and 10.0.15 for .NET 10, plus matching-generation
 Microsoft.Extensions.Hosting.Abstractions. Microsoft.Data.Sqlite/SQLitePCLRaw
 supply the native SQLite engine. There is no scheduler or web-host dependency.
 The Infrastructure compatibility aggregate does not reference this package.

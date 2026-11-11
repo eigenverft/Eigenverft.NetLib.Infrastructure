@@ -1,5 +1,6 @@
 Current changes
 
+- Updates Microsoft.Data.Sqlite to 8.0.34 for both target frameworks.
 - Limits new effective ApplicationId values to 255 ASCII characters. Longer normalized IDs retain their first 189 characters in a reserved representation with the complete normalized ID's lowercase SHA-256 hash.
 - Limits configured and entry-assembly ApplicationVersion values to 255 UTF-16 code units without splitting surrogate pairs.
 - Keeps historical spool metadata unchanged. Existing 256-character IDs now resolve to a different effective identity and default spool directory; coordinate upgrades with receivers enforcing the new limit.

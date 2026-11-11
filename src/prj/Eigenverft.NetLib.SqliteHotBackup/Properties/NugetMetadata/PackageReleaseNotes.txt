@@ -1,1 +1,3 @@
 Initial SQLite online-backup implementation for .NET 8 and .NET 10. Includes lazy EF DbContext/factory discovery, stable target IDs and inventory, explicit file sources, all/single/selected-target execution, per-source progress-stall limits with global inheritance and ID overrides, safe no-overwrite publication, best-effort results with an end-of-run exception, optional ZIP publication/raw cleanup, and opt-in shutdown WAL checkpoints. Scheduler triggers and retries remain consumer-owned; no Hangfire dependency or consumer migration is included.
+
+Uses EF Core SQLite 8.0.34/10.0.15 and Hosting.Abstractions 8.0.1/10.0.15 for the .NET 8/.NET 10 targets.

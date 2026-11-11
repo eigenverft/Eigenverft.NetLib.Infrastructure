@@ -69,8 +69,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" Condition="'$(TargetFramework)' == 'net8.0'" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" Condition="'$(TargetFramework)' == 'net8.0'" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" Condition="'$(TargetFramework)' == 'net10.0'" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" Condition="'$(TargetFramework)' == 'net10.0'" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.15" Condition="'$(TargetFramework)' == 'net10.0'" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.15" Condition="'$(TargetFramework)' == 'net10.0'" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildProjectDirectory)\NugetAssets\**\*" Pack="true" PackagePath="" />
