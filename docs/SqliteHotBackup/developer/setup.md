@@ -91,6 +91,15 @@ projects follow normal CI activation and branch distribution rules. No workflow
 entry or package-specific publishing gate is added here. A local pack does not
 publish a release.
 
+The shared pipeline reads project and Nerdbank version properties through
+MSBuild's `-getResultOutputFile` switch. Restore diagnostics stay in the log;
+only the dedicated UTF-8 JSON file is parsed. Query files use unique names under
+each project's ignored `obj/` and are removed on success or failure. This avoids
+NuGet warnings corrupting a captured JSON stream. Focused regression checks use
+Pester 5: `Invoke-Pester .github/workflows/tests/ProjectProperties.Tests.ps1`.
+The workflow's push filter covers `src/**`; for a pipeline-only correction,
+dispatch `cicd.yml` explicitly after pushing the corrected script.
+
 The GlobalServer/PWA reference was inspected at application commit
 `58bf56763a078f0a212b4b2b79d98064bd4b71a4`. The stepped native algorithm, delays,
 file/ZIP workflow and EF WAL eligibility are retained as baseline behavior.

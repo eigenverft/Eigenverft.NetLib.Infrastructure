@@ -39,6 +39,60 @@ if ($PowerShellGalleryAvailable)
 Import-Module -Name 'Eigenverft.Manifested.Drydock' -Force -ErrorAction Stop
 $null = Test-ModuleAvailable -Name 'Eigenverft.Manifested.Drydock' -IncludePrerelease -ExitIfNotFound -Quiet
 
+function Invoke-DotnetPropertyRestore {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.IO.FileInfo]$ProjectFileInfo,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$CommonArguments,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string[]]$PropertyNames,
+
+        [string]$Target
+    )
+
+    $ResultDirectory = Join-Path $ProjectFileInfo.DirectoryName 'obj'
+    $null = [System.IO.Directory]::CreateDirectory($ResultDirectory)
+    $ResultPath = Join-Path $ResultDirectory ("cicd-properties-{0}.json" -f [guid]::NewGuid().ToString('N'))
+    try
+    {
+        # Restore warnings can share the captured stream with JSON. MSBuild's dedicated
+        # result file keeps diagnostics visible without feeding them to the JSON parser.
+        $Arguments = @(
+            'restore', $ProjectFileInfo.FullName, '-nologo', '-p:Stage=restore',
+            ('-getProperty:' + ($PropertyNames -join ',')),
+            ('-getResultOutputFile:' + $ResultPath)
+        )
+        if (-not [string]::IsNullOrWhiteSpace($Target))
+        {
+            $Arguments += '-t:' + $Target
+        }
+        $RestoreOutput = Invoke-ProcessTyped -Executable 'dotnet' -Arguments $Arguments `
+            -CommonArguments $CommonArguments -CaptureOutput $true -ReturnType Text
+        if (-not [string]::IsNullOrWhiteSpace($RestoreOutput))
+        {
+            Write-Host $RestoreOutput
+        }
+
+        try
+        {
+            return (Get-Content -LiteralPath $ResultPath -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop).Properties
+        }
+        catch
+        {
+            throw "dotnet restore returned invalid property data for '$($ProjectFileInfo.FullName)': $($_.Exception.Message)"
+        }
+    }
+    finally
+    {
+        Remove-Item -LiteralPath $ResultPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Restore-DotnetProjectProperties {
     [CmdletBinding()]
     param(
@@ -58,35 +112,12 @@ function Restore-DotnetProjectProperties {
 
     # This is the first regular restore in the restore-clean-restore sequence. It also
     # evaluates the project state required by the remaining linear processing steps.
-    $ProjectPropertyOutput = Invoke-ProcessTyped `
-        -Executable 'dotnet' `
-        -Arguments @(
-            'restore',
-            $ProjectFileInfo.FullName,
-            '-nologo',
-            '-p:Stage=restore',
-            '-getProperty:UsingMicrosoftNETSdk',
-            '-getProperty:TargetFrameworkVersion',
-            '-getProperty:TargetFramework',
-            '-getProperty:TargetFrameworks',
-            '-getProperty:IsTestProject',
-            '-getProperty:IsPackable',
-            '-getProperty:IsPublishable',
-            '-getProperty:IsCicdEnabled',
-            '-getProperty:GitVersionBaseDirectory'
-        ) `
-        -CommonArguments $CommonArguments `
-        -ReturnType Text `
-        -CaptureOutput $true
-
-    try
-    {
-        $EvaluatedProperties = ($ProjectPropertyOutput | ConvertFrom-Json -ErrorAction Stop).Properties
-    }
-    catch
-    {
-        throw "dotnet restore returned invalid project properties for '$($ProjectFileInfo.FullName)': $($_.Exception.Message)"
-    }
+    $EvaluatedProperties = Invoke-DotnetPropertyRestore -ProjectFileInfo $ProjectFileInfo `
+        -CommonArguments $CommonArguments -PropertyNames @(
+            'UsingMicrosoftNETSdk', 'TargetFrameworkVersion', 'TargetFramework',
+            'TargetFrameworks', 'IsTestProject', 'IsPackable', 'IsPublishable',
+            'IsCicdEnabled', 'GitVersionBaseDirectory'
+        )
 
     $IsSDKProj = [string]::Equals([string]$EvaluatedProperties.UsingMicrosoftNETSdk, 'true', [System.StringComparison]::OrdinalIgnoreCase)
     $IsNoneSDKProj = -not $IsSDKProj
@@ -124,29 +155,10 @@ function Restore-DotnetProjectProperties {
     {
         # GetBuildVersion is supplied by Nerdbank.GitVersioning. No TargetFramework override
         # is used because that would reduce a multi-target project's project.assets.json.
-        $VersionOutput = Invoke-ProcessTyped `
-            -Executable 'dotnet' `
-            -Arguments @(
-                'restore',
-                $ProjectFileInfo.FullName,
-                '-nologo',
-                '-t:GetBuildVersion',
-                '-getProperty:NuGetPackageVersion',
-                '-getProperty:AssemblyInformationalVersion',
-                '-getProperty:BuildVersionSimple'
-            ) `
-            -CommonArguments $CommonArguments `
-            -ReturnType Text `
-            -CaptureOutput $true
-
-        try
-        {
-            $VersionProperties = ($VersionOutput | ConvertFrom-Json -ErrorAction Stop).Properties
-        }
-        catch
-        {
-            throw "Nerdbank.GitVersioning returned invalid version data for '$($ProjectFileInfo.FullName)': $($_.Exception.Message)"
-        }
+        $VersionProperties = Invoke-DotnetPropertyRestore -ProjectFileInfo $ProjectFileInfo `
+            -CommonArguments $CommonArguments -Target 'GetBuildVersion' -PropertyNames @(
+                'NuGetPackageVersion', 'AssemblyInformationalVersion', 'BuildVersionSimple'
+            )
 
         $NuGetPackageVersion = [string]$VersionProperties.NuGetPackageVersion
         if ([string]::IsNullOrWhiteSpace($NuGetPackageVersion))

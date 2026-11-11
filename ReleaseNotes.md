@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix CI project/version property queries failing when restore warnings are appended to JSON output. Read MSBuild's dedicated UTF-8 result file, retain restore diagnostics in the log, and clean up query files after success or failure. Add focused regression coverage for project metadata, Nerdbank version queries, diagnostic output and failed results. Package/runtime behavior is unchanged.
+
 - `664eb4e` — Add the independently versioned `Eigenverft.NetLib.SqliteHotBackup` package for .NET 8 and .NET 10. Provide EF DbContext/factory discovery, explicit file targets, stable IDs and inventory, all/single/selected-target calls, per-source progress-stall limits with inherited defaults and ID overrides, safe no-overwrite backup/ZIP publication, best-effort results with an end-of-run exception, and opt-in shutdown WAL checkpoints. Scheduling and retries remain consumer-owned; no Hangfire dependency or consumer migration is included. Verify 44 tests per framework and local packing; establish 95% line, 90% branch and 95% method coverage minimums for the first implementation while retaining defensive fault guards in reports.
 
 - `5514893` — Require a completed HTTP 204 No Content response to acknowledge SerilogRelay spool, emergency RAM, and shutdown batches. Other status codes remain unacknowledged; redirects continue to follow the HTTP handler's policy. Limit built-in response bodies to 4 KiB while respecting supplied clients' size settings. Capture Retry-After before reading failure bodies, preserve valid hints if reading fails, and cap date and delta hints through EndpointRetry.MaximumDelay (five minutes by default). Adapt existing HTTP fixtures and retry expectations and update the receiver-contract documentation.
