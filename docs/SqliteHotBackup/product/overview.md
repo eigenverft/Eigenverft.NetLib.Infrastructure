@@ -63,9 +63,8 @@ separates source discovery, copying, publication, archiving and lifecycle work.
 EF-only WAL eligibility is retained; explicit files can use other journal modes.
 No consumer repository is migrated in this implementation.
 
-The original design context is recorded in
-[Eigenverft.NetLib.SqliteHotBackup](https://github.com/eigenverft/Eigenverft.NetLib.SqliteHotBackup).
-Local product behavior and this package's contracts are authoritative here.
+SqliteHotBackup is maintained as a subproject of this Infrastructure repository.
+Its implementation and documented package contracts are authoritative here.
 
 Retention, restore, remote stores, cross-database transactional snapshots,
 periodic ETA/stall-warning reporting and distributed scheduling/locking are
