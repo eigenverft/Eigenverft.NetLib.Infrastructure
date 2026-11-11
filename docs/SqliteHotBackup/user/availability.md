@@ -7,8 +7,9 @@
 dotnet add package Eigenverft.NetLib.SqliteHotBackup
 ```
 
-The implementation is available in this repository; publishing a release is a
-separate operation. A locally packed package can also be used for evaluation.
+Version [1.0.0.3](https://www.nuget.org/packages/Eigenverft.NetLib.SqliteHotBackup/1.0.0.3)
+is available on nuget.org, with public download verified on 2026-11-11. It contains
+both target assemblies. A locally packed package can also be used for evaluation.
 
 ## Register and invoke
 

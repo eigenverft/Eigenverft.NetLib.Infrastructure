@@ -14,7 +14,7 @@ failure logs are available.
 
 ## Verification
 
-Local Windows verification on 2026-11-10 completed restore and Release builds for
+Local Windows verification on 2026-11-11 completed restore and Release builds for
 both frameworks without compiler/analyzer warnings or errors. All **44 tests per
 framework** pass, with no skipped tests. Tests use synthetic databases only. They
 cover actual SQLite/WAL copying and lock exhaustion, EF/factory ownership, target
@@ -39,8 +39,15 @@ copy duration or guaranteed maximum wait behind a productive serial source.
 
 ## Delivery boundary
 
+Version [1.0.0.3](https://www.nuget.org/packages/Eigenverft.NetLib.SqliteHotBackup/1.0.0.3)
+is published on nuget.org. The [shared CI run](https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure/actions/runs/42980372323)
+completed successfully at source commit `295e6a2`, and the public feed, package page
+and package download were verified on 2026-11-11. The downloaded artifact includes
+both target assemblies and the expected EF Core/hosting dependency groups. It is
+available for consumer evaluation; live application integration remains untested.
+
 Local NuGet packing validates both target assemblies and matching-generation EF
 Core/hosting dependency groups. The package follows normal shared CI activation,
 version-base and release-reference rules; no package-specific distribution gate
-was introduced. Publishing/deployment and application migration are separate work.
+was introduced. Application deployment and migration remain separate work.
 The Infrastructure compatibility aggregate does not reference the new package.
