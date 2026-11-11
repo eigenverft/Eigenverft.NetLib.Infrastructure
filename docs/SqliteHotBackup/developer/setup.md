@@ -91,6 +91,25 @@ projects follow normal CI activation and branch distribution rules. No workflow
 entry or package-specific publishing gate is added here. A local pack does not
 publish a release.
 
+On production branches (`main`, `master`, `hotfix`, including their subbranches),
+GitHub Actions checks the repository `NUGET_APIKEY` immediately after checkout,
+before SDK setup, restore, build or tests. `NuGetPreflight.ps1` discovers the
+CI-enabled projects with literal `IsPackable=true` and `PackageId` declarations.
+It requests a temporary verification credential for each package ID and verifies
+permission for existing packages without uploading anything. The secret is
+passed through the step environment; neither it nor temporary credentials or
+response bodies are logged. Requests time out after 20 seconds, redirects are
+disabled, and the entire step is limited to two minutes.
+
+An authentication rejection, denied package permission, invalid response or
+unavailable service stops the job early. A new package returns 404 and remains
+eligible for first publication; that operation still requires a key allowing new
+package IDs with a matching package/glob scope. At least one existing package
+must verify successfully. Branches publishing only to GitHub or the NuGet test
+feed skip this nuget.org check. The standalone `cicd.ps1` does not add this check
+to local runs. Run the focused Pester 5 checks with
+`Invoke-Pester .github/workflows/tests/NuGetPreflight.Tests.ps1`.
+
 The shared pipeline reads project and Nerdbank version properties through
 MSBuild's `-getResultOutputFile` switch. Restore diagnostics stay in the log;
 only the dedicated UTF-8 JSON file is parsed. Query files use unique names under

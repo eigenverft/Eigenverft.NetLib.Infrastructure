@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Validate NuGet.org publication credentials immediately after CI checkout, before SDK setup or builds. Discover the CI-enabled package IDs, verify existing-package permissions through short-lived verification credentials, stop early on authentication/permission/service failures, and keep credential values out of logs. Preserve production branch/channel selection and report the first-publication limitation for new package IDs.
+
 - Refresh NuGet references to current patch releases within their existing version lines, including EF Core/SQLite, Microsoft.Extensions, Serilog, test tooling and the Relay examples. Update DataProtection's Cryptography.Xml to 8.0.5/10.0.15 and its transitive Pkcs dependencies to remove the reported security advisories. Retain the .NET 8/.NET 10 targets and existing runtime contracts.
 
 - Separate SerilogRelay's hanging-response retry test from the default overall shutdown deadline. Give its TCP/SQLite acknowledgment a bounded test budget, retain one-second retry checks and stable event IDs, explicitly gate the successful response, and add a deterministic check that elapsed request time does not incur another retry wait. The production shutdown defaults and separate deadline/retention tests remain unchanged.

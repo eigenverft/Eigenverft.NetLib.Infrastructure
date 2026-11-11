@@ -61,6 +61,15 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Verify NuGet publication credentials
+      timeout-minutes: 2
+      shell: pwsh
+      env:
+        NUGET_APIKEY: ${{ secrets.NUGET_APIKEY }}
+      run: |
+        . .github/workflows/NuGetPreflight.ps1
+        Invoke-NuGetPublicationPreflight -ApiKey $env:NUGET_APIKEY -BranchName $env:GITHUB_REF_NAME -ProjectsRoot ./src/prj
+
     - name: Setup-dotnet
       uses: actions/setup-dotnet@v4
       with:
