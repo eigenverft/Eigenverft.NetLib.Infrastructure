@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Stabilize the SerilogRelay escaped-JSON payload-splitting regression by recording serialized requests through the existing HTTP message handler and using an explicit test shutdown budget. Preserve six-batch/twelve-event, byte-limit, order/count and empty-spool assertions in normal and shutdown modes; retain separate TCP response-completion and default shutdown-deadline tests. Runtime code and coverage gates are unchanged.
+
 - Validate NuGet.org publication credentials immediately after CI checkout, before SDK setup or builds. Discover the CI-enabled package IDs, verify existing-package permissions through short-lived verification credentials, stop early on authentication/permission/service failures, and keep credential values out of logs. Preserve production branch/channel selection and report the first-publication limitation for new package IDs.
 
 - Refresh NuGet references to current patch releases within their existing version lines, including EF Core/SQLite, Microsoft.Extensions, Serilog, test tooling and the Relay examples. Update DataProtection's Cryptography.Xml to 8.0.5/10.0.15 and its transitive Pkcs dependencies to remove the reported security advisories. Retain the .NET 8/.NET 10 targets and existing runtime contracts.

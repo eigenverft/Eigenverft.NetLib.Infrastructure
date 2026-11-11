@@ -2628,13 +2628,12 @@ VALUES
         {
             string directory = CreateTemporaryDirectory();
             string connectionString = $"Data Source={Path.Combine(directory, "relay.db")}";
-            using var listener = new TcpListener(IPAddress.Loopback, 0);
-            listener.Start();
-            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
             var options = new SerilogRelayOptions();
             options.Delivery.TargetBatchPayloadBytes = 4096;
             options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
             options.Delivery.MaximumBatchWait = TimeSpan.FromMinutes(1);
+            // Payload splitting is independent of the production shutdown deadline.
+            options.Delivery.ShutdownTimeout = TimeSpan.FromSeconds(30);
             string suffix = new string('ä', 100) + "\"\\\n";
             var expected = new List<string>();
 
@@ -2650,15 +2649,17 @@ VALUES
                     }
                 }
 
-                Task<List<string>> requests = ReceiveRequestsAsync(listener,
-                    HttpStatusCode.NoContent, HttpStatusCode.NoContent, HttpStatusCode.NoContent,
-                    HttpStatusCode.NoContent, HttpStatusCode.NoContent, HttpStatusCode.NoContent);
-                var sink = new SerilogRelaySink(connectionString, $"http://127.0.0.1:{port}/logs", options);
+                using var receiver = new RecordingReceiverHandler();
+                using var client = new HttpClient(receiver) { Timeout = Timeout.InfiniteTimeSpan };
+                options.HttpClient = client;
+                var sink = new SerilogRelaySink(connectionString, "http://receiver.test/logs", options);
                 try
                 {
                     if (shutdown)
                         await sink.DisposeAsync();
-                    List<string> bodies = await requests.WaitAsync(TimeSpan.FromSeconds(10));
+                    await WaitUntilAsync(() => GetTotalRowCount(connectionString) == 0, TimeSpan.FromSeconds(30));
+                    List<string> bodies = receiver.Bodies;
+                    Assert.AreEqual(6, bodies.Count);
                     var received = new List<string>();
                     foreach (string body in bodies)
                     {
@@ -2671,7 +2672,7 @@ VALUES
                             received.Add(entry.GetProperty("renderMessage").GetString()!);
                     }
                     CollectionAssert.AreEqual(expected, received);
-                    await WaitUntilAsync(() => GetTotalRowCount(connectionString) == 0, TimeSpan.FromSeconds(5));
+                    Assert.AreEqual(0L, GetTotalRowCount(connectionString));
                 }
                 finally
                 {
@@ -2680,7 +2681,6 @@ VALUES
             }
             finally
             {
-                listener.Stop();
                 DeleteTemporaryDirectory(directory);
             }
         }
@@ -3035,12 +3035,14 @@ VALUES
 
         private sealed class RecordingReceiverHandler : HttpMessageHandler
         {
+            internal List<string> Bodies { get; } = new List<string>();
             internal List<string> EventIds { get; } = new List<string>();
             internal List<int> BatchSizes { get; } = new List<int>();
 
             protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
                 string body = await request.Content!.ReadAsStringAsync(cancellationToken);
+                Bodies.Add(body);
                 using JsonDocument document = JsonDocument.Parse(body);
                 JsonElement logs = document.RootElement.GetProperty("logs");
                 BatchSizes.Add(logs.GetArrayLength());

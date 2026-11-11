@@ -42,6 +42,20 @@ three-second deadline and retention of the unsent row. The deterministic
 against adding an extra retry interval after a timed-out request; it uses an
 already elapsed monotonic timestamp and requires no sleep.
 
+`PayloadTargetSplitsEscapedJsonAndDrainsEveryEvent` inspects the actual serialized
+HTTP request bodies through the existing recording message handler. It checks
+six batches of two escaped messages, the byte limit, ordering/counts and an empty
+durable spool for both normal and shutdown delivery. The fixture uses a 30-second
+test shutdown budget and waits for acknowledgments before inspecting the recorded
+bodies. Its purpose is payload splitting, while separate TCP tests protect HTTP
+response completion and the default three-second shutdown deadline.
+
+The former six-request TCP fixture also required complete draining inside that
+default deadline. A controlled delayed-response run reproduced one passing normal
+case and one shutdown timeout on .NET 10. Keep payload assertions independent of
+network scheduling and production deadline timing; retain the separate deadline
+and backlog-retention tests.
+
 The runtime reliability contract, including spool ownership, delivery, shutdown
 and receiver behavior, is documented in
 [the reliability guide](../../../src/sln/Eigenverft.NetLib.SerilogRelay/RELIABILITY.md).
