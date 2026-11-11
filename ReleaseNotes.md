@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Stabilize SerilogRelay coverage by explicitly testing cancellation before the application-spool maintenance worker starts. The lifecycle case previously depended on incidental background-task scheduling and could leave one line/branch unexecuted despite all 204 tests passing. Runtime behavior and the 100% coverage requirement remain unchanged.
+
 - Fix CI project/version property queries failing when restore warnings are appended to JSON output. Read MSBuild's dedicated UTF-8 result file, retain restore diagnostics in the log, and clean up query files after success or failure. Add focused regression coverage for project metadata, Nerdbank version queries, diagnostic output and failed results. Package/runtime behavior is unchanged.
 
 - `664eb4e` — Add the independently versioned `Eigenverft.NetLib.SqliteHotBackup` package for .NET 8 and .NET 10. Provide EF DbContext/factory discovery, explicit file targets, stable IDs and inventory, all/single/selected-target calls, per-source progress-stall limits with inherited defaults and ID overrides, safe no-overwrite backup/ZIP publication, best-effort results with an end-of-run exception, and opt-in shutdown WAL checkpoints. Scheduling and retries remain consumer-owned; no Hangfire dependency or consumer migration is included. Verify 44 tests per framework and local packing; establish 95% line, 90% branch and 95% method coverage minimums for the first implementation while retaining defensive fault guards in reports.

@@ -5,6 +5,9 @@
 This document describes the current implemented reliability behavior of
 `Eigenverft.NetLib.SerilogRelay` and makes option scope explicit.
 
+See the [developer verification guide](../../../docs/SerilogRelay/developer/testing.md)
+for the CI-equivalent test command and deterministic worker-cancellation checks.
+
 The important distinction for multi-process work is:
 
 - `ApplicationSpool` options act on the durable spool shared by processes that resolve to the

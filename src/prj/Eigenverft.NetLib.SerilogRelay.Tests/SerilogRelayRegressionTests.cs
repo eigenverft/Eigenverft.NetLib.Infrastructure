@@ -16,6 +16,31 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
     public sealed partial class SerilogRelayReliabilityTests
     {
         [TestMethod]
+        public async Task SpoolMaintenanceStopsWhenCancellationPrecedesWorkerStart()
+        {
+            string directory = CreateTemporaryDirectory();
+            string connectionString = $"Data Source={Path.Combine(directory, "maintenance.db")}";
+            try
+            {
+                var options = new SerilogRelayOptions();
+                options.Delivery.PollInterval = TimeSpan.FromMinutes(1);
+                await using var sink = new SerilogRelaySink(connectionString, null, options);
+                await StopRelayWorkers(sink);
+                sink.Emit(CreateLogEvent("retained after worker cancellation"));
+
+                // A queued worker may start after shutdown cancels its token. Exercise
+                // that boundary explicitly instead of relying on Task.Run scheduling.
+                Assert.IsTrue(GetPrivateField<CancellationTokenSource>(sink, "_cts").IsCancellationRequested);
+                Task maintenance = InvokePrivateTaskMethod(sink, "ApplicationSpoolMaintenanceLoopAsync");
+                await maintenance.WaitAsync(TimeSpan.FromSeconds(5));
+
+                Assert.AreEqual(1L, GetUnsentCount(connectionString));
+                Assert.AreEqual(1L, GetPrivateField<long>(sink, "_pendingCount"));
+            }
+            finally { DeleteTemporaryDirectory(directory); }
+        }
+
+        [TestMethod]
         public async Task SenderWaitReleasesEveryTimerWhenWokenOrStopped()
         {
             string directory = CreateTemporaryDirectory();
