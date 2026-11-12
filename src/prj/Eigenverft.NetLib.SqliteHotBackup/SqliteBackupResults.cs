@@ -9,7 +9,7 @@ namespace Eigenverft.NetLib.SqliteHotBackup
     {
         /// <summary>An automatically discovered EF registration.</summary>
         DbContext,
-        /// <summary>An explicitly registered database file.</summary>
+        /// <summary>A database file supplied by configuration, the runtime registry or an automatic provider.</summary>
         File
     }
 
@@ -43,12 +43,37 @@ namespace Eigenverft.NetLib.SqliteHotBackup
     /// <summary>The independent archive outcome. Successful raw backups remain available if archiving fails.</summary>
     public sealed record SqliteBackupArchiveResult(SqliteBackupStatus Status, string? File, string? Reason);
 
+    /// <summary>An automatic provider or runtime-registry snapshot that could not be obtained.</summary>
+    public sealed record SqliteBackupDiscoveryFailure(string Source, string Reason);
+
+    /// <summary>Reports incomplete inventory while retaining targets obtained from the other sources.</summary>
+    public sealed class SqliteBackupDiscoveryException : Exception
+    {
+        /// <summary>Creates an inventory failure with the successful partial catalog and source failures.</summary>
+        public SqliteBackupDiscoveryException(IReadOnlyList<SqliteBackupTarget> targets, IReadOnlyList<SqliteBackupDiscoveryFailure> failures)
+            : base("SQLite backup discovery is incomplete. Inspect Targets and Failures.")
+        {
+            ArgumentNullException.ThrowIfNull(targets);
+            ArgumentNullException.ThrowIfNull(failures);
+            Targets = targets;
+            Failures = failures;
+        }
+
+        /// <summary>Gets the partial inventory, without claiming that failed sources are empty.</summary>
+        public IReadOnlyList<SqliteBackupTarget> Targets { get; }
+        /// <summary>Gets the sources that could not supply a snapshot.</summary>
+        public IReadOnlyList<SqliteBackupDiscoveryFailure> Failures { get; }
+    }
+
     /// <summary>The complete report, including successful sources when another source failed.</summary>
     public sealed record SqliteBackupRunResult(IReadOnlyList<SqliteBackupResult> Targets, SqliteBackupArchiveResult? Archive)
     {
+        /// <summary>Gets failed source queries. Known targets are still attempted before the run exception is thrown.</summary>
+        public IReadOnlyList<SqliteBackupDiscoveryFailure> DiscoveryFailures { get; init; } = Array.Empty<SqliteBackupDiscoveryFailure>();
+
         /// <summary>Gets whether a source or archive failed.</summary>
         public bool HasFailures => Targets.Any(static target => target.Status == SqliteBackupStatus.Failed)
-            || Archive?.Status == SqliteBackupStatus.Failed;
+            || Archive?.Status == SqliteBackupStatus.Failed || DiscoveryFailures.Count != 0;
     }
 
     /// <summary>Reports operational failures after attempting the remaining independent targets and optional ZIP.</summary>

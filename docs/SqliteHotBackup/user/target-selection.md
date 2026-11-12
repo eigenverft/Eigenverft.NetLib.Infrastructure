@@ -8,6 +8,8 @@ Consumers retain scheduling and select targets by logical IDs rather than paths.
 | Registered EF context | Type `MyApp.Data.LocalizationDbContext` | `ef:MyApp.Data.LocalizationDbContext` |
 | Mapped EF context | `Discovery.SetDbContextId<LocalizationDbContext>("localization")` | `localization` |
 | Explicit file | `Discovery.AddFile("hangfire", path)` | `hangfire` |
+| Runtime file | `ISqliteBackupTargetRegistry.AddFile("store", path)` | `store` |
+| Automatic provider file | `SqliteBackupFileSource("catalog-store", path)` | `catalog-store` |
 
 The default EF ID uses the fully qualified type name without an assembly version,
 database filename or deployment path. Direct DI and factory registration of the
@@ -29,9 +31,15 @@ IReadOnlyList<SqliteBackupTarget> targets =
 
 Inventory returns `Id`, `Kind`, `Name` and `SourceFile`. A file candidate includes
 its configured absolute path; EF candidates have a null `SourceFile` until a run
-resolves their connection. Inventory does not construct contexts, open files or
-establish eligibility. Results identify the actual resolved source file when
+resolves their connection. The library does not construct backup contexts, open
+source files or establish eligibility during inventory; automatic providers may
+read their own catalogs. Results identify the actual resolved source file when
 available. Source-resolution failures may not yet have a resolved EF filename.
+
+Automatic is the default discovery mode. Manual includes only configured files
+and runtime registrations. See [dynamic sources and modes](dynamic-sources.md)
+for source registration, per-call snapshots, restart ownership and partial
+discovery failures.
 
 Both all-target and selected-target operations accept per-run option overrides:
 
@@ -56,12 +64,20 @@ IDs are trimmed, nonempty and compared with `StringComparer.OrdinalIgnoreCase`.
 All source kinds share one namespace. Duplicate IDs are configuration errors;
 there are no discovery-order suffixes. Two types with the same full name in
 different assemblies need distinct explicit mappings. Mapped contexts and
-execution-limit override IDs must exist in the effective inventory.
+execution-limit override IDs must exist in the effective inventory when discovery
+succeeds. Manual ignores automatic context-ID mappings. A provider-local invalid
+snapshot is reported as a discovery failure; collisions between sources remain
+configuration errors before output.
 
-The entire selected ID set is validated before creating backup output. Unknown
+When discovery succeeds, the entire selected ID set is validated before creating backup output. Unknown
 IDs and empty selections throw instead of selecting all. Repeated selection of
 one ID is processed once. Use `BackupAllAsync` deliberately for the full inventory;
 an empty inventory is a successful no-op.
+
+If a provider fails, absent IDs cannot be conclusively classified as unknown.
+The run backs up known selected targets, reports unavailable selected IDs as
+failed and includes source errors in Result.DiscoveryFailures before throwing.
+GetTargetsAsync throws SqliteBackupDiscoveryException with the partial inventory.
 
 Distinct IDs may resolve to one database. Paths are obtained from SQLite's actual
 main database filename and normalized with `Path.GetFullPath`. Windows comparison

@@ -43,7 +43,14 @@ report filenames and can otherwise encounter file locks.
 - `SqliteHotBackupOptions` holds recipes and per-run snapshots; target-specific
   callbacks inherit the final global settings without sharing execution state.
 - `TargetCatalog` checks loaded types and DI registration metadata without
-  constructing contexts. Explicit files bypass EF knowledge.
+  constructing backup contexts. It combines configured files, a detached runtime
+  registry snapshot and scoped automatic provider snapshots; Manual skips EF and
+  provider resolution. Source-local failures retain an incomplete inventory,
+  while cross-source ID collisions remain configuration errors.
+- `SqliteBackupSources` defines generic ID/path provider and registry contracts.
+  `BackupSourceRegistration<T>` defers provider construction into its isolated
+  query attempt. The built-in registry locks updates and copies its values; it
+  does not persist state or own database lifecycle.
 - `SourceResolver` owns source eligibility and independent read-only connections.
   DI-scoped contexts belong to the run scope; factory-created contexts are
   disposed explicitly. Missing databases are never created.
@@ -124,3 +131,17 @@ The GlobalServer/PWA reference was inspected at application commit
 file/ZIP workflow and EF WAL eligibility are retained as baseline behavior.
 Target IDs, targeted calls, best-effort result aggregation and progress-stall
 limits are library contracts. Consumer migration is outside this change.
+
+## Dynamic source verification
+
+DynamicSourceTests protects mode selection and per-run mode overrides, fixed and
+runtime targets in both modes, duplicate/relative-path rules, detached snapshots,
+source-list changes during acquisition, scoped provider disposal, idempotent
+registration, provider constructor/query/validation failures, partial inventory,
+selected targets under incomplete discovery, successful ZIPs despite source
+failure, cancellation and restart ownership. The full suite has 65 cases per TFM
+with 98.64% line / 93.93% branch / 100% method coverage at the existing gates.
+
+The next source-discovery package release preserves the existing public API
+baseline. Local packing with PackageValidationBaselineVersion=1.0.0.3 succeeds.
+No consumer project is changed by this library increment.

@@ -6,11 +6,21 @@ awaitable backup workflow; consumers supply configuration and invoke it.
 
 ## Delivered behavior
 
-The library discovers registered concrete EF DbContexts and context factories
-from loaded assemblies, accepts explicit SQLite files, and exposes all-target,
-single-target and selected-target calls plus an inventory without database I/O.
+The library supports Automatic (default) and Manual target discovery. Automatic
+discovers enabled registered EF types and queries registered file-source providers;
+Manual uses configured files and the runtime registry without automatic discovery.
+Both expose all-target, single-target and selected-target calls plus inventory.
+The library does not open source databases during inventory; consumer providers
+may read their own catalogs.
 Stable IDs name logical targets; selected aliases resolving to the same normalized
 path share one copy and retain their ID associations.
+
+Each operation acquires a fresh target snapshot. Runtime registrations are
+thread-safe and process-local; consumers restore them after restart. Removing a
+registration does not delete a database or change an in-flight run. Automatic
+providers use a new DI scope per operation and are not resolved in Manual mode.
+An unavailable provider produces an explicit discovery failure while other
+known targets remain eligible for backup and archiving.
 
 Each source uses the native SQLite page-stepped backup API with busy/locked
 retries, cancellation and a private progress-stall limit. Temporary raw files and
@@ -36,6 +46,11 @@ in the [consumer guide](../user/availability.md).
 The optional shutdown checkpoint belongs to library host-lifecycle integration,
 independently enabled from backup triggering. Administrative endpoints, their
 authentication and authorization remain consumer concerns.
+
+The library accepts logical IDs and SQLite filenames from consumer-owned sources.
+Application/tenant identities, database creation/migration/readiness, catalog
+persistence, directory layout and limits on new databases stay with the consumer.
+There is no application-specific scan or catalog implementation in the package.
 
 ## Execution limits
 

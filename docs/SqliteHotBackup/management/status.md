@@ -1,5 +1,26 @@
 # SqliteHotBackup delivery status
 
+## Automatic/manual source increment
+
+The repository now supports default Automatic discovery, opt-in Manual discovery,
+scoped consumer-owned file-source providers and a process-local runtime registry.
+Manual skips automatic EF/provider resolution. The package still accepts generic
+IDs and SQLite paths; application identity, database creation/readiness and catalog
+persistence remain outside it. App.Logging has not been changed for this increment.
+
+On 2026-11-12, all 65 tests per .NET 8/.NET 10 target passed without skips or
+compiler/analyzer warnings. Coverage is 98.64% line, 93.93% branch and 100% method
+on both targets, retaining the existing 95/90/95 gates. Local packing against the
+1.0.0.3 API baseline also succeeded. Tests cover fresh scoped queries, constructor
+and query failures, partial successful archives, cancellation, runtime changes
+during a run, restart ownership and existing backup behavior.
+
+The new source API awaits the next CI/NuGet publication. The verified public
+1.0.0.3 below predates it. Consumer adoption is deliberately deferred until the
+user confirms publication readiness.
+
+## Initial implementation
+
 The first implementation is complete in the repository as one independently
 versioned .NET 8/.NET 10 package. It includes DI registration, lazy EF/factory
 discovery, explicit files, stable IDs and inventory, targeted/all-target execution,

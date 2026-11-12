@@ -6,6 +6,8 @@ namespace Eigenverft.NetLib.SqliteHotBackup.Internal
 {
     internal static partial class BackupLog
     {
+        [LoggerMessage(13, LogLevel.Warning, "SQLite backup source discovery failed for {Source}.")]
+        internal static partial void DiscoveryFailed(ILogger logger, string source, Exception exception);
         [LoggerMessage(1, LogLevel.Warning, "Could not remove owned temporary backup file {Path}.")]
         internal static partial void TemporaryCleanup(ILogger logger, string path, Exception exception);
         [LoggerMessage(2, LogLevel.Information, "SQLite backup completed for {Source}: {Backup}.")]

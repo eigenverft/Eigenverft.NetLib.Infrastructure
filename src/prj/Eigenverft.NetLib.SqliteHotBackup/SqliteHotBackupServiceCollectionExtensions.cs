@@ -26,11 +26,23 @@ namespace Eigenverft.NetLib.SqliteHotBackup
             }
             services.AddLogging();
             services.TryAddSingleton<TimeProvider>(TimeProvider.System);
+            services.TryAddSingleton<ISqliteBackupTargetRegistry, SqliteBackupTargetRegistry>();
             services.TryAddSingleton<SqliteHotBackupOrchestrator>(static provider => new(provider,
                 provider.GetRequiredService<IOptions<SqliteHotBackupOptions>>(), provider.GetRequiredService<TimeProvider>(),
                 provider.GetRequiredService<ILogger<SqliteHotBackupOrchestrator>>()));
             services.TryAddSingleton<ISqliteHotBackupOrchestrator>(static provider => provider.GetRequiredService<SqliteHotBackupOrchestrator>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ShutdownCheckpoint>());
+            return services;
+        }
+
+        /// <summary>Registers an automatic file-source provider, scoped to each inventory/backup/checkpoint call.</summary>
+        /// <remarks>Repeated registration of the same type is idempotent. An existing registration of TProvider retains its lifetime.</remarks>
+        public static IServiceCollection AddSqliteBackupSourceProvider<TProvider>(this IServiceCollection services)
+            where TProvider : class, ISqliteBackupSourceProvider
+        {
+            ArgumentNullException.ThrowIfNull(services);
+            services.TryAddScoped<TProvider>();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackupSourceRegistration, BackupSourceRegistration<TProvider>>());
             return services;
         }
     }

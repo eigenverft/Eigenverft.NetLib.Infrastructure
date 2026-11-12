@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Extend SqliteHotBackup with Automatic (default) and Manual discovery modes, scoped dynamic file-source providers and a thread-safe process-local runtime registry. Manual skips EF/provider discovery while retaining configured/runtime files. Each call acquires fresh detached snapshots; provider failures retain partial inventory and permit healthy selected backups/archives before the final exception. Preserve existing source IDs, copy/ZIP behavior, timing and consumer-owned database lifecycle/scheduling. Verify 65 tests per .NET 8/.NET 10 target with the existing coverage gates.
+
 - Stabilize the SerilogRelay escaped-JSON payload-splitting regression by recording serialized requests through the existing HTTP message handler and using an explicit test shutdown budget. Preserve six-batch/twelve-event, byte-limit, order/count and empty-spool assertions in normal and shutdown modes; retain separate TCP response-completion and default shutdown-deadline tests. Runtime code and coverage gates are unchanged.
 
 - Validate NuGet.org publication credentials immediately after CI checkout, before SDK setup or builds. Discover the CI-enabled package IDs, verify existing-package permissions through short-lived verification credentials, stop early on authentication/permission/service failures, and keep credential values out of logs. Preserve production branch/channel selection and report the first-publication limitation for new package IDs.

@@ -11,6 +11,11 @@ Version [1.0.0.3](https://www.nuget.org/packages/Eigenverft.NetLib.SqliteHotBack
 is available on nuget.org, with public download verified on 2026-11-11. It contains
 both target assemblies. A locally packed package can also be used for evaluation.
 
+The repository now also contains Automatic/Manual discovery modes, dynamic source
+providers and a runtime target registry. These additions are not in 1.0.0.3;
+their next CI/NuGet publication must complete before consuming them. See
+[dynamic sources](dynamic-sources.md) for the new API.
+
 ## Register and invoke
 
 The application keeps its existing EF registration and source paths. The library
@@ -43,13 +48,16 @@ SqliteBackupRunResult selected = await backup.BackupAsync(
 ```
 
 `SetDbContextId<T>` maps an already registered/discovered context. It does not
-register EF. Set `Discovery.DiscoverDbContexts = false` for explicit files only.
+register EF. Set `Discovery.Mode = SqliteBackupDiscoveryMode.Manual` for configured
+and runtime files only. The existing `DiscoverDbContexts = false` disables just
+EF discovery in Automatic mode; registered automatic providers still participate.
 File paths supplied to `AddFile` are resolved relative to `AppContext.BaseDirectory`.
 Discovery examines loaded assemblies and concrete DI registrations. It does not
 load application plugins, discover open generic context types or make claims
 about trimming/Native AOT support. Use explicit files where those assumptions do
-not fit. Inventory reads registration metadata without constructing a context or
-opening a database; source eligibility is checked when running a backup.
+not fit. The library inventories EF metadata without constructing a context or
+opening a source database; registered providers may read their own catalogs.
+Source eligibility is checked when running a backup.
 
 ## Keep Hangfire in the caller
 

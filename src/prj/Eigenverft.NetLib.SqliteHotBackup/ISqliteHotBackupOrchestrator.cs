@@ -8,7 +8,8 @@ namespace Eigenverft.NetLib.SqliteHotBackup
     /// <summary>Discovers configured targets and performs complete or selected best-effort backup runs.</summary>
     public interface ISqliteHotBackupOrchestrator
     {
-        /// <summary>Lists effective IDs without instantiating DbContexts or opening databases.</summary>
+        /// <summary>Lists effective IDs from a fresh snapshot. The library does not open source databases; automatic providers may read their catalogs.</summary>
+        /// <exception cref="SqliteBackupDiscoveryException">A source failed; the exception retains the partial inventory.</exception>
         Task<IReadOnlyList<SqliteBackupTarget>> GetTargetsAsync(CancellationToken cancellationToken = default);
         /// <summary>Backs up all targets. Operational failures are reported after the other targets and optional archive.</summary>
         Task<SqliteBackupRunResult> BackupAllAsync(CancellationToken cancellationToken = default);

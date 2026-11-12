@@ -92,7 +92,7 @@
     <RepositoryUrl>https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <!-- NuGet gallery blurb. CDATA is optional and keeps multiline text. -->
-    <Description><![CDATA[Scheduler-independent SQLite online backups with EF Core discovery, explicit file targets, targeted execution, progress-stall limits, best-effort results, and optional ZIP publication.]]></Description>
+    <Description><![CDATA[Scheduler-independent SQLite online backups with automatic/manual discovery, dynamic source providers, runtime file registration, EF Core discovery, targeted execution, progress-stall limits, best-effort results, and optional ZIP publication.]]></Description>
     <PackageReadmeFile>Readme.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIcon>Icon-128x128.png</PackageIcon>

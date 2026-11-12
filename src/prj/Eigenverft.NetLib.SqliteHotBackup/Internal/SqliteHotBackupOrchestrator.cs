@@ -28,13 +28,19 @@ namespace Eigenverft.NetLib.SqliteHotBackup.Internal
             _logger = logger;
         }
 
-        public Task<IReadOnlyList<SqliteBackupTarget>> GetTargetsAsync(CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<SqliteBackupTarget>> GetTargetsAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             SqliteHotBackupOptions options = Snapshot(null);
-            IReadOnlyList<SqliteBackupTarget> targets = Array.AsReadOnly(TargetCatalog.Build(options, _services)
+            await using AsyncServiceScope scope = _services.CreateAsyncScope();
+            TargetInventory inventory = await TargetCatalog.BuildAsync(options, scope.ServiceProvider, _logger, cancellationToken).ConfigureAwait(false);
+            IReadOnlyList<SqliteBackupTarget> targets = Array.AsReadOnly(inventory.Targets
                 .Select(static item => item.Target).ToArray());
-            return Task.FromResult(targets);
+            if (inventory.Failures.Count != 0)
+            {
+                throw new SqliteBackupDiscoveryException(targets, inventory.Failures);
+            }
+            return targets;
         }
 
         public Task<SqliteBackupRunResult> BackupAllAsync(CancellationToken cancellationToken = default)
@@ -80,7 +86,6 @@ namespace Eigenverft.NetLib.SqliteHotBackup.Internal
             try
             {
                 SqliteHotBackupOptions options = Snapshot(configure);
-                IReadOnlyList<TargetRegistration> catalog = TargetCatalog.Build(options, _services);
                 HashSet<string>? selection = null;
                 if (requestedIds is not null)
                 {
@@ -89,16 +94,27 @@ namespace Eigenverft.NetLib.SqliteHotBackup.Internal
                     {
                         throw new ArgumentException("Select at least one target, or call BackupAllAsync explicitly.", nameof(requestedIds));
                     }
-                    string[] unknown = selection.Except(catalog.Select(static item => item.Target.Id), StringComparer.OrdinalIgnoreCase).ToArray();
-                    if (unknown.Length != 0)
-                    {
-                        throw new ArgumentException("Unknown backup target IDs: " + string.Join(", ", unknown), nameof(requestedIds));
-                    }
                 }
 
                 List<SqliteBackupResult> results = new();
                 List<ResolvedSource> sources = new();
                 await using AsyncServiceScope scope = _services.CreateAsyncScope();
+                TargetInventory inventory = await TargetCatalog.BuildAsync(options, scope.ServiceProvider, _logger, ct).ConfigureAwait(false);
+                IReadOnlyList<TargetRegistration> catalog = inventory.Targets;
+                if (selection is not null)
+                {
+                    string[] unknown = selection.Except(catalog.Select(static item => item.Target.Id), StringComparer.OrdinalIgnoreCase).ToArray();
+                    if (unknown.Length != 0 && inventory.Failures.Count == 0)
+                    {
+                        throw new ArgumentException("Unknown backup target IDs: " + string.Join(", ", unknown), nameof(requestedIds));
+                    }
+                    // An unavailable provider cannot establish that a requested ID is unknown. Keep the healthy selection usable.
+                    foreach (string id in unknown)
+                    {
+                        results.Add(new(Array.AsReadOnly(new[] { id }), SqliteBackupStatus.Failed, null, null,
+                            "Target unavailable because source discovery is incomplete.", TimeSpan.Zero));
+                    }
+                }
                 foreach (TargetRegistration registration in catalog.Where(item => selection is null || selection.Contains(item.Target.Id)))
                 {
                     ct.ThrowIfCancellationRequested();
@@ -155,7 +171,7 @@ namespace Eigenverft.NetLib.SqliteHotBackup.Internal
                 ct.ThrowIfCancellationRequested();
                 SqliteBackupArchiveResult? archive = await BackupArchive.CreateAsync(results, options.Zip, _time, _logger, ct).ConfigureAwait(false);
                 ct.ThrowIfCancellationRequested();
-                SqliteBackupRunResult report = new(results.AsReadOnly(), archive);
+                SqliteBackupRunResult report = new(results.AsReadOnly(), archive) { DiscoveryFailures = inventory.Failures };
                 bool hasFailures = report.HasFailures;
                 BackupLog.RunCompleted(_logger, results.Count, hasFailures);
                 if (hasFailures)
@@ -177,8 +193,9 @@ namespace Eigenverft.NetLib.SqliteHotBackup.Internal
             {
                 SqliteHotBackupOptions options = Snapshot(null);
                 await using AsyncServiceScope scope = _services.CreateAsyncScope();
+                TargetInventory inventory = await TargetCatalog.BuildAsync(options, scope.ServiceProvider, _logger, ct).ConfigureAwait(false);
                 HashSet<string> seen = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
-                foreach (TargetRegistration registration in TargetCatalog.Build(options, _services))
+                foreach (TargetRegistration registration in inventory.Targets)
                 {
                     ct.ThrowIfCancellationRequested();
                     try

@@ -75,6 +75,10 @@ namespace Eigenverft.NetLib.SqliteHotBackup
 
         internal void Validate()
         {
+            if (!Enum.IsDefined(Discovery.Mode))
+            {
+                throw new ArgumentOutOfRangeException(nameof(Discovery), "Unknown SQLite backup discovery mode.");
+            }
             ExecutionLimit.Validate();
             ArgumentException.ThrowIfNullOrWhiteSpace(Backup.Directory);
             Internal.BackupFiles.FileName(Backup.FileNamePattern, "source", DateTimeOffset.UnixEpoch, ".db");
@@ -88,10 +92,13 @@ namespace Eigenverft.NetLib.SqliteHotBackup
     /// <summary>Configures automatic EF candidates and explicit file sources.</summary>
     public sealed class SqliteBackupDiscoveryOptions
     {
+        /// <summary>Gets or sets how targets are acquired. Automatic preserves existing EF discovery and queries registered providers.</summary>
+        public SqliteBackupDiscoveryMode Mode { get; set; } = SqliteBackupDiscoveryMode.Automatic;
+
         internal readonly Dictionary<Type, string> ContextIds = new();
         internal readonly List<(string Id, string Path)> Files = new();
 
-        /// <summary>Gets or sets whether registered concrete DbContexts/factories are discovered in loaded assemblies.</summary>
+        /// <summary>Gets or sets whether Automatic mode discovers registered concrete DbContexts/factories. Manual ignores this setting.</summary>
         public bool DiscoverDbContexts { get; set; } = true;
 
         /// <summary>Replaces the generated ID of a discovered context without registering an EF service.</summary>
@@ -110,7 +117,7 @@ namespace Eigenverft.NetLib.SqliteHotBackup
 
         internal SqliteBackupDiscoveryOptions Copy()
         {
-            SqliteBackupDiscoveryOptions result = new() { DiscoverDbContexts = DiscoverDbContexts };
+            SqliteBackupDiscoveryOptions result = new() { Mode = Mode, DiscoverDbContexts = DiscoverDbContexts };
             foreach (KeyValuePair<Type, string> mapping in ContextIds)
             {
                 result.ContextIds.Add(mapping.Key, mapping.Value);
