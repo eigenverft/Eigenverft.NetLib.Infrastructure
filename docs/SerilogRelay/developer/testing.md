@@ -14,6 +14,28 @@ while an unexecuted branch still fails the command. For a focused test, add
 `--framework net8.0 --filter FullyQualifiedName~<method>`; its partial coverage is
 not expected to satisfy the full-suite gate.
 
+The sender library also targets `netstandard2.1`. That target is a library asset,
+not a test runtime. Run the same suite against it on both supported runtimes:
+
+```powershell
+dotnet test src/prj/Eigenverft.NetLib.SerilogRelay.NetStandard.Tests/Eigenverft.NetLib.SerilogRelay.NetStandard.Tests.csproj --configuration Release -m:1
+```
+
+The separate test project links the existing test sources, forces its reference
+to the Standard assembly and includes that asset's extra runtime dependencies.
+It is included in the sender solution and the existing CI project discovery;
+no shared workflow change is required. Its own bin/obj, MSTestResults and
+CoverletOutput directories isolate reports from the native-asset test project.
+`LibraryTargetsExpectedFramework` verifies the loaded assembly's
+TargetFrameworkAttribute so a native-asset run cannot stand in for this check.
+The 100% coverage gate applies to this assembly too.
+
+Compatibility tests preserve SHA-256 identifiers, process metadata and stream
+read semantics. The full reliability suite also exercises request/shutdown
+deadlines, bounded response copying, replay and storage recovery through the
+Standard implementation. These CLR runs do not establish Unity player support;
+native SQLite distribution and Mono/IL2CPP behavior need a real player check.
+
 Background-worker startup must be tested independently of thread scheduling.
 Shutdown can cancel a token before a queued worker starts, or while a running
 worker is waiting. `SpoolMaintenanceStopsWhenCancellationPrecedesWorkerStart`
@@ -63,3 +85,9 @@ and receiver behavior, is documented in
 Verified on 2026-11-11: the CI-equivalent full run passes 206 tests on each of
 .NET 8 and .NET 10 with 100% line, branch and method coverage. The runtime assembly
 and coverage configuration were unchanged by this correction.
+
+Verified on 2026-11-13: the native-asset test project passes 209 tests on each
+runtime, and the Standard-asset project passes 211 on each runtime: 840 successful
+executions with 100% line, branch and method coverage in all four matrices.
+Package validation checks the three framework assets and compatibility with the
+previous published package. No Unity editor or player execution is claimed.

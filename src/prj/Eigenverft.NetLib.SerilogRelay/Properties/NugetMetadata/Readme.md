@@ -15,8 +15,21 @@ The sender and receiver are deliberately loosely coupled. Only a complete HTTP *
 
 ## Supported frameworks
 
+- .NET Standard 2.1 (`netstandard2.1`)
 - .NET 8 (`net8.0`)
 - .NET 10 (`net10.0`)
+
+The same package retains dedicated .NET 8 and .NET 10 assets. The Standard asset
+uses the same sink API, wire format and SQLite spool schema; the receiver needs
+no changes. System.Text.Json and the TimeProvider compatibility package are
+included as dependencies only for that asset.
+
+.NET Standard describes API compatibility, not a complete host runtime. A host
+must provide writable persistent storage, background work, HTTP/TLS and the
+matching native SQLite library. Unity integration still requires testing the
+actual player platform, Mono/IL2CPP backend and native plug-in deployment. The
+console examples and optional configuration helpers are separate applications
+and packages; they are not required to use this sink.
 
 ## Install
 
