@@ -36,6 +36,32 @@ deadlines, bounded response copying, replay and storage recovery through the
 Standard implementation. These CLR runs do not establish Unity player support;
 native SQLite distribution and Mono/IL2CPP behavior need a real player check.
 
+`SerilogRelayHappyEyeballsTests` protects TCP address selection independently
+of HTTP delivery. Controlled resolver/connect/delay tasks check the 250 ms
+head start without wall-clock sleeps, alternating families, immediate failure,
+an earlier attempt winning after later failures, cancellation and late successful
+losers. Losing connections must close even if they complete after the caller
+has already received its winner or cancellation. The same linked tests run
+against every asset.
+
+Loopback tests exercise real IPv4, IPv6 and IPv4-mapped IPv6 addresses. HTTPS tests verify that the
+built-in handlers preserve the original TLS hostname, reject an untrusted server
+certificate by default and accept it only with the existing dangerous opt-in.
+The local TLS fixture imports its generated PFX because Windows Schannel cannot
+use the generated ephemeral private key directly. It does not change machine
+trust. No production receiver or public log endpoint is used.
+
+The corrupted-spool fixture explicitly awaits the disabled spool's maintenance
+worker before disposing its sink. This verifies that maintenance stops without
+depending on disposal cancellation to end it, and keeps the existing 100% gate
+independent of whether that worker happened to run earlier in another test.
+
+The Standard asset alone depends on `StandardSocketsHttpHandler` 2.2.0.10.
+It provides the HTTP connection callback missing from the Standard API; the
+sender supplies its system proxy explicitly. The connector races only TCP
+establishment and returns an owned stream to the handler, leaving HTTP, TLS,
+pooling and redirects there. Custom clients bypass this built-in transport.
+
 Background-worker startup must be tested independently of thread scheduling.
 Shutdown can cancel a token before a queued worker starts, or while a running
 worker is waiting. `SpoolMaintenanceStopsWhenCancellationPrecedesWorkerStart`
@@ -91,3 +117,9 @@ runtime, and the Standard-asset project passes 211 on each runtime: 840 successf
 executions with 100% line, branch and method coverage in all four matrices.
 Package validation checks the three framework assets and compatibility with the
 previous published package. No Unity editor or player execution is claimed.
+
+Verified on 2026-11-13 for Happy Eyeballs: native assemblies pass 233 tests per
+runtime and the Standard assembly passes 235 per runtime (936 executions), with
+100% line, branch and method coverage in all four matrices. Package/API validation
+against published 1.0.0.15 succeeds, and the transitive dependency audit reports
+no known vulnerable entries. Real Unity player validation remains separate.

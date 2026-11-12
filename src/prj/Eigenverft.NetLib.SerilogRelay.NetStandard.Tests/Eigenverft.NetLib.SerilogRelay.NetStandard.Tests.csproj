@@ -30,6 +30,7 @@
     <AssemblyMetadata Include="TestLibraryTargetFramework" Value="netstandard2.1" />
     <!-- Restore selects the native nearest TFM; explicitly carry the forced Standard asset's extra dependencies. -->
     <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="8.0.0" />
+    <PackageReference Include="StandardSocketsHttpHandler" Version="2.2.0.10" />
     <PackageReference Include="System.Text.Json" Version="10.0.12" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.2" />
     <PackageReference Include="MSTest.TestAdapter" Version="4.4.1" />

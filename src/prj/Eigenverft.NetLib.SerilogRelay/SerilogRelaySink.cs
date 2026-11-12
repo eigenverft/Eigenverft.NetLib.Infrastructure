@@ -197,17 +197,6 @@ namespace Eigenverft.NetLib.SerilogRelay
     public partial class SerilogRelaySink : ILogEventSink, IAsyncDisposable, IDisposable
     {
 
-        private static readonly HttpClientHandler _defaultHttpHandler = new HttpClientHandler
-        {
-            UseCookies = false,
-        };
-
-        private static readonly HttpClientHandler _dangerousHttpHandler = new HttpClientHandler
-        {
-            UseCookies = false,
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
-        };
-
         private const int MaxBusyRetries = 5;
         private const int MaximumApplicationVersionLength = 255;
         private const int BusyRetryDelayMs = 100;
@@ -572,9 +561,6 @@ CREATE TABLE IF NOT EXISTS {0} (
             if (options.EmergencyMemoryBuffer.MaxBufferedPayloadBytes < 1)
                 throw new ArgumentOutOfRangeException(nameof(options), "Emergency payload-byte capacity must be at least 1.");
         }
-
-        internal static HttpClientHandler GetHttpClientHandler(bool dangerousAcceptAnyServerCertificate)
-            => dangerousAcceptAnyServerCertificate ? _dangerousHttpHandler : _defaultHttpHandler;
 
         [ExcludeFromCodeCoverage]
         private static string? ResolveMachineId()

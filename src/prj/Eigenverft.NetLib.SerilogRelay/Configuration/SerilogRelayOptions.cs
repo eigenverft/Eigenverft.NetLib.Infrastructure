@@ -27,6 +27,8 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// built-in client, which limits response bodies to 4 KiB. A supplied client's
         /// MaxResponseContentBufferSize remains its response-body limit. Configure proxy, client
         /// certificates, or custom authentication on the supplied client and its handlers.
+        /// Built-in clients use Happy Eyeballs with a 250 ms connection-attempt head start.
+        /// A supplied client controls its own address selection and Happy Eyeballs policy.
         /// </summary>
         public HttpClient? HttpClient { get; set; }
 

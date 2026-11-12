@@ -56,13 +56,14 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         [TestMethod]
         public void TlsValidationIsSafeByDefaultAndDangerousModeIsExplicit()
         {
-            System.Net.Http.HttpClientHandler defaultHandler = SerilogRelaySink.GetHttpClientHandler(false);
-            System.Net.Http.HttpClientHandler dangerousHandler = SerilogRelaySink.GetHttpClientHandler(true);
+            var defaultHandler = SerilogRelaySink.GetHttpClientHandler(false);
+            var dangerousHandler = SerilogRelaySink.GetHttpClientHandler(true);
 
-            Assert.IsNull(defaultHandler.ServerCertificateCustomValidationCallback);
-            Assert.AreEqual(
-                System.Net.Http.HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
-                dangerousHandler.ServerCertificateCustomValidationCallback);
+            Assert.IsNull(defaultHandler.SslOptions.RemoteCertificateValidationCallback);
+            Assert.IsTrue(dangerousHandler.SslOptions.RemoteCertificateValidationCallback!(
+                new object(), null, null, System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch));
+            Assert.IsNotNull(defaultHandler.ConnectCallback);
+            Assert.IsFalse(defaultHandler.UseCookies);
             Assert.AreNotSame(defaultHandler, dangerousHandler);
         }
 
@@ -159,13 +160,14 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
 
         [TestMethod]
         [DoNotParallelize]
-        public void CorruptedSpoolCreatesSuccessorWithoutMovingOriginal()
+        public async Task CorruptedSpoolCreatesSuccessorWithoutMovingOriginal()
         {
             string directory = CreateTemporaryDirectory();
             string databasePath = Path.Combine(directory, "SerilogRelay.db");
             string successorPath = Path.Combine(directory, "SerilogRelay.g0001.db");
             const string damagedContent = "this is not a sqlite database";
             var options = new SerilogRelayOptions();
+            options.Delivery.PollInterval = TimeSpan.FromMilliseconds(10);
             options.Delivery.ShutdownTimeout = TimeSpan.Zero;
             try
             {
@@ -173,6 +175,8 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
                 using var damaged = new SerilogRelaySink($"Data Source={databasePath}", null, options);
                 damaged.Emit(CreateLogEvent("Volatile after corruption"));
                 Assert.IsTrue(GetPrivateField<bool>(damaged, "_spoolDisabledForLifetime"));
+                // A disabled spool must stop its maintenance worker before the sink is disposed.
+                await GetPrivateField<Task>(damaged, "_applicationSpoolMaintenanceTask").WaitAsync(TimeSpan.FromSeconds(5));
                 Assert.AreEqual(1L, GetPrivateField<long>(damaged, "_emergencyBufferedCount"));
                 Assert.AreEqual(damagedContent, ReadSharedSpoolFile(databasePath));
                 Assert.IsTrue(File.Exists(successorPath));
