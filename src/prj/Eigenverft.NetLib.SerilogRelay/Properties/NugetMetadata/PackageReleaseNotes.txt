@@ -1,5 +1,7 @@
 Current changes
 
+- Adds built-in Happy Eyeballs connection selection with a 250 ms head start, immediate fallback after connection failure, alternating address families and cancellation/cleanup of losing connections. HTTP requests are sent only over the winning connection.
+- Uses the runtime SocketsHttpHandler for net8.0/net10.0 and StandardSocketsHttpHandler 2.2.0.10 for netstandard2.1, preserving default TLS validation, the original hostname and caller-owned HttpClient transport policy.
 - Adds a netstandard2.1 sender asset alongside the existing net8.0 and net10.0 assets.
 - Preserves the public sink API, HTTP acknowledgment rules and persisted spool format across targets; no receiver change is required.
 - Uses Microsoft.Data.Sqlite 8.0.34 across target frameworks.

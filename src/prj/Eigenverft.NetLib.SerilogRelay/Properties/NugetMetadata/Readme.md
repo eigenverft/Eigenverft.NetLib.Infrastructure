@@ -21,7 +21,8 @@ The sender and receiver are deliberately loosely coupled. Only a complete HTTP *
 
 The same package retains dedicated .NET 8 and .NET 10 assets. The Standard asset
 uses the same sink API, wire format and SQLite spool schema; the receiver needs
-no changes. System.Text.Json and the TimeProvider compatibility package are
+no changes. System.Text.Json, the TimeProvider compatibility package and
+StandardSocketsHttpHandler 2.2.0.10 are
 included as dependencies only for that asset.
 
 .NET Standard describes API compatibility, not a complete host runtime. A host
@@ -302,6 +303,26 @@ with the 256-event default. If either sender count maximum changes, keep the rec
 at least as large as both. Host/proxy byte limits and request timeouts remain independent.
 
 ## HTTP transport
+
+Built-in clients use Happy Eyeballs for TCP connection establishment. After DNS
+resolution, addresses alternate IPv6/IPv4 in resolver-preferred order, with a
+250 ms head start for each pending attempt. A failed attempt allows an immediate
+next attempt. The first successful connection wins; losing connections are
+canceled and closed, including late successes. IPv4-mapped IPv6 addresses are
+normalized to IPv4 and duplicate addresses are removed.
+
+Only connections are raced, not HTTP POSTs. TLS still validates the original
+hostname, and pooling, acknowledgment and retry behavior remain handler/sink
+responsibilities. The two-second request budget includes connection setup;
+250 ms is not a per-address timeout. A successful TCP connection followed by a
+TLS or application failure does not trigger another address race for that request.
+
+.NET 8/10 use the runtime's SocketsHttpHandler. The Standard asset uses
+StandardSocketsHttpHandler 2.2.0.10 and explicitly supplies the OS system proxy
+because the backport does not discover it. It adds no native HTTP dependency.
+Standard DNS cancellation stops the await, while an already-running OS lookup
+may finish in the background. Unity Mono/IL2CPP requires a real player check.
+Caller-supplied clients retain their own address-selection/Happy-Eyeballs policy.
 
 By default, the sink owns its HTTP client and uses normal .NET certificate validation and the
 platform's default proxy settings. Built-in clients ignore server cookies so separate relay

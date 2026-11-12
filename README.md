@@ -934,6 +934,11 @@ The package ships dedicated assets for:
 
 A .NET 9 consumer can use the compatible `net8.0` asset.
 
+The SerilogRelay sender additionally includes a `netstandard2.1` asset with the
+same public sink API and built-in Happy Eyeballs transport. See its
+[transport guide](docs/SerilogRelay/user/http-transport.md) for dependencies and
+Unity/player validation limits.
+
 ## 📚 Documentation
 
 - [Guides and API reference](https://eigenverft.github.io/Eigenverft.NetLib.Infrastructure/docfx/production/)

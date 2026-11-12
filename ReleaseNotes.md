@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add SerilogRelay Happy Eyeballs TCP connection selection to its netstandard2.1, net8.0 and net10.0 assets. Alternate address families with a 250 ms head start, normalize mapped IPv4 addresses, immediately advance after failures and close losing/late connections. Race connections rather than log requests, retain TLS hostname validation and existing delivery/spool contracts, and use StandardSocketsHttpHandler only for the Standard asset. Verify controlled failure/cancellation cases, real IPv4/IPv6 sockets and local TLS across native/Standard test matrices.
+
 - Extend SqliteHotBackup with Automatic (default) and Manual discovery modes, scoped dynamic file-source providers and a thread-safe process-local runtime registry. Manual skips EF/provider discovery while retaining configured/runtime files. Each call acquires fresh detached snapshots; provider failures retain partial inventory and permit healthy selected backups/archives before the final exception. Preserve existing source IDs, copy/ZIP behavior, timing and consumer-owned database lifecycle/scheduling. Verify 65 tests per .NET 8/.NET 10 target with the existing coverage gates.
 
 - Stabilize the SerilogRelay escaped-JSON payload-splitting regression by recording serialized requests through the existing HTTP message handler and using an explicit test shutdown budget. Preserve six-batch/twelve-event, byte-limit, order/count and empty-spool assertions in normal and shutdown modes; retain separate TCP response-completion and default shutdown-deadline tests. Runtime code and coverage gates are unchanged.

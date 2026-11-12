@@ -13,7 +13,8 @@ For a runnable sender and receiver, see [Run the examples](#run-the-sender-and-r
 
 The same package retains dedicated .NET 8 and .NET 10 assets. The Standard asset
 uses the same sink API, wire format and SQLite spool schema; the receiver needs
-no changes. System.Text.Json and the TimeProvider compatibility package are
+no changes. System.Text.Json, the TimeProvider compatibility package and
+StandardSocketsHttpHandler 2.2.0.10 are
 included as dependencies only for that asset.
 
 .NET Standard describes API compatibility, not a complete host runtime. A host
@@ -45,6 +46,17 @@ seconds and can be increased below the 30-second claim lease; a shorter timeout 
 client still applies. The built-in clients ignore server cookies, so separate relay sinks cannot
 share a cookie container. A supplied client controls its own cookie handling. The sink uses the
 same client for spool, RAM, and shutdown delivery.
+
+Built-in clients use Happy Eyeballs after DNS resolution: address families
+alternate in resolver-preferred order, pending connections get a 250 ms head
+start and immediate failures allow the next address to start immediately. The
+first successful TCP connection wins; all losing connections are canceled and
+closed. Only TCP establishment is raced, so the log POST is sent over one
+connection with its original TLS/HTTP hostname. Existing request timeouts and
+spool retry rules still apply. A caller-supplied client owns its transport policy.
+See [HTTP transport](../../../docs/SerilogRelay/user/http-transport.md) and
+[sender documentation](../../../docs/SerilogRelay/README.md) for platform limits
+and verification.
 
 ## Application spool
 
