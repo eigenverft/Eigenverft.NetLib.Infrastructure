@@ -72,6 +72,7 @@
     <ProjectReference Include="..\Eigenverft.NetLib.SerilogRelay\Eigenverft.NetLib.SerilogRelay.csproj">
       <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
     </ProjectReference>
+    <AssemblyMetadata Include="TestLibraryTargetFramework" Value="$(TargetFramework)" />
   </ItemGroup>
 
   <!-- External dependencies -->

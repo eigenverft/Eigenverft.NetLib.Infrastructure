@@ -304,7 +304,7 @@ namespace Eigenverft.NetLib.SerilogRelay
             if (string.IsNullOrEmpty(_endpoint))
                 return false;
             if (Volatile.Read(ref _disposeStarted) != 0)
-                await _senderTask.WaitAsync(token).ConfigureAwait(false);
+                await WaitForCompletionAsync(_senderTask, token).ConfigureAwait(false);
 
             var entries = new List<LogEntry>(batch.Count);
             foreach (EmergencyEntry bufferedEntry in batch)

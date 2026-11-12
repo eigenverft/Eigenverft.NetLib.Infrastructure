@@ -3,7 +3,6 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace Eigenverft.NetLib.SerilogRelay
@@ -95,8 +94,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                 FingerprintDomain,
                 "\nsystem-platform-uuid=",
                 platformUuid);
-            byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(canonical));
-            fingerprint = Convert.ToHexString(hash);
+            fingerprint = RelayRuntime.Sha256Hex(Encoding.UTF8.GetBytes(canonical));
             return true;
         }
 
@@ -114,17 +112,17 @@ namespace Eigenverft.NetLib.SerilogRelay
         {
             platformUuid = string.Empty;
 
-            if (OperatingSystem.IsWindows())
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 return TryReadWindowsSmbiosUuid(out platformUuid);
             }
 
-            if (OperatingSystem.IsLinux())
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 return TryReadLinuxDmiUuid(out platformUuid);
             }
 
-            if (OperatingSystem.IsMacOS())
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 return TryReadMacPlatformUuid(out platformUuid);
             }
@@ -134,7 +132,7 @@ namespace Eigenverft.NetLib.SerilogRelay
 
         private static bool IsSupportedOperatingSystem()
         {
-            return OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS();
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
         }
 
         private static bool TryReadWindowsSmbiosUuid(out string platformUuid)

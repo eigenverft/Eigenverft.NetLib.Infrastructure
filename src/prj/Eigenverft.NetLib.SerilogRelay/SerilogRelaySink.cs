@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -6,7 +7,6 @@ using System.IO;
 using System.Reflection;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -142,7 +142,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                 localApplicationData,
                 "Eigenverft",
                 "SerilogRelay",
-                ResolveApplicationSpoolDirectoryName(ResolveApplicationId(applicationId), OperatingSystem.IsWindows()));
+                ResolveApplicationSpoolDirectoryName(ResolveApplicationId(applicationId), RuntimeInformation.IsOSPlatform(OSPlatform.Windows)));
 
             string resolvedDirectory = string.IsNullOrWhiteSpace(spoolDirectory)
                 ? defaultDirectory
@@ -161,7 +161,7 @@ namespace Eigenverft.NetLib.SerilogRelay
 
             // Ordinary normalized IDs cannot start with '_'; shortened IDs have 255 characters.
             // Neither can overlap this 65-character reserved-name directory. The event ID stays unchanged.
-            return "_" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(applicationId)))
+            return "_" + RelayRuntime.Sha256Hex(Encoding.UTF8.GetBytes(applicationId))
                 .ToLowerInvariant();
         }
 
@@ -177,7 +177,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                 // Reserve a prefix that ordinary normalized IDs cannot have. Hash the complete
                 // identity so long IDs with the same readable prefix keep distinct spools.
                 return "_" + normalized[..189] + "_"
-                    + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)))
+                    + RelayRuntime.Sha256Hex(Encoding.UTF8.GetBytes(normalized))
                         .ToLowerInvariant();
             }
 
@@ -349,7 +349,11 @@ CREATE TABLE IF NOT EXISTS {0} (
             bool dangerousAcceptAnyServerCertificate = false,
             string? bearerToken = null)
         {
+#if NETSTANDARD2_1
+            if (options is null) throw new ArgumentNullException(nameof(options));
+#else
             ArgumentNullException.ThrowIfNull(options);
+#endif
             ValidateOptions(options);
             if (options.HttpClient is not null && dangerousAcceptAnyServerCertificate)
                 throw new ArgumentException(
@@ -363,7 +367,7 @@ CREATE TABLE IF NOT EXISTS {0} (
             _applicationId = LoggerConfigurationSerilogRelayExtensions.ResolveApplicationId(applicationId);
             _applicationVersion = ResolveApplicationVersion(options.ApplicationVersion, Assembly.GetEntryAssembly());
             _machineId = ResolveMachineId();
-            _processId = Environment.ProcessId;
+            _processId = RelayRuntime.ProcessId;
             _claimOwnerId = FormattableString.Invariant($"{_processId}:{Guid.NewGuid():N}");
             _minBatchSize = options.Delivery.MinimumBatchEvents;
             _maxBatchSize = options.Delivery.MaximumBatchEvents;
@@ -530,12 +534,20 @@ CREATE TABLE IF NOT EXISTS {0} (
             if (options.Delivery.RequestTimeout <= TimeSpan.Zero
                 || options.Delivery.RequestTimeout >= ClaimLeaseDuration)
                 throw new ArgumentOutOfRangeException(nameof(options), "HTTP request timeout must be positive and shorter than the 30-second claim lease.");
+#if NETSTANDARD2_1
+            if (!Enum.IsDefined(typeof(SerilogRelayStatusEventMode), options.StatusEvents.Mode))
+#else
             if (!Enum.IsDefined(options.StatusEvents.Mode))
+#endif
                 throw new ArgumentOutOfRangeException(nameof(options), "Unknown relay status event mode.");
             if (options.StatusEvents.Mode == SerilogRelayStatusEventMode.AllSinks
                 && options.StatusEvents.LoggerProvider is null)
                 throw new ArgumentException("AllSinks status events require a LoggerProvider that returns null until the application logger is ready.", nameof(options));
+#if NETSTANDARD2_1
+            if (!Enum.IsDefined(typeof(LogEventLevel), options.StatusEvents.MinimumLevel))
+#else
             if (!Enum.IsDefined(options.StatusEvents.MinimumLevel))
+#endif
                 throw new ArgumentOutOfRangeException(nameof(options), "Unknown relay status minimum level.");
             if (options.StatusEvents.SummaryInterval is TimeSpan summaryInterval
                 && (summaryInterval < TimeSpan.FromMinutes(1) || summaryInterval.TotalMilliseconds > uint.MaxValue - 1L))
@@ -614,7 +626,12 @@ CREATE TABLE IF NOT EXISTS {0} (
         // emergency memory accepted it. Public Emit retains its existing best-effort contract.
         private bool TryEmit(LogEvent logEvent, bool reportRejectedEvent)
         {
+#if NETSTANDARD2_1
+            if (Volatile.Read(ref _disposeStarted) != 0)
+                throw new ObjectDisposedException(GetType().FullName);
+#else
             ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeStarted) != 0, this);
+#endif
             bool statusEvent = IsRelayStatusEvent(logEvent);
 
             LogEntry entry;
@@ -761,7 +778,7 @@ CREATE TABLE IF NOT EXISTS {0} (
 
             try
             {
-                await _shutdownCleanupTask.WaitAsync(token).ConfigureAwait(false);
+                await WaitForCompletionAsync(_shutdownCleanupTask, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
@@ -774,8 +791,8 @@ CREATE TABLE IF NOT EXISTS {0} (
             try
             {
                 _cts.CancelAfter(_shutdownTimeout);
-                await _senderTask.WaitAsync(token).ConfigureAwait(false);
-                await _emergencyTask.WaitAsync(token).ConfigureAwait(false);
+                await WaitForCompletionAsync(_senderTask, token).ConfigureAwait(false);
+                await WaitForCompletionAsync(_emergencyTask, token).ConfigureAwait(false);
 
                 if (!string.IsNullOrEmpty(_endpoint) && !_spoolDisabledForLifetime)
                 {

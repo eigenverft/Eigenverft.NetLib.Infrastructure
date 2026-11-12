@@ -20,7 +20,7 @@ namespace Eigenverft.NetLib.SerilogRelay
             bootId = Guid.Empty;
             try
             {
-                if (OperatingSystem.IsWindows())
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     // SystemBootEnvironmentInformation. The native query is optional:
                     // if its layout or availability changes, retain obsolete generations.
@@ -30,12 +30,12 @@ namespace Eigenverft.NetLib.SerilogRelay
                         return false;
                     bootId = information.BootIdentifier;
                 }
-                else if (OperatingSystem.IsLinux())
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     if (!Guid.TryParseExact(File.ReadAllText("/proc/sys/kernel/random/boot_id").Trim(), "D", out bootId))
                         return false;
                 }
-                else if (OperatingSystem.IsMacOS())
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
                     var buffer = new byte[37];
                     nuint length = (nuint)buffer.Length;

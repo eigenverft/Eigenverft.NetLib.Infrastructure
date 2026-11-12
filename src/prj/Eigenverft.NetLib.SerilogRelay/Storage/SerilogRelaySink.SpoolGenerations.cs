@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -31,7 +32,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                 }
                 catch (IOException)
                 {
-                    if (Stopwatch.GetElapsedTime(started) >= timeout)
+                    if (RelayRuntime.ElapsedSince(started) >= timeout)
                         return null;
                     Thread.Sleep(50);
                 }
@@ -130,7 +131,7 @@ namespace Eigenverft.NetLib.SerilogRelay
 
         // Accept only canonical, numeric generation filenames belonging to this configured spool.
         private int GetSpoolGenerationNumber(string path)
-            => GetSpoolGenerationNumberCore(path, OperatingSystem.IsWindows());
+            => GetSpoolGenerationNumberCore(path, RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
 
         private int GetSpoolGenerationNumberCore(string path, bool isWindows)
         {

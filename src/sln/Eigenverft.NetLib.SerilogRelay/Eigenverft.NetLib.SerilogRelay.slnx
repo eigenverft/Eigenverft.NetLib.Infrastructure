@@ -7,6 +7,7 @@
     <Project Path="../../prj/Eigenverft.NetLib.SerilogRelayReceiver.Example/Eigenverft.NetLib.SerilogRelayReceiver.Example.csproj" />
     <Project Path="../../prj/Eigenverft.NetLib.SerilogRelaySender.Example/Eigenverft.NetLib.SerilogRelaySender.Example.csproj" />
     <Project Path="../../prj/Eigenverft.NetLib.SerilogRelay.Tests/Eigenverft.NetLib.SerilogRelay.Tests.csproj" />
+    <Project Path="../../prj/Eigenverft.NetLib.SerilogRelay.NetStandard.Tests/Eigenverft.NetLib.SerilogRelay.NetStandard.Tests.csproj" />
     <Project Path="../../prj/Eigenverft.NetLib.SerilogRelay/Eigenverft.NetLib.SerilogRelay.csproj" />
   </Folder>
 </Solution>

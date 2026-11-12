@@ -4,7 +4,7 @@
   <!-- General build settings: defines the output type and target framework -->
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.1;net8.0;net10.0</TargetFrameworks>
   </PropertyGroup>
 
   <!-- C# language features and debugging configuration -->
@@ -75,6 +75,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.34" />
     <PackageReference Include="Serilog" Version="4.4.0" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="8.0.0" />
+    <PackageReference Include="System.Text.Json" Version="10.0.12" />
   </ItemGroup>
 
   <!-- Package metadata -->

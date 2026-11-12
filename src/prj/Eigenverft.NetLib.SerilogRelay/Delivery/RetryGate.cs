@@ -14,7 +14,11 @@ namespace Eigenverft.NetLib.SerilogRelay
 
         internal RetryGate(EndpointRetryOptions options, Func<double>? nextDouble = null)
         {
+#if NETSTANDARD2_1
+            if (options is null) throw new ArgumentNullException(nameof(options));
+#else
             ArgumentNullException.ThrowIfNull(options);
+#endif
 
             _options = new EndpointRetryOptions
             {
@@ -34,7 +38,7 @@ namespace Eigenverft.NetLib.SerilogRelay
             if (!double.IsFinite(_options.JitterRatio) || _options.JitterRatio < 0d || _options.JitterRatio > 1d)
                 throw new ArgumentOutOfRangeException(nameof(options), "Retry jitter ratio must be finite and between 0 and 1.");
 
-            _nextDouble = nextDouble ?? Random.Shared.NextDouble;
+            _nextDouble = nextDouble ?? RelayRuntime.NextRandomDouble;
         }
 
         internal TimeSpan MaximumDelay => _options.MaximumDelay;

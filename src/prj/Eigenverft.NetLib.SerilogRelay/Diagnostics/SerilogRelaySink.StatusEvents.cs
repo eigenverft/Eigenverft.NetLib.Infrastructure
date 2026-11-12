@@ -320,7 +320,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                             (long[])_coalescedStatusTransitionCounts.Clone(),
                             _coalescedStatusFirstUtc.Value,
                             _coalescedStatusLastUtc!.Value);
-                        Array.Clear(_coalescedStatusTransitionCounts);
+                        Array.Clear(_coalescedStatusTransitionCounts, 0, _coalescedStatusTransitionCounts.Length);
                         _coalescedStatusFirstUtc = null;
                         _coalescedStatusLastUtc = null;
                     }

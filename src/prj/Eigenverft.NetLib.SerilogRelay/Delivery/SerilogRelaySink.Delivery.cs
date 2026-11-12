@@ -146,8 +146,8 @@ namespace Eigenverft.NetLib.SerilogRelay
         {
             // Bound waits to the timer range and recheck the absolute retry deadline after waking.
             using var waitCancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
-            Task deadline = Task.Delay(delay > MaximumSenderDelay ? MaximumSenderDelay : delay,
-                _timeProvider, waitCancellation.Token);
+            Task deadline = DelayAsync(delay > MaximumSenderDelay ? MaximumSenderDelay : delay,
+                waitCancellation.Token);
             try
             {
                 while (!token.IsCancellationRequested && Volatile.Read(ref _disposeStarted) == 0)
@@ -162,7 +162,7 @@ namespace Eigenverft.NetLib.SerilogRelay
                     }
 
                     if (await Task.WhenAny(deadline,
-                        Task.Delay(TimeSpan.FromMilliseconds(100), _timeProvider, waitCancellation.Token))
+                        DelayAsync(TimeSpan.FromMilliseconds(100), waitCancellation.Token))
                         .ConfigureAwait(false) == deadline)
                         return;
                 }
@@ -258,7 +258,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         {
             // Count time spent in the failed request toward the retry interval.
             long attemptStarted = Math.Max(roundStarted, Interlocked.Read(ref _lastHttpAttemptStartedTimestamp));
-            TimeSpan delay = _shutdownRetryInterval - Stopwatch.GetElapsedTime(attemptStarted);
+            TimeSpan delay = _shutdownRetryInterval - RelayRuntime.ElapsedSince(attemptStarted);
             if (delay > TimeSpan.Zero)
                 await Task.Delay(delay, token).ConfigureAwait(false);
         }
@@ -331,15 +331,29 @@ namespace Eigenverft.NetLib.SerilogRelay
                 if (clientTimeout != Timeout.InfiniteTimeSpan && clientTimeout < timeout)
                     timeout = clientTimeout;
 
+#if NETSTANDARD2_1
+                using var requestTimeout = new CancellationTokenSource();
+                using var requestTimer = _timeProvider.CreateTimer(CancelRequestTimeout,
+                    requestTimeout, timeout, Timeout.InfiniteTimeSpan);
+                using var shutdownRequestTimeout = new CancellationTokenSource();
+                using var shutdownTimer = _timeProvider.CreateTimer(CancelRequestTimeout,
+                    shutdownRequestTimeout, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+#else
                 using var requestTimeout = new CancellationTokenSource(timeout, _timeProvider);
                 using var shutdownRequestTimeout = new CancellationTokenSource(Timeout.InfiniteTimeSpan, _timeProvider);
+#endif
                 using var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(
                     token,
                     requestTimeout.Token,
                     shutdownRequestTimeout.Token);
                 // Also shorten an HTTP attempt that was already running when shutdown began.
                 // Keep its original deadline independent so shutdown cannot extend it.
+#if NETSTANDARD2_1
+                using var shutdownRegistration = _shutdownSignal.Token.Register(() =>
+                    shutdownTimer.Change(_shutdownRequestTimeout, Timeout.InfiniteTimeSpan));
+#else
                 using var shutdownRegistration = _shutdownSignal.Token.Register(() => shutdownRequestTimeout.CancelAfter(_shutdownRequestTimeout));
+#endif
                 Interlocked.Exchange(ref _lastHttpAttemptStartedTimestamp, Stopwatch.GetTimestamp());
                 using var resp = await _httpClient.SendAsync(
                     request,
@@ -402,7 +416,13 @@ namespace Eigenverft.NetLib.SerilogRelay
                 throw new HttpRequestException("HTTP relay response exceeds the client's response-content size limit.");
 
             using var discard = new ResponseDiscardStream(maximumBytes, token);
+#if NETSTANDARD2_1
+            // The older HttpContent API has no cancellation overload. Bound the wait as well
+            // as every write; the response scope disposes the underlying content on cancellation.
+            await WaitForCompletionAsync(content.CopyToAsync(discard), token).ConfigureAwait(false);
+#else
             await content.CopyToAsync(discard, token).ConfigureAwait(false);
+#endif
             token.ThrowIfCancellationRequested();
         }
 
@@ -450,7 +470,7 @@ namespace Eigenverft.NetLib.SerilogRelay
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 DiscardBytes(buffer.Length);
-                return ValueTask.CompletedTask;
+                return default;
             }
 
             private void DiscardBytes(int count)
