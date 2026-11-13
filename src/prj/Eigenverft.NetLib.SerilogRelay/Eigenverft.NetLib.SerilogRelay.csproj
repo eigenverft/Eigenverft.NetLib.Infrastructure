@@ -94,7 +94,7 @@
     <RepositoryUrl>https://github.com/eigenverft/Eigenverft.NetLib.Infrastructure</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <!-- NuGet gallery blurb. CDATA is optional and keeps multiline text. -->
-    <Description><![CDATA[Durable Serilog relay with local persistent spooling and restart-safe delivery.]]></Description>
+    <Description><![CDATA[Durable Serilog forwarding with a bounded SQLite spool, restart-safe delivery and optional ingestion-key submission access. Client-distributed keys are not proof of trusted sender identity.]]></Description>
     <PackageReadmeFile>Readme.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIcon>Icon-128x128.png</PackageIcon>

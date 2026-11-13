@@ -35,7 +35,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// Configures Serilog to try local SQLite persistence first, attempt bounded volatile buffering when storage fails or rejects an event, and optionally relay events to an HTTP endpoint.
         /// </summary>
         /// <remarks>
-        /// Processes sharing one application spool may send each other's pending rows. Each new event records the originating application's version once, independently of the process that later sends it. The process that owns the current claim uses its own endpoint and bearer token. Only a complete HTTP 204 response marks the still-owned claim delivered; every other status releases the claim before process-local retry backoff so another process/version may take over.
+        /// Processes sharing one application spool may send each other's pending rows. Each new event records the originating application's version once, independently of the process that later sends it. The process that owns the current claim uses its own endpoint and ingestion key. Only a complete HTTP 204 response marks the still-owned claim delivered; every other status releases the claim before process-local retry backoff so another process/version may take over.
         /// </remarks>
         /// <param name="loggerConfiguration">The Serilog sink configuration.</param>
         /// <param name="endpoint">The optional HTTP endpoint used by this sink/process for batched delivery of any shared-spool rows it claims. Pending rows do not retain the endpoint of their creating process.</param>
@@ -55,7 +55,7 @@ namespace Eigenverft.NetLib.SerilogRelay
         /// by the default spool directory; it is resolved during sink creation, not per event.
         /// </param>
         /// <param name="dangerousAcceptAnyServerCertificate">When <see langword="true"/>, disables server-certificate validation for relay HTTP requests. Defaults to <see langword="false"/> and should only be enabled deliberately for trusted private/development infrastructure.</param>
-        /// <param name="bearerToken">Optional raw bearer token sent as <c>Authorization: Bearer &lt;token&gt;</c> on this sink/process's HTTP requests for claimed spool rows and direct emergency batches. The token is not persisted with spool rows. Null, empty, or whitespace disables the header.</param>
+        /// <param name="bearerToken">Compatibility name for the optional ingestion key. Prefer <see cref="SerilogRelayOptions.IngestionKey"/>. The raw value is sent using <c>Authorization: Bearer</c> and is not persisted with spool rows. A client-distributed key does not establish trusted sender identity. Null, empty, or whitespace disables the sink's header unless IngestionKey is set.</param>
         /// <param name="restrictedToMinimumLevel">The minimum Serilog event level accepted by the sink.</param>
         /// <param name="options">Optional grouped relay settings, including delivery, retention, retry, and a caller-owned HTTP client. Null uses complete defaults.</param>
         /// <returns>The original Serilog logger configuration.</returns>
@@ -344,6 +344,11 @@ CREATE TABLE IF NOT EXISTS {0} (
             ArgumentNullException.ThrowIfNull(options);
 #endif
             ValidateOptions(options);
+            if (!string.IsNullOrWhiteSpace(options.IngestionKey)
+                && !string.IsNullOrWhiteSpace(bearerToken)
+                && !string.Equals(options.IngestionKey, bearerToken, StringComparison.Ordinal))
+                throw new ArgumentException("IngestionKey and the legacy bearerToken argument must not specify different keys.", nameof(options));
+            string? ingestionKey = options.IngestionKey ?? bearerToken;
             if (options.HttpClient is not null && dangerousAcceptAnyServerCertificate)
                 throw new ArgumentException(
                     "Configure certificate validation on the supplied HttpClient instead.",
@@ -387,8 +392,8 @@ CREATE TABLE IF NOT EXISTS {0} (
             {
                 MaxResponseContentBufferSize = 4 * 1024,
             };
-            if (!string.IsNullOrWhiteSpace(bearerToken))
-                _authorizationHeader = new AuthenticationHeaderValue("Bearer", bearerToken);
+            if (!string.IsNullOrWhiteSpace(ingestionKey))
+                _authorizationHeader = new AuthenticationHeaderValue("Bearer", ingestionKey);
             _cts = new CancellationTokenSource();
             _shutdownSignal = new CancellationTokenSource();
             _emergencyChannel = Channel.CreateBounded<EmergencyEntry>(

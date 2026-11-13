@@ -1,5 +1,14 @@
 # Diagnosing SerilogRelay network delivery
 
+`SerilogRelayOptions.IngestionKey` is the preferred submission-key setting; the
+old `bearerToken:` argument still works. Use the raw value without a Bearer
+prefix. A null option falls back to the legacy argument; an explicit blank
+suppresses the sink's header. Different nonblank values fail setup instead of
+silently selecting one. A custom HTTP client can still add its own authorization.
+Create/reconfigure the sink to capture a rotated value. Do not treat a key shipped
+with an application as a private query credential or trusted sender identity;
+use HTTPS and separate private authorization for read/admin endpoints.
+
 The sender's built-in clients use Happy Eyeballs for TCP connections. After DNS
 resolution, they alternate IPv6/IPv4 addresses in the resolver's preferred order,
 starting another attempt after 250 ms while the preceding attempt is pending.

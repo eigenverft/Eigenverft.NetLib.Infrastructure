@@ -1,5 +1,22 @@
 # SerilogRelay HTTP transport
 
+## Ingestion access
+
+Use `options.IngestionKey` for the optional log-submission key. It is carried as
+`Authorization: Bearer <key>` and never stored in spool rows by this option.
+A key distributed with an application is recoverable; it gates submissions
+without proving trusted sender identity. HTTPS supplies transport protection.
+Use separate private credentials for log queries/admin APIs. A server-only
+deployment may hold the key privately; the package makes no secrecy guarantee.
+
+The existing `bearerToken:` argument is retained without obsolete warnings.
+A null new option falls back to that argument. Empty/whitespace explicitly
+suppresses the sink's header, including a legacy value, while a supplied client
+can still provide authorization. Different nonblank values are rejected;
+identical values are accepted. The value is captured when the sink is created.
+
+## Connection selection
+
 The sender's built-in HTTP clients use Happy Eyeballs when opening a TCP
 connection. No additional sink configuration is required. This helps a desktop
 application reach the receiver when its network advertises IPv6 but cannot

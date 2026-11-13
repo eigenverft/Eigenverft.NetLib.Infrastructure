@@ -406,9 +406,9 @@ count during shutdown.
 
 Old and new versions of the same logical application may use the same spool concurrently.
 
-Pending rows are not bound to the endpoint or bearer token of the process that created them. The
+Pending rows are not bound to the endpoint or ingestion key of the process that created them. The
 process that currently owns a claim sends those rows using its own configured endpoint and
-bearer token.
+ingestion key.
 
 A non-204 response releases the claim before that process enters its own retry delay. A different
 process/version can therefore claim the same row and attempt delivery through different current
@@ -447,5 +447,7 @@ A login page returning HTTP 200 cannot acknowledge the batch. Receivers using an
 status must change their acknowledgment to 204.
 
 Receiver persistence, duplicate presentation, and server-side storage policies remain receiver
-concerns. Optional bearer authentication only controls the Authorization header emitted by the
-sending process.
+concerns. The optional ingestion key only controls the Authorization header emitted by the
+sending process. IngestionKey is the preferred option and bearerToken is retained for compatibility.
+A key distributed with a client is recoverable and does not establish trusted producer identity.
+HTTPS protects transport; private read/admin authorization remains a separate host responsibility.

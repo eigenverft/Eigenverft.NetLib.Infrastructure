@@ -1,5 +1,7 @@
 Current changes
 
+- Adds SerilogRelayOptions.IngestionKey as the preferred submission-key option while preserving the bearerToken argument and HTTP Bearer header. Different nonblank new/legacy values are rejected.
+- Clarifies that client-distributed ingestion keys are recoverable admission gates, not trusted sender identity; HTTPS protects transport and private query/admin access needs separate credentials.
 - Adds built-in Happy Eyeballs connection selection with a 250 ms head start, immediate fallback after connection failure, alternating address families and cancellation/cleanup of losing connections. HTTP requests are sent only over the winning connection.
 - Uses the runtime SocketsHttpHandler for net8.0/net10.0 and StandardSocketsHttpHandler 2.2.0.10 for netstandard2.1, preserving default TLS validation, the original hostname and caller-owned HttpClient transport policy.
 - Adds a netstandard2.1 sender asset alongside the existing net8.0 and net10.0 assets.

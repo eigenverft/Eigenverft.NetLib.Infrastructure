@@ -11,6 +11,16 @@ namespace Eigenverft.NetLib.SerilogRelay
     public sealed class SerilogRelayOptions
     {
         /// <summary>
+        /// Gets or sets the optional ingestion key sent as <c>Authorization: Bearer &lt;key&gt;</c>.
+        /// This admits log submissions; a key distributed with a client is recoverable and does
+        /// not establish trusted sender identity. HTTPS provides transport protection.
+        /// Null falls back to the legacy <c>bearerToken</c> argument. Empty or whitespace suppresses
+        /// the sink's header; a supplied HTTP client can still supply its own authorization.
+        /// Different nonblank new and legacy values are rejected. The key is not stored in spool rows.
+        /// </summary>
+        public string? IngestionKey { get; set; }
+
+        /// <summary>
         /// Gets or sets the version of the application that creates new events. Null resolves the
         /// entry assembly's informational version once when the sink is created, falling back to
         /// its assembly version. Surrounding whitespace is removed, and values longer than 255

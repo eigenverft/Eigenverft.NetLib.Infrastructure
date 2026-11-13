@@ -1,5 +1,13 @@
 # Verifying SerilogRelay
 
+Ingestion-key compatibility checks retain all published bearerToken parameters
+and exercise the new option with legacy fallback, explicit blank suppression,
+equal values, conflicting case-sensitive values and caller-owned client headers.
+Existing public legacy-parameter and shared-spool takeover tests remain in place.
+No Obsolete warnings are introduced. API validation against published 1.0.0.19
+accepts the additive option. Native matrices pass 243 tests per runtime and
+Standard matrices 245 (976 executions), all at 100% line/branch/method coverage.
+
 Use the .NET 10 SDK and the .NET 8/.NET 10 runtimes. From the repository root:
 
 ```powershell

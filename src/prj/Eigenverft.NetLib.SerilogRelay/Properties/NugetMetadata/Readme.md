@@ -352,9 +352,10 @@ factory-created client captured for the sink's lifetime needs an appropriate han
 lifetime for DNS changes. Custom handlers can provide changing credentials; avoid unbounded extra
 HTTP retries because the relay already retries failed deliveries.
 
-The existing `bearerToken` parameter still applies with a supplied client. When present, it sets
-`Authorization: Bearer` on each relay request and takes precedence over the client's default
-Authorization header. Without it, the client's own authentication applies. Configure certificate
+`options.IngestionKey` also applies with a supplied client. It sets `Authorization: Bearer`
+on each relay request and takes precedence over the client's default Authorization header.
+The legacy `bearerToken` argument remains supported. Without a selected key, the client's own
+authentication applies. Configure certificate
 validation on the supplied client's handler; combining it with
 `dangerousAcceptAnyServerCertificate: true` is rejected.
 
@@ -467,20 +468,31 @@ Redirects follow the HTTP handler's policy; the final response must still be 204
 returning HTTP 200 therefore cannot acknowledge delivery. Receivers that previously returned
 another successful status must change their acknowledgment to 204.
 
-Bearer authentication is supported with one optional opaque token:
+An optional **ingestion key** gates log submissions at a compatible receiver:
 
 ```csharp
 .WriteTo.SerilogRelay(
     endpoint: "https://logging.example/api/v1/logs",
-    bearerToken: "replace-with-secret")
+    options: new SerilogRelayOptions { IngestionKey = "your-ingestion-key" })
 ```
 
-Pass only the token value, not the `Bearer ` scheme prefix. Null, empty, or whitespace means the
-sink does not add an Authorization header; a supplied client may still provide one. The token
-belongs to the sending sink/process and is not persisted with spool rows, so an updated process
-draining old backlog uses its own current token.
+Pass only the raw value, not the `Bearer ` scheme prefix. The HTTP header remains
+`Authorization: Bearer <key>`; the API name describes the key's ingestion purpose.
+An application-distributed key is recoverable by its users. It is an extra admission
+gate against submissions without the key, not proof of trusted client identity and
+not transport encryption. HTTPS protects the transmission. Never reuse such a key
+for private log queries or administration. A deployment that keeps the key off
+distributed clients can hold it privately; the package does not guarantee secrecy.
 
-SerilogRelay does not parse JWT claims or refresh its `bearerToken` parameter. A supplied client
+The existing `bearerToken:` argument remains a supported compatibility API without
+obsolete warnings. A null `IngestionKey` falls back to that argument. An explicitly
+empty/whitespace option suppresses the sink's header, even with a legacy value;
+a supplied client may still add its own authorization. Two different nonblank
+new/legacy values are rejected; identical values are allowed. The selected key
+belongs to the sink/process and is not persisted with spool rows, so a process
+draining old backlog uses its current key.
+
+SerilogRelay does not parse JWT claims or refresh its configured ingestion key. A supplied client
 can implement its own authentication handler. Receiver persistence,
 duplicate-handling, and server-side storage policies are receiver concerns.
 

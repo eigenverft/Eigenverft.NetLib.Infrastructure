@@ -1,5 +1,13 @@
 # SerilogRelay connection selection
 
+The optional ingestion key is a submission gate, not a verified producer
+identity. IngestionKey is the preferred sender option, with the previous
+bearerToken argument retained without warnings. It selects the same HTTP Bearer
+header and does not change payloads or storage. Client-distributed keys are
+recoverable; private read/admin access needs separate credentials and HTTPS
+supplies transport protection. A server-only key may remain private, but the
+API name expresses purpose rather than a secrecy guarantee.
+
 The sender needs to deliver desktop application logs from networks where one
 advertised address family may be unusable. Its built-in HTTP clients therefore
 race TCP connections using a 250 ms Happy Eyeballs head start. Resolver

@@ -377,20 +377,27 @@ returning HTTP 200 therefore cannot acknowledge delivery. Receivers that previou
 another successful status must change their acknowledgment to 204. The status confirms processing
 according to the receiver's policy; it does not prove remote persistence.
 
-Bearer authentication is supported with one optional opaque token:
+An optional **ingestion key** gates log submissions at a compatible receiver:
 
 ```csharp
 .WriteTo.SerilogRelay(
     endpoint: "https://logging.example/api/v1/logs",
-    bearerToken: "replace-with-secret")
+    options: new SerilogRelayOptions { IngestionKey = "your-ingestion-key" })
 ```
 
-Pass only the token value, not the `Bearer ` scheme prefix. Null, empty, or whitespace means the
-sink does not add an Authorization header; a supplied client may still provide one. The token
-belongs to the sending sink/process and is not persisted with spool rows, so an updated process
-draining old backlog uses its own current token.
+The header remains `Authorization: Bearer <key>`, using the raw key without a scheme
+prefix. A key distributed with an application is recoverable; it is an admission
+gate, not proof of trusted client identity. HTTPS supplies transport protection.
+Private query/admin access needs separate credentials. A server-only deployment
+may keep its ingestion key private; the package makes no secrecy guarantee.
 
-SerilogRelay does not parse JWT claims or refresh its `bearerToken` parameter. A supplied client
+The legacy `bearerToken:` argument remains compatible without obsolete warnings.
+A null option falls back to it; an explicitly empty/whitespace option suppresses
+the sink's header. A supplied client can still add authorization. Different
+nonblank new/legacy values are rejected and identical values are allowed. The
+selected key is process-local and is not stored with spool rows.
+
+SerilogRelay does not parse JWT claims or refresh its configured ingestion key. A supplied client
 can implement its own authentication handler. Receiver persistence,
 duplicate-handling, and server-side storage policies are receiver concerns.
 

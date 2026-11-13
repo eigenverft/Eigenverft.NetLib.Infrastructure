@@ -1,5 +1,15 @@
 # SerilogRelay transport compatibility
 
+The compatible ingestion-key naming increment introduces IngestionKey while
+retaining the existing bearerToken parameter without obsolete warnings. HTTP
+Bearer transport, payloads and spool schema are unchanged. Documentation names
+the submission purpose and distinguishes a recoverable client-distributed key
+from private query/admin credentials and trusted producer identity. The naming
+does not require a server-only key to be public or promise that it is secret.
+All 976 sender test executions pass at 100% coverage; package/API validation
+against 1.0.0.19 and old/new receiver interoperability checks pass. These are
+local candidate results; the public package metadata changes only on a new release.
+
 The sender source targets .NET Standard 2.1, .NET 8 and .NET 10 with the same
 public sink API, persisted spool schema and HTTP payload. Built-in clients use
 Happy Eyeballs to reduce failures caused by an unusable IPv4 or IPv6 route.

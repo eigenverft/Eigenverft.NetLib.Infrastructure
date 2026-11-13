@@ -68,6 +68,43 @@ namespace Eigenverft.NetLib.SerilogRelay.Tests
         }
 
         [TestMethod]
+        [DataRow(null, null, "Basic host-token")]
+        [DataRow(null, "legacy-key", "Bearer legacy-key")]
+        [DataRow("ingestion-key", null, "Bearer ingestion-key")]
+        [DataRow("same-key", "same-key", "Bearer same-key")]
+        [DataRow("", "legacy-key", "Basic host-token")]
+        [DataRow(" ", "legacy-key", "Basic host-token")]
+        [DataRow("ingestion-key", "", "Bearer ingestion-key")]
+        [DataRow("ingestion-key", " ", "Bearer ingestion-key")]
+        public async Task IngestionKeyAndLegacyArgumentPreserveHeaderSelection(string? key, string? legacy, string expected)
+        {
+            string? authorization = null;
+            using var client = new HttpClient(new CallbackHttpHandler((request, _) =>
+            {
+                authorization = request.Headers.Authorization?.ToString();
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+            }));
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", "host-token");
+            var options = new SerilogRelayOptions { IngestionKey = key, HttpClient = client };
+            await using var sink = new SerilogRelaySink("Data Source=:memory:", "http://receiver.test/logs", options, bearerToken: legacy);
+            Assert.IsTrue(await InvokeSendBatchAsync(sink,
+                new List<LogEntry> { CreateLogEntry(1, "ingestion key") }, CancellationToken.None));
+            Assert.AreEqual(expected, authorization);
+            Assert.AreEqual("Basic host-token", client.DefaultRequestHeaders.Authorization?.ToString());
+        }
+
+        [TestMethod]
+        [DataRow("new-key", "old-key")]
+        [DataRow("Key", "key")]
+        public void ConflictingNewAndLegacyIngestionKeysAreRejected(string key, string legacy)
+        {
+            var options = new SerilogRelayOptions { IngestionKey = key };
+            ArgumentException error = Assert.ThrowsExactly<ArgumentException>(() =>
+                new SerilogRelaySink("Data Source=:memory:", null, options, bearerToken: legacy));
+            Assert.AreEqual("options", error.ParamName);
+        }
+
+        [TestMethod]
         public async Task SuppliedHttpClientKeepsItsSettingsAndRemainsCallerOwned()
         {
             var authorizationHeaders = new List<string?>();
