@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `SerilogRelayOptions.IngestionKey` as the preferred log-submission key while retaining the `bearerToken:` parameter and HTTP Bearer transport. Preserve null fallback and caller-owned HTTP authorization, allow explicit blank suppression and reject conflicting nonblank key values. Clarify that a key distributed with a client is recoverable and does not establish trusted producer identity; HTTPS and separate private query/admin credentials remain required for their respective purposes. Verify the native and Standard sender matrices plus compatibility with old/new receiver options.
+
 - Add SerilogRelay Happy Eyeballs TCP connection selection to its netstandard2.1, net8.0 and net10.0 assets. Alternate address families with a 250 ms head start, normalize mapped IPv4 addresses, immediately advance after failures and close losing/late connections. Race connections rather than log requests, retain TLS hostname validation and existing delivery/spool contracts, and use StandardSocketsHttpHandler only for the Standard asset. Verify controlled failure/cancellation cases, real IPv4/IPv6 sockets and local TLS across native/Standard test matrices.
 
 - Extend SqliteHotBackup with Automatic (default) and Manual discovery modes, scoped dynamic file-source providers and a thread-safe process-local runtime registry. Manual skips EF/provider discovery while retaining configured/runtime files. Each call acquires fresh detached snapshots; provider failures retain partial inventory and permit healthy selected backups/archives before the final exception. Preserve existing source IDs, copy/ZIP behavior, timing and consumer-owned database lifecycle/scheduling. Verify 65 tests per .NET 8/.NET 10 target with the existing coverage gates.
